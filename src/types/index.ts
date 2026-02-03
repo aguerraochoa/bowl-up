@@ -46,6 +46,13 @@ export interface Team {
   league: string;
   players: Player[];
   debtTags: DebtTag[];
+  features?: {
+    betTracker?: boolean;
+  };
+}
+
+export interface BetTallies {
+  [playerId: string]: number; // playerId -> tally count
 }
 
 export interface Stats {

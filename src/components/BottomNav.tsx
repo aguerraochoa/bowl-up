@@ -1,16 +1,18 @@
-import { Home, Plus, Users, DollarSign } from 'lucide-react';
+import { Home, Plus, Users, DollarSign, Target } from 'lucide-react';
 
 interface BottomNavProps {
   activeTab: string;
   onTabChange: (tab: string) => void;
+  showBetTracker?: boolean;
 }
 
-export default function BottomNav({ activeTab, onTabChange }: BottomNavProps) {
+export default function BottomNav({ activeTab, onTabChange, showBetTracker = false }: BottomNavProps) {
   const tabs = [
     { id: 'dashboard', label: 'Dashboard', icon: Home },
     { id: 'add-game', label: 'Add Game', icon: Plus },
     { id: 'players', label: 'Players', icon: Users },
     { id: 'debts', label: 'Debts', icon: DollarSign },
+    ...(showBetTracker ? [{ id: 'bet-tracker', label: 'Tracker', icon: Target }] : []),
   ];
 
   return (

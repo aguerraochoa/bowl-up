@@ -205,7 +205,7 @@ export default function AddGame() {
                 const position = isSelected ? selectedPlayers.indexOf(player.id) + 1 : null;
                 const positionColors = [
                   'bg-orange-500',
-                  'bg-amber-400',
+                  'bg-amber-500',
                   'bg-lime-500',
                   'bg-orange-600',
                 ];
@@ -334,15 +334,17 @@ export default function AddGame() {
             </label>
             
             {/* Score Display - Always visible */}
-            <div className="mb-4 text-center relative">
-              <span className="text-4xl sm:text-5xl font-black text-black min-w-[120px] sm:min-w-[150px] inline-block">
-                {currentGame.totalScore !== undefined ? currentGame.totalScore : '---'}
-              </span>
+            <div className="mb-4 flex items-center justify-center relative">
+              <div className="inline-block px-4 py-3 border-4 border-black bg-white min-w-[200px] text-center">
+                <span className="text-4xl sm:text-5xl font-black text-black">
+                  {currentGame.totalScore !== undefined ? currentGame.totalScore : '---'}
+                </span>
+              </div>
               {currentGame.totalScore !== undefined && currentGame.totalScore > 0 && (
                 <button
                   onClick={() => handleNumberInput('totalScore', 0)}
-                  className="absolute bg-red-600 border-4 border-black px-3 py-2 text-black font-black hover:bg-red-700 ml-3"
-                  style={{ top: '50%', transform: 'translateY(-50%)' }}
+                  className="absolute bg-red-600 border-4 border-black px-3 py-2 text-black font-black hover:bg-red-700"
+                  style={{ left: 'calc(50% + 110px)' }}
                 >
                   <X className="w-5 h-5 sm:w-6 sm:h-6" />
                 </button>
@@ -451,7 +453,7 @@ export default function AddGame() {
                   onClick={() => handleNumberInput('sparesFrames1to9', num)}
                   className={`py-2 sm:py-3 rounded-none border-4 border-black font-black transition-all  text-sm sm:text-base ${
                     currentGame.sparesFrames1to9 === num
-                      ? 'bg-amber-400 text-black'
+                      ? 'bg-orange-500 text-black'
                       : 'bg-amber-400 hover:bg-amber-500 text-black'
                   }`}
                 >
@@ -468,12 +470,21 @@ export default function AddGame() {
             </label>
             
             {/* Current Notation Display */}
-            <div className="mb-4 text-center">
-              <div className="inline-block px-4 py-3 border-4 border-black bg-white min-w-[200px]">
+            <div className="mb-4 flex items-center justify-center relative">
+              <div className="inline-block px-4 py-3 border-4 border-black bg-white min-w-[200px] text-center">
                 <span className="text-2xl sm:text-3xl font-mono font-black text-black">
                   {currentGame.tenthFrame || '---'}
                 </span>
               </div>
+              {currentGame.tenthFrame && currentGame.tenthFrame.length > 0 && (
+                <button
+                  onClick={() => handleTenthFrameChange('')}
+                  className="absolute bg-red-600 border-4 border-black px-3 py-2 text-black font-black hover:bg-red-700"
+                  style={{ left: 'calc(50% + 110px)' }}
+                >
+                  <X className="w-5 h-5 sm:w-6 sm:h-6" />
+                </button>
+              )}
             </div>
 
             {/* Notation Pad */}
@@ -523,16 +534,25 @@ export default function AddGame() {
                   </button>
                 ))}
               </div>
-              {/* Row 4: 0, X, / */}
+              {/* Row 4: /, -, X */}
               <div className="grid grid-cols-3 gap-2">
                 <button
                   onClick={() => {
                     const current = currentGame.tenthFrame || '';
-                    handleTenthFrameChange(current + '0');
+                    handleTenthFrameChange(current + '/');
                   }}
                   className="bg-amber-400 hover:bg-amber-500 border-4 border-black text-black py-3 sm:py-4 rounded-none font-black text-lg sm:text-xl transition-all "
                 >
-                  0
+                  /
+                </button>
+                <button
+                  onClick={() => {
+                    const current = currentGame.tenthFrame || '';
+                    handleTenthFrameChange(current + '-');
+                  }}
+                  className="bg-amber-400 hover:bg-amber-500 border-4 border-black text-black py-3 sm:py-4 rounded-none font-black text-lg sm:text-xl transition-all "
+                >
+                  -
                 </button>
                 <button
                   onClick={() => {
@@ -542,15 +562,6 @@ export default function AddGame() {
                   className="bg-amber-400 hover:bg-amber-500 border-4 border-black text-black py-3 sm:py-4 rounded-none font-black text-lg sm:text-xl transition-all "
                 >
                   X
-                </button>
-                <button
-                  onClick={() => {
-                    const current = currentGame.tenthFrame || '';
-                    handleTenthFrameChange(current + '/');
-                  }}
-                  className="bg-amber-400 hover:bg-amber-500 border-4 border-black text-black py-3 sm:py-4 rounded-none font-black text-lg sm:text-xl transition-all "
-                >
-                  /
                 </button>
               </div>
             </div>
