@@ -16,27 +16,27 @@ export default function Dashboard() {
   const [isClosingModal, setIsClosingModal] = useState(false);
   const [showMoreGames, setShowMoreGames] = useState(false);
 
-  const refreshData = () => {
-    const stats = calculateTeamStats();
+  const refreshData = async () => {
+    const stats = await calculateTeamStats();
     setTeamStats(stats);
     
-    const games = getTopIndividualGames(10);
+    const games = await getTopIndividualGames(10);
     setTopGames(games.map(g => ({
       playerName: g.playerName,
       totalScore: g.totalScore,
       date: g.date,
     })));
     
-    const teamSums = getTopTeamSumGames(5);
+    const teamSums = await getTopTeamSumGames(5);
     setTopTeamSums(teamSums);
     
-    const averages = getTopIndividualAverages(100); // Show all players
+    const averages = await getTopIndividualAverages(100); // Show all players
     setTopAverages(averages.map(a => ({
       playerName: a.playerName,
       average: a.average,
     })));
     
-    const tenthFrameAverages = getTopTenthFrameAverages(100); // Show all players
+    const tenthFrameAverages = await getTopTenthFrameAverages(100); // Show all players
     setTopTenthFrameAverages(tenthFrameAverages.map(a => ({
       playerName: a.playerName,
       average: a.average,
@@ -45,8 +45,8 @@ export default function Dashboard() {
 
   useEffect(() => {
     refreshData();
-    // Refresh every 2 seconds to catch updates from other tabs
-    const interval = setInterval(refreshData, 2000);
+    // Refresh every 5 seconds to catch updates (Supabase is real-time, but keeping for safety)
+    const interval = setInterval(refreshData, 5000);
     return () => clearInterval(interval);
   }, []);
 

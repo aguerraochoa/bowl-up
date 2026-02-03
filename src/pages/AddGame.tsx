@@ -5,7 +5,7 @@ import type { Player, Game } from '../types';
 import { Check, X, ArrowRight, ArrowLeft, RotateCcw } from 'lucide-react';
 
 export default function AddGame() {
-  const [allPlayers, setAllPlayers] = useState<Player[]>(getPlayers());
+  const [allPlayers, setAllPlayers] = useState<Player[]>([]);
   const [selectedPlayers, setSelectedPlayers] = useState<string[]>([]); // Array of player IDs in order
   const [currentStep, setCurrentStep] = useState(0); // 0 = select players, 1 = enter scores, 2 = review
   const [currentPlayerIndex, setCurrentPlayerIndex] = useState(0);
@@ -19,7 +19,11 @@ export default function AddGame() {
   const [error, setError] = useState<string>('');
 
   useEffect(() => {
-    setAllPlayers(getPlayers());
+    const loadPlayers = async () => {
+      const players = await getPlayers();
+      setAllPlayers(players);
+    };
+    loadPlayers();
   }, []);
 
   const handleAddPlayer = (playerId: string) => {
@@ -122,14 +126,15 @@ export default function AddGame() {
     }
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     const playersList = getSelectedPlayersList();
     // Save all games
     const date = new Date().toISOString().split('T')[0];
-    gameData.forEach((game, index) => {
+    for (let index = 0; index < gameData.length; index++) {
+      const game = gameData[index];
       if (game.totalScore !== undefined && game.tenthFrame) {
         const newGame: Game = {
-          id: `game-${Date.now()}-${index}`,
+          id: crypto.randomUUID(),
           playerId: playersList[index].id,
           date,
           totalScore: game.totalScore!,
@@ -137,9 +142,9 @@ export default function AddGame() {
           sparesFrames1to9: game.sparesFrames1to9 || 0,
           tenthFrame: game.tenthFrame,
         };
-        addGame(newGame);
+        await addGame(newGame);
       }
-    });
+    }
 
     // Reset
     setCurrentStep(0);

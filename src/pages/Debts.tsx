@@ -1,12 +1,12 @@
 import { useState, useEffect } from 'react';
-import { getDebts, getDebtTags, getPlayers, addDebt, updateDebt, removeDebt, saveDebtTags } from '../utils/storage';
+import { getDebts, getDebtTags, getPlayers, addDebt, updateDebt, removeDebt, addDebtTag, updateDebtTag, removeDebtTag } from '../utils/storage';
 import type { Debt, DebtTag, Player } from '../types';
 import { Plus, DollarSign, Users, Tag, X, Edit2, Trash2, Check } from 'lucide-react';
 
 export default function Debts() {
-  const [debts, setDebts] = useState<Debt[]>(getDebts());
-  const [tags, setTags] = useState<DebtTag[]>(getDebtTags());
-  const [players] = useState<Player[]>(getPlayers());
+  const [debts, setDebts] = useState<Debt[]>([]);
+  const [tags, setTags] = useState<DebtTag[]>([]);
+  const [players, setPlayers] = useState<Player[]>([]);
   const [showAddDebt, setShowAddDebt] = useState(false);
   const [isClosingDebt, setIsClosingDebt] = useState(false);
   const [editingDebtId, setEditingDebtId] = useState<string | null>(null);
@@ -27,8 +27,17 @@ export default function Debts() {
   });
 
   useEffect(() => {
-    setDebts(getDebts());
-    setTags(getDebtTags());
+    const loadData = async () => {
+      const [loadedDebts, loadedTags, loadedPlayers] = await Promise.all([
+        getDebts(),
+        getDebtTags(),
+        getPlayers(),
+      ]);
+      setDebts(loadedDebts);
+      setTags(loadedTags);
+      setPlayers(loadedPlayers);
+    };
+    loadData();
   }, []);
 
   // Prevent body scroll when modal is open
@@ -166,7 +175,7 @@ export default function Debts() {
     }
   };
 
-  const handleSaveDebt = () => {
+  const handleSaveDebt = async () => {
     // Validate required fields
     if (expenseType === 'tag' && !newDebt.tag) {
       alert('Please select a tag or switch to custom expense');
@@ -182,7 +191,7 @@ export default function Debts() {
     }
 
     const debt: Debt = {
-      id: editingDebtId || `debt-${Date.now()}`,
+      id: editingDebtId || crypto.randomUUID(),
       tag: expenseType === 'tag' ? newDebt.tag : undefined,
       customName: expenseType === 'custom' ? customExpenseName.trim() : undefined,
       amount: newDebt.amount || 0,
@@ -197,12 +206,13 @@ export default function Debts() {
     };
 
     if (editingDebtId) {
-      updateDebt(editingDebtId, debt);
+      await updateDebt(editingDebtId, debt);
     } else {
-      addDebt(debt);
+      await addDebt(debt);
     }
     
-    setDebts(getDebts());
+    const loadedDebts = await getDebts();
+    setDebts(loadedDebts);
     setIsClosingDebt(true);
     setTimeout(() => {
       setShowAddDebt(false);
@@ -257,7 +267,7 @@ export default function Debts() {
     setShowAddTag(true);
   };
 
-  const handleSaveTag = () => {
+  const handleSaveTag = async () => {
     if (!newTagName.trim() || newTagAmount <= 0) {
       alert('Please enter a tag name and a valid amount');
       return;
@@ -265,25 +275,26 @@ export default function Debts() {
 
     if (editingTagId) {
       // Update existing tag
-      const updatedTags = tags.map(tag => 
-        tag.id === editingTagId
-          ? { ...tag, name: newTagName.trim(), defaultAmount: newTagAmount }
-          : tag
-      );
-      saveDebtTags(updatedTags);
-      setTags(updatedTags);
+      const tagToUpdate = tags.find(t => t.id === editingTagId);
+      if (tagToUpdate) {
+        await updateDebtTag(editingTagId, {
+          ...tagToUpdate,
+          name: newTagName.trim(),
+          defaultAmount: newTagAmount,
+        });
+      }
     } else {
       // Create new tag
       const newTag: DebtTag = {
-        id: `tag-${Date.now()}`,
+        id: crypto.randomUUID(),
         name: newTagName.trim(),
         defaultAmount: newTagAmount,
       };
-      const updatedTags = [...tags, newTag];
-      saveDebtTags(updatedTags);
-      setTags(updatedTags);
+      await addDebtTag(newTag);
     }
     
+    const loadedTags = await getDebtTags();
+    setTags(loadedTags);
     setNewTagName('');
     setNewTagAmount(0);
     setEditingTagId(null);
@@ -305,11 +316,11 @@ export default function Debts() {
     }, 300);
   };
 
-  const handleDeleteTag = (tagId: string) => {
+  const handleDeleteTag = async (tagId: string) => {
     if (confirm('Are you sure you want to delete this tag? This will not delete expenses using this tag.')) {
-      const updatedTags = tags.filter(t => t.id !== tagId);
-      saveDebtTags(updatedTags);
-      setTags(updatedTags);
+      await removeDebtTag(tagId);
+      const loadedTags = await getDebtTags();
+      setTags(loadedTags);
     }
   };
 

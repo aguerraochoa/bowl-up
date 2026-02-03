@@ -1,15 +1,17 @@
 import { useState, useEffect } from 'react';
-import { getPlayers, addPlayer, removePlayer, savePlayers } from '../utils/storage';
+import { getPlayers, addPlayer, removePlayer } from '../utils/storage';
 import { calculatePlayerStats } from '../utils/stats';
+import { supabase } from '../lib/supabase';
 import type { Player, Stats } from '../types';
 import { Plus, X, TrendingUp, TrendingDown, Target, Pencil, Check } from 'lucide-react';
 
 export default function Players() {
-  const [players, setPlayers] = useState<Player[]>(getPlayers());
+  const [players, setPlayers] = useState<Player[]>([]);
+  const [playersStats, setPlayersStats] = useState<Record<string, Stats>>({});
   const [selectedPlayer, setSelectedPlayer] = useState<Player | null>(null);
   const [playerStats, setPlayerStats] = useState<Stats | null>(null);
   const [isClosingStats, setIsClosingStats] = useState(false);
-  const [showAddPlayer, setShowAddPlayer] = useState(players.length === 0);
+  const [showAddPlayer, setShowAddPlayer] = useState(false);
   const [isClosingAddPlayer, setIsClosingAddPlayer] = useState(false);
   const [newPlayerName, setNewPlayerName] = useState('');
   const [isEditMode, setIsEditMode] = useState(false);
@@ -17,13 +19,29 @@ export default function Players() {
   const [editingPlayerName, setEditingPlayerName] = useState('');
 
   useEffect(() => {
-    setPlayers(getPlayers());
+    const loadPlayers = async () => {
+      const loadedPlayers = await getPlayers();
+      setPlayers(loadedPlayers);
+      setShowAddPlayer(loadedPlayers.length === 0);
+      
+      // Calculate stats for all players
+      const statsMap: Record<string, Stats> = {};
+      for (const player of loadedPlayers) {
+        statsMap[player.id] = await calculatePlayerStats(player.id);
+      }
+      setPlayersStats(statsMap);
+    };
+    loadPlayers();
   }, []);
 
   useEffect(() => {
     if (selectedPlayer) {
-      setPlayerStats(calculatePlayerStats(selectedPlayer.id));
-      setIsClosingStats(false);
+      const loadStats = async () => {
+        const stats = await calculatePlayerStats(selectedPlayer.id);
+        setPlayerStats(stats);
+        setIsClosingStats(false);
+      };
+      loadStats();
     }
   }, [selectedPlayer]);
 
@@ -39,15 +57,16 @@ export default function Players() {
     };
   }, [selectedPlayer, playerStats, isClosingStats, showAddPlayer, isClosingAddPlayer]);
 
-  const handleAddPlayer = () => {
+  const handleAddPlayer = async () => {
     if (newPlayerName.trim()) {
       const newPlayer: Player = {
-        id: `player-${Date.now()}`,
+        id: crypto.randomUUID(),
         name: newPlayerName.trim(),
-        teamId: 'team-1',
+        teamId: '', // Will be set by Supabase
       };
-      addPlayer(newPlayer);
-      setPlayers(getPlayers());
+      await addPlayer(newPlayer);
+      const loadedPlayers = await getPlayers();
+      setPlayers(loadedPlayers);
       setNewPlayerName('');
       setIsClosingAddPlayer(true);
       setTimeout(() => {
@@ -66,10 +85,11 @@ export default function Players() {
     }, 300);
   };
 
-  const handleRemovePlayer = (playerId: string) => {
+  const handleRemovePlayer = async (playerId: string) => {
     if (confirm('Are you sure you want to remove this player?')) {
-      removePlayer(playerId);
-      setPlayers(getPlayers());
+      await removePlayer(playerId);
+      const loadedPlayers = await getPlayers();
+      setPlayers(loadedPlayers);
       if (selectedPlayer?.id === playerId) {
         setSelectedPlayer(null);
         setPlayerStats(null);
@@ -82,15 +102,20 @@ export default function Players() {
     setEditingPlayerName(player.name);
   };
 
-  const handleSaveEdit = (playerId: string) => {
+  const handleSaveEdit = async (playerId: string) => {
     if (editingPlayerName.trim()) {
-      const updatedPlayers = players.map(p =>
-        p.id === playerId ? { ...p, name: editingPlayerName.trim() } : p
-      );
-      savePlayers(updatedPlayers);
-      setPlayers(getPlayers());
-      setEditingPlayerId(null);
-      setEditingPlayerName('');
+      // Update player in Supabase
+      const { error } = await supabase
+        .from('players')
+        .update({ name: editingPlayerName.trim() })
+        .eq('id', playerId);
+
+      if (!error) {
+        const loadedPlayers = await getPlayers();
+        setPlayers(loadedPlayers);
+        setEditingPlayerId(null);
+        setEditingPlayerName('');
+      }
     }
   };
 
@@ -233,7 +258,15 @@ export default function Players() {
         ) : (
           <div className="space-y-3">
             {players.map((player) => {
-              const stats = calculatePlayerStats(player.id);
+              const stats = playersStats[player.id] || {
+                gamesPlayed: 0,
+                averageScore: 0,
+                strikePercentage: 0,
+                sparePercentage: 0,
+                floor: 0,
+                ceiling: 0,
+                recentAverage: 0,
+              };
               const isEditing = editingPlayerId === player.id;
               
               return (

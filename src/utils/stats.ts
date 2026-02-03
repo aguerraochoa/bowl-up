@@ -2,8 +2,8 @@ import type { Game, Player, Stats } from '../types';
 import { getGames, getPlayers } from './storage';
 import { calculateStrikePercentage, calculateSparePercentage, parseTenthFrame } from './scoring';
 
-export const calculatePlayerStats = (playerId: string): Stats => {
-  const games = getGames().filter(g => g.playerId === playerId);
+export const calculatePlayerStats = async (playerId: string): Promise<Stats> => {
+  const games = (await getGames()).filter(g => g.playerId === playerId);
   
   if (games.length === 0) {
     return {
@@ -51,8 +51,8 @@ export const calculatePlayerStats = (playerId: string): Stats => {
   };
 };
 
-export const calculateTeamStats = () => {
-  const games = getGames();
+export const calculateTeamStats = async () => {
+  const games = await getGames();
   
   if (games.length === 0) {
     return {
@@ -97,9 +97,9 @@ export const calculateTeamStats = () => {
   };
 };
 
-export const getTopIndividualGames = (limit: number = 10): Array<Game & { playerName: string }> => {
-  const games = getGames();
-  const players = getPlayers();
+export const getTopIndividualGames = async (limit: number = 10): Promise<Array<Game & { playerName: string }>> => {
+  const games = await getGames();
+  const players = await getPlayers();
   
   const gamesWithNames = games.map(game => ({
     ...game,
@@ -111,8 +111,8 @@ export const getTopIndividualGames = (limit: number = 10): Array<Game & { player
     .slice(0, limit);
 };
 
-export const getTopTeamSumGames = (limit: number = 5): Array<{ date: string; totalSum: number; players: string[]; games: Game[] }> => {
-  const games = getGames();
+export const getTopTeamSumGames = async (limit: number = 5): Promise<Array<{ date: string; totalSum: number; players: string[]; games: Game[] }>> => {
+  const games = await getGames();
   const gamesByDate = new Map<string, Game[]>();
   
   games.forEach(game => {
@@ -138,9 +138,9 @@ export const getTopTeamSumGames = (limit: number = 5): Array<{ date: string; tot
     .slice(0, limit);
 };
 
-export const getTopIndividualAverages = (limit: number = 5): Array<{ playerId: string; playerName: string; average: number }> => {
-  const players = getPlayers();
-  const games = getGames();
+export const getTopIndividualAverages = async (limit: number = 5): Promise<Array<{ playerId: string; playerName: string; average: number }>> => {
+  const players = await getPlayers();
+  const games = await getGames();
   
   const playerAverages = players.map((player: Player) => {
     const playerGames = games.filter(g => g.playerId === player.id);
@@ -161,9 +161,9 @@ export const getTopIndividualAverages = (limit: number = 5): Array<{ playerId: s
     .slice(0, limit);
 };
 
-export const getTopTenthFrameAverages = (limit: number = 5): Array<{ playerId: string; playerName: string; average: number }> => {
-  const players = getPlayers();
-  const games = getGames();
+export const getTopTenthFrameAverages = async (limit: number = 5): Promise<Array<{ playerId: string; playerName: string; average: number }>> => {
+  const players = await getPlayers();
+  const games = await getGames();
   
   const playerTenthFrameAverages = players.map((player: Player) => {
     const playerGames = games.filter(g => g.playerId === player.id);

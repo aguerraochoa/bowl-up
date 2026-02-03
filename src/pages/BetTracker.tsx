@@ -5,23 +5,32 @@ import { getBetTallies, incrementBetTally, decrementBetTally } from '../utils/st
 import type { Player } from '../types';
 
 export default function BetTracker() {
-  const [players, setPlayers] = useState<Player[]>(getPlayers());
-  const [tallies, setTallies] = useState(getBetTallies());
+  const [players, setPlayers] = useState<Player[]>([]);
+  const [tallies, setTallies] = useState<Record<string, number>>({});
 
   useEffect(() => {
     // Refresh players and tallies when component mounts or updates
-    setPlayers(getPlayers());
-    setTallies(getBetTallies());
+    const loadData = async () => {
+      const [loadedPlayers, loadedTallies] = await Promise.all([
+        getPlayers(),
+        getBetTallies(),
+      ]);
+      setPlayers(loadedPlayers);
+      setTallies(loadedTallies);
+    };
+    loadData();
   }, []);
 
-  const handleIncrement = (playerId: string) => {
-    incrementBetTally(playerId);
-    setTallies(getBetTallies());
+  const handleIncrement = async (playerId: string) => {
+    await incrementBetTally(playerId);
+    const loadedTallies = await getBetTallies();
+    setTallies(loadedTallies);
   };
 
-  const handleDecrement = (playerId: string) => {
-    decrementBetTally(playerId);
-    setTallies(getBetTallies());
+  const handleDecrement = async (playerId: string) => {
+    await decrementBetTally(playerId);
+    const loadedTallies = await getBetTallies();
+    setTallies(loadedTallies);
   };
 
   const getTally = (playerId: string): number => {
