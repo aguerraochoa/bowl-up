@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { getPlayers, addGame, getGames, removeGame, removeGamesBySession } from '../utils/storage';
 import { validateGame } from '../utils/scoring';
 import type { Player, Game } from '../types';
-import { Check, X, ArrowRight, ArrowLeft, RotateCcw, Loader2, Trash2, History } from 'lucide-react';
+import { Check, X, ArrowRight, ArrowLeft, Loader2, Trash2, Clock, Eraser, ChevronDown, ChevronUp } from 'lucide-react';
 
 export default function AddGame() {
   const [allPlayers, setAllPlayers] = useState<Player[]>([]);
@@ -24,25 +24,25 @@ export default function AddGame() {
   const [deletingSessionId, setDeletingSessionId] = useState<string | null>(null);
   const [isLoadingPlayers, setIsLoadingPlayers] = useState(true);
   const [isLoadingGames, setIsLoadingGames] = useState(true);
+  const [expandedSessions, setExpandedSessions] = useState<Set<string>>(new Set());
 
   useEffect(() => {
-    const loadPlayers = async () => {
+    const loadData = async () => {
       setIsLoadingPlayers(true);
-      const players = await getPlayers();
-      setAllPlayers(players);
-      setIsLoadingPlayers(false);
-    };
-    loadPlayers();
-  }, []);
-
-  useEffect(() => {
-    const loadGames = async () => {
       setIsLoadingGames(true);
-      const loadedGames = await getGames();
+      
+      // Load players and games in parallel
+      const [players, loadedGames] = await Promise.all([
+        getPlayers(),
+        getGames(),
+      ]);
+      
+      setAllPlayers(players);
       setGames(loadedGames);
+      setIsLoadingPlayers(false);
       setIsLoadingGames(false);
     };
-    loadGames();
+    loadData();
   }, []);
 
   const handleAddPlayer = (playerId: string) => {
@@ -126,9 +126,18 @@ export default function AddGame() {
         sparesFrames1to9: 0,
         tenthFrame: '',
       });
+      setError('');
+      // Scroll to top when moving to next player (after state update)
+      setTimeout(() => {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }, 0);
     } else {
       // All players done, show review
       setCurrentStep(2);
+      // Scroll to top when moving to review
+      setTimeout(() => {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }, 0);
     }
   };
 
@@ -142,6 +151,8 @@ export default function AddGame() {
         sparesFrames1to9: 0,
         tenthFrame: '',
       });
+      // Scroll to top when going to previous player
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     }
   };
 
@@ -249,10 +260,10 @@ export default function AddGame() {
   if (isLoadingPlayers) {
     return (
       <div className="min-h-screen bg-orange-50 pb-20 safe-top flex items-center justify-center px-4 relative">
-        <div className="text-center">
-          <Loader2 className="w-8 h-8 animate-spin mx-auto mb-4 text-black" />
-          <p className="text-black font-bold">Loading players...</p>
-        </div>
+          <div className="text-center">
+            <Loader2 className="w-8 h-8 animate-spin mx-auto mb-4 text-black" />
+            <p className="text-black font-bold text-base">Loading players...</p>
+          </div>
       </div>
     );
   }
@@ -286,18 +297,17 @@ export default function AddGame() {
                 }}
                 className="border-4 border-black text-black px-3 sm:px-4 py-2 sm:py-3 rounded-none font-black flex items-center gap-2 text-sm sm:text-base bg-amber-400 hover:bg-amber-500"
               >
-                <History className="w-4 h-4 sm:w-5 sm:h-5" />
+                <Clock className="w-4 h-4 sm:w-5 sm:h-5" />
                 <span className="hidden sm:inline">History</span>
               </button>
-              {selectedPlayers.length > 0 && (
-                <button
-                  onClick={handleClearSelection}
-                  className="bg-amber-400 border-4 border-black text-black px-3 sm:px-4 py-2 sm:py-3 rounded-none font-black  flex items-center gap-2 text-sm sm:text-base"
-                >
-                  <RotateCcw className="w-4 h-4 sm:w-5 sm:h-5" />
-                  <span className="hidden sm:inline">Clear</span>
-                </button>
-              )}
+              <button
+                onClick={handleClearSelection}
+                disabled={selectedPlayers.length === 0}
+                className="bg-amber-400 border-4 border-black text-black px-3 sm:px-4 py-2 sm:py-3 rounded-none font-black flex items-center gap-2 text-sm sm:text-base disabled:bg-gray-300 disabled:cursor-not-allowed disabled:opacity-70"
+              >
+                <Eraser className="w-4 h-4 sm:w-5 sm:h-5" />
+                <span className="hidden sm:inline">Clear</span>
+              </button>
             </div>
           </div>
 
@@ -383,8 +393,8 @@ export default function AddGame() {
                 <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-4 sm:py-6 bg-white min-h-0">
                   {isLoadingGames ? (
                     <div className="flex items-center justify-center py-8">
-                      <Loader2 className="w-6 h-6 animate-spin text-black mr-2" />
-                      <p className="text-black font-bold text-sm sm:text-base">Loading games...</p>
+                      <Loader2 className="w-8 h-8 animate-spin text-black mr-2" />
+                      <p className="text-black font-bold text-base">Loading games...</p>
                     </div>
                   ) : games.length === 0 ? (
                     <p className="text-black font-bold text-sm sm:text-base">No games recorded yet.</p>
@@ -413,16 +423,38 @@ export default function AddGame() {
                             {sessions.map(([sessionId, sessionGames]) => {
                               const totalSum = sessionGames.reduce((sum, g) => sum + g.totalScore, 0);
                               const date = sessionGames[0]?.date || '';
+                              const isExpanded = expandedSessions.has(sessionId);
                               return (
                                 <div key={sessionId} className="bg-amber-400 border-4 border-black p-3 sm:p-4">
                                   <div className="flex items-center justify-between mb-2">
-                                    <div className="flex-1">
-                                      <p className="font-black text-black text-sm sm:text-base">
-                                        {new Date(date).toLocaleDateString()}
-                                      </p>
-                                      <p className="text-xs sm:text-sm text-black font-bold">
-                                        Team Total: {totalSum} | {sessionGames.length} players
-                                      </p>
+                                    <div className="flex-1 flex items-center gap-2">
+                                      <button
+                                        onClick={() => {
+                                          const newExpanded = new Set(expandedSessions);
+                                          if (isExpanded) {
+                                            newExpanded.delete(sessionId);
+                                          } else {
+                                            newExpanded.add(sessionId);
+                                          }
+                                          setExpandedSessions(newExpanded);
+                                        }}
+                                        className="p-1 hover:bg-amber-500 transition-all"
+                                        aria-label={isExpanded ? "Collapse" : "Expand"}
+                                      >
+                                        {isExpanded ? (
+                                          <ChevronUp className="w-5 h-5 text-black" />
+                                        ) : (
+                                          <ChevronDown className="w-5 h-5 text-black" />
+                                        )}
+                                      </button>
+                                      <div className="flex-1">
+                                        <p className="font-black text-black text-sm sm:text-base">
+                                          {new Date(date).toLocaleDateString()}
+                                        </p>
+                                        <p className="text-xs sm:text-sm text-black font-bold">
+                                          Team Total: {totalSum} | {sessionGames.length} players
+                                        </p>
+                                      </div>
                                     </div>
                                     <button
                                       onClick={() => handleDeleteSession(sessionId)}
@@ -443,19 +475,21 @@ export default function AddGame() {
                                       )}
                                     </button>
                                   </div>
-                                  <div className="space-y-2 mt-3">
-                                    {sessionGames.map(game => {
-                                      const player = allPlayers.find(p => p.id === game.playerId);
-                                      return (
-                                        <div key={game.id} className="bg-white border-2 border-black p-2">
-                                          <p className="font-black text-black text-sm sm:text-base">{player?.name || 'Unknown'}</p>
-                                          <p className="text-xs text-black font-bold">
-                                            Score: {game.totalScore} | Strikes: {game.strikesFrames1to9} | Spares: {game.sparesFrames1to9}
-                                          </p>
-                                        </div>
-                                      );
-                                    })}
-                                  </div>
+                                  {isExpanded && (
+                                    <div className="space-y-2 mt-3">
+                                      {sessionGames.map(game => {
+                                        const player = allPlayers.find(p => p.id === game.playerId);
+                                        return (
+                                          <div key={game.id} className="bg-white border-2 border-black p-2">
+                                            <p className="font-black text-black text-sm sm:text-base">{player?.name || 'Unknown'}</p>
+                                            <p className="text-xs text-black font-bold">
+                                              Score: {game.totalScore} | Strikes: {game.strikesFrames1to9} | Spares: {game.sparesFrames1to9}
+                                            </p>
+                                          </div>
+                                        );
+                                      })}
+                                    </div>
+                                  )}
                                 </div>
                               );
                             })}

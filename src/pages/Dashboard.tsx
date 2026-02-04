@@ -111,8 +111,8 @@ export default function Dashboard() {
     return (
       <div className="min-h-screen bg-orange-50 pb-20 md:pb-6 safe-top relative flex items-center justify-center">
         <div className="text-center">
-          <Loader2 className="w-12 h-12 animate-spin mx-auto mb-4 text-black" />
-          <p className="text-black font-black text-xl uppercase">Loading Dashboard...</p>
+          <Loader2 className="w-8 h-8 animate-spin mx-auto mb-4 text-black" />
+          <p className="text-black font-bold text-base">Loading Dashboard...</p>
         </div>
       </div>
     );

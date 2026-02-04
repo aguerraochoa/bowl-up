@@ -414,7 +414,7 @@ export default function Debts() {
                 {isLoading ? (
                   <div className="bg-white rounded-none border-4 border-black p-12 text-center">
                     <Loader2 className="w-8 h-8 animate-spin mx-auto mb-4 text-black" />
-                    <p className="text-black font-bold">Loading expenses...</p>
+                    <p className="text-black font-bold text-base">Loading expenses...</p>
                   </div>
                 ) : debts.length === 0 ? (
                   <div className="bg-white rounded-none border-4 border-black p-12 text-center ">
@@ -535,8 +535,8 @@ export default function Debts() {
                 </div>
                 {isLoading ? (
                   <div className="text-center py-4">
-                    <Loader2 className="w-6 h-6 animate-spin mx-auto mb-2 text-black" />
-                    <p className="text-black font-bold">Loading tags...</p>
+                    <Loader2 className="w-8 h-8 animate-spin mx-auto mb-4 text-black" />
+                    <p className="text-black font-bold text-base">Loading tags...</p>
                   </div>
                 ) : tags.length === 0 ? (
                   <p className="text-black text-center py-4 font-bold">No tags created yet. Click "New Tag" to create one.</p>
@@ -636,7 +636,7 @@ export default function Debts() {
                 {isLoading ? (
                   <div className="bg-white rounded-none border-4 border-black p-12 text-center">
                     <Loader2 className="w-8 h-8 animate-spin mx-auto mb-4 text-black" />
-                    <p className="text-black font-bold text-lg">Loading expenses...</p>
+                    <p className="text-black font-bold text-base">Loading expenses...</p>
                   </div>
                 ) : debts.length === 0 ? (
                   <div className="bg-white rounded-none border-4 border-black p-12 text-center">
@@ -758,8 +758,8 @@ export default function Debts() {
                 </div>
                 {isLoading ? (
                   <div className="text-center py-8">
-                    <Loader2 className="w-6 h-6 animate-spin mx-auto mb-2 text-black" />
-                    <p className="text-black font-bold text-lg">Loading tags...</p>
+                    <Loader2 className="w-8 h-8 animate-spin mx-auto mb-4 text-black" />
+                    <p className="text-black font-bold text-base">Loading tags...</p>
                   </div>
                 ) : tags.length === 0 ? (
                   <p className="text-black text-center py-8 font-bold text-lg">No tags created yet. Click "New Tag" to create one.</p>

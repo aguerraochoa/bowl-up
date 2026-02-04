@@ -23,7 +23,7 @@ export const getTeam = async (): Promise<Team | null> => {
 
   const { data: team, error } = await supabase
     .from('teams')
-    .select('id, name, league, league_id, features')
+    .select('id, name, league, league_id')
     .eq('user_id', user.id)
     .single();
 
@@ -50,7 +50,6 @@ export const getTeam = async (): Promise<Team | null> => {
       name: t.name,
       defaultAmount: parseFloat(t.default_amount.toString()),
     })),
-    features: team.features || { betTracker: false },
   };
 };
 
@@ -63,7 +62,6 @@ export const saveTeam = async (team: Team): Promise<void> => {
     .update({
       name: team.name,
       league: team.league,
-      features: team.features || { betTracker: false },
     })
     .eq('id', teamId);
 
@@ -607,38 +605,6 @@ export const decrementBetTally = async (playerId: string): Promise<void> => {
   }
 };
 
-// Enable/disable tracker feature
-export const enableBetTracker = async (): Promise<void> => {
-  const teamId = await getTeamId();
-  if (!teamId) return;
-
-  const { error } = await supabase
-    .from('teams')
-    .update({
-      features: { betTracker: true },
-    })
-    .eq('id', teamId);
-
-  if (error) {
-    console.error('Error enabling bet tracker:', error);
-  }
-};
-
-export const disableBetTracker = async (): Promise<void> => {
-  const teamId = await getTeamId();
-  if (!teamId) return;
-
-  const { error } = await supabase
-    .from('teams')
-    .update({
-      features: { betTracker: false },
-    })
-    .eq('id', teamId);
-
-  if (error) {
-    console.error('Error disabling bet tracker:', error);
-  }
-};
 
 // Initialize default data
 export const initializeDefaultData = async (): Promise<void> => {

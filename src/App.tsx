@@ -1,7 +1,7 @@
 import { useState, useEffect, lazy, Suspense } from 'react';
 import BottomNav from './components/BottomNav';
 import { supabase } from './lib/supabase';
-import { initializeDefaultData, getTeam } from './utils/storage';
+import { initializeDefaultData } from './utils/storage';
 
 // Lazy load main pages
 const Dashboard = lazy(() => import('./pages/Dashboard'));
@@ -19,7 +19,6 @@ const ColorPalettes = lazy(() => import('./pages/ColorPalettes'));
 
 function App() {
   const [activeTab, setActiveTab] = useState('dashboard');
-  const [showBetTracker, setShowBetTracker] = useState(false);
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
@@ -42,24 +41,11 @@ function App() {
 
   useEffect(() => {
     if (!user) {
-      setShowBetTracker(false);
       return;
     }
 
     // Initialize default data on first load
     initializeDefaultData();
-    
-    // Check if tracker feature is enabled
-    getTeam().then(team => {
-      if (team) {
-        setShowBetTracker(team.features?.betTracker === true);
-      } else {
-        setShowBetTracker(false);
-      }
-    }).catch(error => {
-      console.error('Error loading team:', error);
-      setShowBetTracker(false);
-    });
     
     // Handle routing
     const handleRoute = () => {
@@ -87,7 +73,6 @@ function App() {
   const handleSignOut = async () => {
     await supabase.auth.signOut();
     setUser(null);
-    setShowBetTracker(false);
     setActiveTab('login');
     window.history.pushState({}, '', '/login');
   };
@@ -136,18 +121,21 @@ function App() {
     </div>
   );
 
+  // Empty fallback for main pages - they have their own loading states
+  const EmptyFallback = () => null;
+
   const renderContent = () => {
     switch (activeTab) {
       case 'dashboard':
-        return <Suspense fallback={<LoadingSpinner />}><Dashboard /></Suspense>;
+        return <Suspense fallback={<EmptyFallback />}><Dashboard /></Suspense>;
       case 'add-game':
-        return <Suspense fallback={<LoadingSpinner />}><AddGame /></Suspense>;
+        return <Suspense fallback={<EmptyFallback />}><AddGame /></Suspense>;
       case 'players':
-        return <Suspense fallback={<LoadingSpinner />}><Players /></Suspense>;
+        return <Suspense fallback={<EmptyFallback />}><Players /></Suspense>;
       case 'debts':
-        return <Suspense fallback={<LoadingSpinner />}><Debts /></Suspense>;
+        return <Suspense fallback={<EmptyFallback />}><Debts /></Suspense>;
       case 'bet-tracker':
-        return <Suspense fallback={<LoadingSpinner />}><BetTracker /></Suspense>;
+        return <Suspense fallback={<EmptyFallback />}><BetTracker /></Suspense>;
       case 'designs':
         return <Suspense fallback={<LoadingSpinner />}><Designs /></Suspense>;
       case 'debts-designs':
@@ -155,7 +143,7 @@ function App() {
       case 'color':
         return <Suspense fallback={<LoadingSpinner />}><ColorPalettes /></Suspense>;
       default:
-        return <Suspense fallback={<LoadingSpinner />}><Dashboard /></Suspense>;
+        return <Suspense fallback={<EmptyFallback />}><Dashboard /></Suspense>;
     }
   };
 
@@ -164,7 +152,7 @@ function App() {
       <div className="md:pl-64">
         {renderContent()}
       </div>
-      {activeTab !== 'designs' && activeTab !== 'debts-designs' && activeTab !== 'color' && <BottomNav activeTab={activeTab} onTabChange={handleTabChange} showBetTracker={showBetTracker} onSignOut={handleSignOut} />}
+      {activeTab !== 'designs' && activeTab !== 'debts-designs' && activeTab !== 'color' && <BottomNav activeTab={activeTab} onTabChange={handleTabChange} onSignOut={handleSignOut} />}
       {(activeTab === 'designs' || activeTab === 'debts-designs' || activeTab === 'color') && (
         <div className="fixed bottom-4 right-4">
           <a

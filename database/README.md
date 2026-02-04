@@ -16,18 +16,11 @@ This folder contains SQL migration scripts for the BowlUp database.
 - Creates index for performance
 - Allows grouping games from the same team game session
 
-## Utility Scripts
-
-### `enable_bet_tracker.sql`
-**Enable Bet Tracker feature** - Run this to enable the Bet Tracker tab for your team.
-- Updates your team's `features` JSONB to enable `betTracker`
-- See the file for instructions on how to use it
-
 ## Migration Order
 
 1. **First time setup**: Run `schema.sql`
 2. **Add game sessions**: Run `add_game_session_id.sql`
-3. **Enable features** (optional): Run `enable_bet_tracker.sql` if needed
+3. **Remove features column** (optional): Run `remove_features_column.sql` to clean up the unused `features` column from teams table
 
 ## Notes
 

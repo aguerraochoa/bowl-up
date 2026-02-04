@@ -2,10 +2,11 @@ import type { Game, Player, Stats } from '../types';
 import { getGames, getPlayers } from './storage';
 import { calculateStrikePercentage, calculateSparePercentage, parseTenthFrame } from './scoring';
 
-export const calculatePlayerStats = async (playerId: string): Promise<Stats> => {
-  const games = (await getGames()).filter(g => g.playerId === playerId);
+// Optimized version that accepts games data
+export const calculatePlayerStatsFromData = (playerId: string, games: Game[]): Stats => {
+  const playerGames = games.filter(g => g.playerId === playerId);
   
-  if (games.length === 0) {
+  if (playerGames.length === 0) {
     return {
       gamesPlayed: 0,
       averageScore: 0,
@@ -14,41 +15,57 @@ export const calculatePlayerStats = async (playerId: string): Promise<Stats> => 
       floor: 0,
       ceiling: 0,
       recentAverage: 0,
+      averageTenthFrame: 0,
     };
   }
   
-  const scores = games.map(g => g.totalScore);
+  const scores = playerGames.map(g => g.totalScore);
   const totalScore = scores.reduce((sum, score) => sum + score, 0);
-  const averageScore = totalScore / games.length;
+  const averageScore = totalScore / playerGames.length;
   
   // Calculate strike and spare percentages
   let totalStrikePct = 0;
   let totalSparePct = 0;
-  games.forEach(game => {
+  playerGames.forEach(game => {
     totalStrikePct += calculateStrikePercentage(game);
     totalSparePct += calculateSparePercentage(game);
   });
-  const strikePercentage = games.length > 0 ? totalStrikePct / games.length : 0;
-  const sparePercentage = games.length > 0 ? totalSparePct / games.length : 0;
+  const strikePercentage = playerGames.length > 0 ? totalStrikePct / playerGames.length : 0;
+  const sparePercentage = playerGames.length > 0 ? totalSparePct / playerGames.length : 0;
   
   // Floor and ceiling
   const floor = Math.min(...scores);
   const ceiling = Math.max(...scores);
   
   // Recent average (last 10 games)
-  const recentGames = games.slice(-10);
+  const recentGames = playerGames.slice(-10);
   const recentTotal = recentGames.reduce((sum, g) => sum + g.totalScore, 0);
   const recentAverage = recentGames.length > 0 ? recentTotal / recentGames.length : 0;
   
+  // Calculate average 10th frame score
+  let totalTenthFramePins = 0;
+  playerGames.forEach(game => {
+    const tenthFrame = parseTenthFrame(game.tenthFrame);
+    totalTenthFramePins += tenthFrame.totalPins;
+  });
+  const averageTenthFrame = playerGames.length > 0 ? totalTenthFramePins / playerGames.length : 0;
+  
   return {
-    gamesPlayed: games.length,
+    gamesPlayed: playerGames.length,
     averageScore: Math.round(averageScore * 10) / 10,
     strikePercentage: Math.round(strikePercentage * 10) / 10,
     sparePercentage: Math.round(sparePercentage * 10) / 10,
     floor,
     ceiling,
     recentAverage: Math.round(recentAverage * 10) / 10,
+    averageTenthFrame: Math.round(averageTenthFrame * 10) / 10,
   };
+};
+
+// Keep original async version for backward compatibility
+export const calculatePlayerStats = async (playerId: string): Promise<Stats> => {
+  const games = await getGames();
+  return calculatePlayerStatsFromData(playerId, games);
 };
 
 // Optimized version that accepts games data

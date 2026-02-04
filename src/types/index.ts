@@ -53,9 +53,6 @@ export interface Team {
   leagueId?: string;
   players: Player[];
   debtTags: DebtTag[];
-  features?: {
-    betTracker?: boolean;
-  };
 }
 
 export interface BetTallies {
@@ -70,4 +67,5 @@ export interface Stats {
   floor: number; // lowest score
   ceiling: number; // highest score
   recentAverage: number; // last 10 games
+  averageTenthFrame: number; // average 10th frame score
 }

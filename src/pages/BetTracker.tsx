@@ -25,15 +25,44 @@ export default function BetTracker() {
   }, []);
 
   const handleIncrement = async (playerId: string) => {
-    await incrementBetTally(playerId);
-    const loadedTallies = await getBetTallies();
-    setTallies(loadedTallies);
+    // Optimistically update UI
+    setTallies(prev => ({
+      ...prev,
+      [playerId]: (prev[playerId] || 0) + 1,
+    }));
+    
+    try {
+      await incrementBetTally(playerId);
+      // Reload to ensure consistency (in case of errors or concurrent updates)
+      const loadedTallies = await getBetTallies();
+      setTallies(loadedTallies);
+    } catch (error) {
+      // On error, reload to get correct state
+      const loadedTallies = await getBetTallies();
+      setTallies(loadedTallies);
+    }
   };
 
   const handleDecrement = async (playerId: string) => {
-    await decrementBetTally(playerId);
-    const loadedTallies = await getBetTallies();
-    setTallies(loadedTallies);
+    const currentTally = tallies[playerId] || 0;
+    if (currentTally === 0) return; // Already at 0, nothing to do
+    
+    // Optimistically update UI
+    setTallies(prev => ({
+      ...prev,
+      [playerId]: (prev[playerId] || 0) - 1,
+    }));
+    
+    try {
+      await decrementBetTally(playerId);
+      // Reload to ensure consistency (in case of errors or concurrent updates)
+      const loadedTallies = await getBetTallies();
+      setTallies(loadedTallies);
+    } catch (error) {
+      // On error, reload to get correct state
+      const loadedTallies = await getBetTallies();
+      setTallies(loadedTallies);
+    }
   };
 
   const getTally = (playerId: string): number => {
@@ -51,7 +80,7 @@ export default function BetTracker() {
         {isLoading ? (
           <div className="bg-white rounded-none border-4 border-black p-12 text-center">
             <Loader2 className="w-8 h-8 animate-spin mx-auto mb-4 text-black" />
-            <p className="text-black font-bold">Loading tracker...</p>
+            <p className="text-black font-bold text-base">Loading tracker...</p>
           </div>
         ) : players.length === 0 ? (
           <div className="bg-white rounded-none border-4 border-black p-12 text-center">

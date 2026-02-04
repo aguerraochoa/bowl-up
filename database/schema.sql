@@ -7,7 +7,6 @@ CREATE TABLE IF NOT EXISTS teams (
   user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE UNIQUE NOT NULL,
   name TEXT NOT NULL,
   league TEXT DEFAULT '',
-  features JSONB DEFAULT '{"betTracker": false}'::jsonb,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc', NOW()) NOT NULL,
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc', NOW()) NOT NULL
 );
@@ -64,7 +63,7 @@ CREATE TABLE IF NOT EXISTS debt_split_between (
   PRIMARY KEY (debt_id, player_id)
 );
 
--- Bet tallies table (for teams with betTracker enabled)
+-- Bet tallies table
 CREATE TABLE IF NOT EXISTS bet_tallies (
   team_id UUID REFERENCES teams(id) ON DELETE CASCADE NOT NULL,
   player_id UUID REFERENCES players(id) ON DELETE CASCADE NOT NULL,

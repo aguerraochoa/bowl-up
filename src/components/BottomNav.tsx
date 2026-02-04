@@ -4,11 +4,10 @@ import { Home, Plus, Users, DollarSign, Target, LogOut, MoreHorizontal, X } from
 interface BottomNavProps {
   activeTab: string;
   onTabChange: (tab: string) => void;
-  showBetTracker?: boolean;
   onSignOut?: () => void;
 }
 
-export default function BottomNav({ activeTab, onTabChange, showBetTracker = false, onSignOut }: BottomNavProps) {
+export default function BottomNav({ activeTab, onTabChange, onSignOut }: BottomNavProps) {
   const [showMoreMenu, setShowMoreMenu] = useState(false);
   const [isClosing, setIsClosing] = useState(false);
 
@@ -53,7 +52,7 @@ export default function BottomNav({ activeTab, onTabChange, showBetTracker = fal
   };
 
   const menuOptions = [
-    ...(showBetTracker ? [{ id: 'bet-tracker', label: 'Bet Tracker', icon: Target, action: () => onTabChange('bet-tracker') }] : []),
+    { id: 'bet-tracker', label: 'Bet Tracker', icon: Target, action: () => onTabChange('bet-tracker') },
     { id: 'sign-out', label: 'Sign Out', icon: LogOut, action: () => onSignOut && onSignOut() },
   ];
 

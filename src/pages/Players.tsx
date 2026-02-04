@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { getPlayers, addPlayer, removePlayer } from '../utils/storage';
-import { calculatePlayerStats } from '../utils/stats';
+import { getPlayers, addPlayer, removePlayer, getGames } from '../utils/storage';
+import { calculatePlayerStatsFromData } from '../utils/stats';
 import { supabase } from '../lib/supabase';
 import type { Player, Stats } from '../types';
 import { Plus, X, TrendingUp, TrendingDown, Target, Pencil, Check, Loader2 } from 'lucide-react';
@@ -24,14 +24,21 @@ export default function Players() {
   useEffect(() => {
     const loadPlayers = async () => {
       setIsLoading(true);
-      const loadedPlayers = await getPlayers();
+      
+      // Fetch all data in parallel
+      const [loadedPlayers, allGames] = await Promise.all([
+        getPlayers(),
+        getGames(),
+      ]);
+      
       setPlayers(loadedPlayers);
       
-      // Calculate stats for all players
+      // Calculate stats for all players in parallel using the fetched games data
       const statsMap: Record<string, Stats> = {};
-      for (const player of loadedPlayers) {
-        statsMap[player.id] = await calculatePlayerStats(player.id);
-      }
+      loadedPlayers.forEach(player => {
+        statsMap[player.id] = calculatePlayerStatsFromData(player.id, allGames);
+      });
+      
       setPlayersStats(statsMap);
       setIsLoading(false);
     };
@@ -41,7 +48,9 @@ export default function Players() {
   useEffect(() => {
     if (selectedPlayer) {
       const loadStats = async () => {
-        const stats = await calculatePlayerStats(selectedPlayer.id);
+        // Fetch games once and calculate stats
+        const allGames = await getGames();
+        const stats = calculatePlayerStatsFromData(selectedPlayer.id, allGames);
         setPlayerStats(stats);
         setIsClosingStats(false);
       };
@@ -72,8 +81,22 @@ export default function Players() {
         teamId: '', // Will be set by Supabase
       };
       await addPlayer(newPlayer);
-      const loadedPlayers = await getPlayers();
+      
+      // Reload players and games in parallel, then recalculate stats
+      const [loadedPlayers, allGames] = await Promise.all([
+        getPlayers(),
+        getGames(),
+      ]);
+      
       setPlayers(loadedPlayers);
+      
+      // Recalculate stats for all players (new player will have default stats)
+      const statsMap: Record<string, Stats> = {};
+      loadedPlayers.forEach(player => {
+        statsMap[player.id] = calculatePlayerStatsFromData(player.id, allGames);
+      });
+      setPlayersStats(statsMap);
+      
       setNewPlayerName('');
       setIsClosingAddPlayer(true);
       setTimeout(() => {
@@ -100,8 +123,22 @@ export default function Players() {
   const handleRemovePlayer = async (playerId: string) => {
     if (confirm('Are you sure you want to remove this player?')) {
       await removePlayer(playerId);
-      const loadedPlayers = await getPlayers();
+      
+      // Reload players and recalculate stats
+      const [loadedPlayers, allGames] = await Promise.all([
+        getPlayers(),
+        getGames(),
+      ]);
+      
       setPlayers(loadedPlayers);
+      
+      // Recalculate stats for all players
+      const statsMap: Record<string, Stats> = {};
+      loadedPlayers.forEach(player => {
+        statsMap[player.id] = calculatePlayerStatsFromData(player.id, allGames);
+      });
+      setPlayersStats(statsMap);
+      
       if (selectedPlayer?.id === playerId) {
         setSelectedPlayer(null);
         setPlayerStats(null);
@@ -126,8 +163,16 @@ export default function Players() {
         .eq('id', playerId);
 
       if (!error) {
-        const loadedPlayers = await getPlayers();
-        setPlayers(loadedPlayers);
+        // Optimistically update the player name in the list (no need to reload stats)
+        setPlayers(prev => prev.map(p => 
+          p.id === playerId ? { ...p, name: editingPlayerName.trim() } : p
+        ));
+        
+        // Update selected player if it's the one being edited
+        if (selectedPlayer?.id === playerId) {
+          setSelectedPlayer({ ...selectedPlayer, name: editingPlayerName.trim() });
+        }
+        
         setEditingPlayerId(null);
         setEditingPlayerName('');
       } else {
@@ -283,7 +328,7 @@ export default function Players() {
         {isLoading ? (
           <div className="bg-white rounded-none border-4 border-black p-12 text-center">
             <Loader2 className="w-8 h-8 animate-spin mx-auto mb-4 text-black" />
-            <p className="text-black font-bold">Loading players...</p>
+            <p className="text-black font-bold text-base">Loading players...</p>
           </div>
         ) : players.length === 0 ? (
           <div className="bg-white rounded-none border-4 border-black p-12 text-center ">
@@ -461,6 +506,10 @@ export default function Players() {
                   <div className="bg-orange-600 border-4 border-black rounded-none p-3 sm:p-5 ">
                     <p className="text-xs font-black text-black mb-1 uppercase">Spare %</p>
                     <p className="text-2xl sm:text-3xl md:text-4xl font-black text-black">{playerStats.sparePercentage.toFixed(1)}%</p>
+                  </div>
+                  <div className="bg-purple-500 border-4 border-black rounded-none p-3 sm:p-5 ">
+                    <p className="text-xs font-black text-black mb-1 uppercase">Avg 10th Frame</p>
+                    <p className="text-2xl sm:text-3xl md:text-4xl font-black text-black">{playerStats.averageTenthFrame.toFixed(1)}</p>
                   </div>
                 </div>
 
