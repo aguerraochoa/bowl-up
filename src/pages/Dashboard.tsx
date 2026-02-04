@@ -109,7 +109,7 @@ export default function Dashboard() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-orange-50 pb-20 md:pb-6 safe-top relative flex items-center justify-center">
+      <div className="min-h-screen bg-orange-50 pb-20 lg:pb-6 safe-top relative flex items-center justify-center">
         <div className="text-center">
           <Loader2 className="w-8 h-8 animate-spin mx-auto mb-4 text-black" />
           <p className="text-black font-bold text-base">Loading Dashboard...</p>
@@ -119,7 +119,7 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-orange-50 pb-20 md:pb-6 safe-top relative">
+    <div className="min-h-screen bg-orange-50 pb-20 lg:pb-6 safe-top relative">
       <div className="max-w-7xl mx-auto px-4 py-4 md:py-6">
         {/* Header */}
         <div className="mb-4 md:mb-6">
@@ -128,7 +128,7 @@ export default function Dashboard() {
         </div>
 
         {/* Desktop One-Pager Layout */}
-        <div className="hidden md:block">
+        <div className="hidden lg:block">
           <div className="grid grid-cols-12 gap-4">
             {/* Left Column - KPIs */}
             <div className="col-span-3">
@@ -223,7 +223,7 @@ export default function Dashboard() {
         </div>
 
         {/* Mobile Layout */}
-        <div className="md:hidden">
+        <div className="lg:hidden">
           {/* KPI Cards */}
           <div className="grid grid-cols-2 gap-4 mb-6">
             <KPICard

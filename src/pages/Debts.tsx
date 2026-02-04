@@ -353,7 +353,7 @@ export default function Debts() {
   return (
     <div className="min-h-screen bg-orange-50 pb-20 safe-top relative">
       {/* Mobile Layout */}
-      <div className="md:hidden">
+      <div className="lg:hidden">
         <div className="max-w-2xl mx-auto px-4 py-6">
           <div className="mb-4">
             <h1 className="text-3xl font-black text-black uppercase mb-2">Debts Tracker</h1>
@@ -575,7 +575,7 @@ export default function Debts() {
       </div>
 
       {/* Desktop Layout - Tab Navigation */}
-      <div className="hidden md:block">
+      <div className="hidden lg:block">
         <div className="max-w-4xl mx-auto px-6 py-6">
           <div className="mb-6">
             <h1 className="text-4xl md:text-5xl font-black text-black uppercase mb-2">Debts Tracker</h1>

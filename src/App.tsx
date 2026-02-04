@@ -149,7 +149,7 @@ function App() {
 
   return (
     <div className="min-h-screen bg-orange-50">
-      <div className="md:pl-64">
+      <div className="lg:pl-64">
         {renderContent()}
       </div>
       {activeTab !== 'designs' && activeTab !== 'debts-designs' && activeTab !== 'color' && <BottomNav activeTab={activeTab} onTabChange={handleTabChange} onSignOut={handleSignOut} />}

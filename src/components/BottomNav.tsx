@@ -59,7 +59,7 @@ export default function BottomNav({ activeTab, onTabChange, onSignOut }: BottomN
   return (
     <>
       {/* Desktop Sidebar */}
-      <nav className="hidden md:flex fixed left-0 top-0 bottom-0 w-64 bg-white border-r-4 border-black z-50">
+      <nav className="hidden lg:flex fixed left-0 top-0 bottom-0 w-64 bg-white border-r-4 border-black z-50">
         <div className="flex flex-col justify-between items-start w-full h-full pt-6">
           <div className="w-full">
             {mainTabs.map(({ id, label, icon: Icon }) => (
@@ -89,7 +89,7 @@ export default function BottomNav({ activeTab, onTabChange, onSignOut }: BottomN
 
       {/* Desktop More Menu Dropdown */}
       {showMoreMenu && (
-        <div className="hidden md:block fixed left-64 top-0 bottom-0 w-64 bg-white border-r-4 border-black z-40">
+        <div className="hidden lg:block fixed left-64 top-0 bottom-0 w-64 bg-white border-r-4 border-black z-40">
           <div className="flex flex-col items-start w-full h-full pt-6">
             <div className="w-full px-6 py-4 border-b-4 border-black bg-amber-400">
               <div className="flex items-center justify-between">
@@ -125,7 +125,7 @@ export default function BottomNav({ activeTab, onTabChange, onSignOut }: BottomN
       )}
 
       {/* Mobile Bottom Nav */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t-4 border-black safe-bottom z-50">
+      <nav className="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t-4 border-black safe-bottom z-50">
         <div className="flex justify-around items-center h-16">
           {mainTabs.map(({ id, label, icon: Icon }) => (
             <button
