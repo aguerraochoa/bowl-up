@@ -68,13 +68,10 @@ export default function Signup() {
   return (
     <div className="min-h-screen bg-orange-50 flex items-center justify-center px-4">
       <div className="w-full max-w-md">
-        <div className="flex justify-center mb-8">
-          <img src="/logo_text.png" alt="BowlUp" className="h-28 w-auto" />
-        </div>
         <div className="bg-white border-4 border-black p-6 sm:p-8">
-          <p className="text-sm text-black font-bold mb-6 text-center">
-            Create your team account
-          </p>
+          <div className="flex justify-center mb-6">
+            <img src="/logo_text.png" alt="BowlUp" className="h-32 w-auto" />
+          </div>
 
           <form onSubmit={handleSignup} className="space-y-4">
             <div>
