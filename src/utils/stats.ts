@@ -51,9 +51,8 @@ export const calculatePlayerStats = async (playerId: string): Promise<Stats> => 
   };
 };
 
-export const calculateTeamStats = async () => {
-  const games = await getGames();
-  
+// Optimized version that accepts games data
+export const calculateTeamStatsFromData = (games: Game[]) => {
   if (games.length === 0) {
     return {
       teamGameAverage: 0,
@@ -97,10 +96,14 @@ export const calculateTeamStats = async () => {
   };
 };
 
-export const getTopIndividualGames = async (limit: number = 10): Promise<Array<Game & { playerName: string }>> => {
+// Keep original async version for backward compatibility
+export const calculateTeamStats = async () => {
   const games = await getGames();
-  const players = await getPlayers();
-  
+  return calculateTeamStatsFromData(games);
+};
+
+// Optimized version that accepts games and players data
+export const getTopIndividualGamesFromData = (games: Game[], players: Player[], limit: number = 10): Array<Game & { playerName: string }> => {
   const gamesWithNames = games.map(game => ({
     ...game,
     playerName: players.find((p: Player) => p.id === game.playerId)?.name || 'Unknown',
@@ -111,9 +114,15 @@ export const getTopIndividualGames = async (limit: number = 10): Promise<Array<G
     .slice(0, limit);
 };
 
-export const getTopTeamSumGames = async (limit: number = 5): Promise<Array<{ date: string; totalSum: number; players: string[]; games: Game[] }>> => {
+// Keep original async version for backward compatibility
+export const getTopIndividualGames = async (limit: number = 10): Promise<Array<Game & { playerName: string }>> => {
   const games = await getGames();
-  
+  const players = await getPlayers();
+  return getTopIndividualGamesFromData(games, players, limit);
+};
+
+// Optimized version that accepts games data
+export const getTopTeamSumGamesFromData = (games: Game[], limit: number = 5): Array<{ date: string; totalSum: number; players: string[]; games: Game[] }> => {
   // Group by game_session_id instead of date
   const gamesBySession = new Map<string, Game[]>();
   
@@ -140,10 +149,14 @@ export const getTopTeamSumGames = async (limit: number = 5): Promise<Array<{ dat
     .slice(0, limit);
 };
 
-export const getTopIndividualAverages = async (limit: number = 5): Promise<Array<{ playerId: string; playerName: string; average: number }>> => {
-  const players = await getPlayers();
+// Keep original async version for backward compatibility
+export const getTopTeamSumGames = async (limit: number = 5): Promise<Array<{ date: string; totalSum: number; players: string[]; games: Game[] }>> => {
   const games = await getGames();
-  
+  return getTopTeamSumGamesFromData(games, limit);
+};
+
+// Optimized version that accepts games and players data
+export const getTopIndividualAveragesFromData = (games: Game[], players: Player[], limit: number = 5): Array<{ playerId: string; playerName: string; average: number }> => {
   const playerAverages = players.map((player: Player) => {
     const playerGames = games.filter(g => g.playerId === player.id);
     if (playerGames.length === 0) return null;
@@ -163,10 +176,15 @@ export const getTopIndividualAverages = async (limit: number = 5): Promise<Array
     .slice(0, limit);
 };
 
-export const getTopTenthFrameAverages = async (limit: number = 5): Promise<Array<{ playerId: string; playerName: string; average: number }>> => {
+// Keep original async version for backward compatibility
+export const getTopIndividualAverages = async (limit: number = 5): Promise<Array<{ playerId: string; playerName: string; average: number }>> => {
   const players = await getPlayers();
   const games = await getGames();
-  
+  return getTopIndividualAveragesFromData(games, players, limit);
+};
+
+// Optimized version that accepts games and players data
+export const getTopTenthFrameAveragesFromData = (games: Game[], players: Player[], limit: number = 5): Array<{ playerId: string; playerName: string; average: number }> => {
   const playerTenthFrameAverages = players.map((player: Player) => {
     const playerGames = games.filter(g => g.playerId === player.id);
     if (playerGames.length === 0) return null;
@@ -189,4 +207,11 @@ export const getTopTenthFrameAverages = async (limit: number = 5): Promise<Array
   return playerTenthFrameAverages
     .sort((a, b) => b.average - a.average)
     .slice(0, limit);
+};
+
+// Keep original async version for backward compatibility
+export const getTopTenthFrameAverages = async (limit: number = 5): Promise<Array<{ playerId: string; playerName: string; average: number }>> => {
+  const players = await getPlayers();
+  const games = await getGames();
+  return getTopTenthFrameAveragesFromData(games, players, limit);
 };

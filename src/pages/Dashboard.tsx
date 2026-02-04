@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
 import KPICard from '../components/KPICard';
 import LeaderboardCard from '../components/LeaderboardCard';
-import { calculateTeamStats, getTopIndividualGames, getTopTeamSumGames, getTopIndividualAverages, getTopTenthFrameAverages } from '../utils/stats';
-import { getPlayers } from '../utils/storage';
+import { calculateTeamStatsFromData, getTopIndividualGamesFromData, getTopTeamSumGamesFromData, getTopIndividualAveragesFromData, getTopTenthFrameAveragesFromData } from '../utils/stats';
+import { getPlayers, getGames } from '../utils/storage';
 import { Target, Zap, Gamepad2, TrendingUp, X, Loader2 } from 'lucide-react';
 import type { Game } from '../types';
 
@@ -23,37 +23,47 @@ export default function Dashboard() {
   const [isClosingModal, setIsClosingModal] = useState(false);
   const [showMoreGames, setShowMoreGames] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
-  const [isInitialLoad, setIsInitialLoad] = useState(true);
 
   const refreshData = async (showLoading = false) => {
     if (showLoading) {
       setIsLoading(true);
     }
     
-    const stats = await calculateTeamStats();
-    setTeamStats(stats);
+    // Fetch data once
+    const [allGames, loadedPlayers] = await Promise.all([
+      getGames(),
+      getPlayers(),
+    ]);
     
-    const loadedPlayers = await getPlayers();
     setPlayers(loadedPlayers);
     
-    const games = await getTopIndividualGames(10);
-    setTopGames(games.map(g => ({
+    // Calculate all stats in parallel using the fetched data
+    const [
+      stats,
+      topGamesData,
+      teamSumsData,
+      averagesData,
+      tenthFrameAveragesData,
+    ] = await Promise.all([
+      calculateTeamStatsFromData(allGames),
+      getTopIndividualGamesFromData(allGames, loadedPlayers, 10),
+      getTopTeamSumGamesFromData(allGames, 5),
+      getTopIndividualAveragesFromData(allGames, loadedPlayers, 100),
+      getTopTenthFrameAveragesFromData(allGames, loadedPlayers, 100),
+    ]);
+    
+    setTeamStats(stats);
+    setTopGames(topGamesData.map(g => ({
       playerName: g.playerName,
       totalScore: g.totalScore,
       date: g.date,
     })));
-    
-    const teamSums = await getTopTeamSumGames(5);
-    setTopTeamSums(teamSums);
-    
-    const averages = await getTopIndividualAverages(100); // Show all players
-    setTopAverages(averages.map(a => ({
+    setTopTeamSums(teamSumsData);
+    setTopAverages(averagesData.map(a => ({
       playerName: a.playerName,
       average: a.average,
     })));
-    
-    const tenthFrameAverages = await getTopTenthFrameAverages(100); // Show all players
-    setTopTenthFrameAverages(tenthFrameAverages.map(a => ({
+    setTopTenthFrameAverages(tenthFrameAveragesData.map(a => ({
       playerName: a.playerName,
       average: a.average,
     })));
@@ -61,7 +71,6 @@ export default function Dashboard() {
     if (showLoading) {
       setIsLoading(false);
     }
-    setIsInitialLoad(false);
   };
 
   useEffect(() => {

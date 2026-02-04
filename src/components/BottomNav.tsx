@@ -79,11 +79,7 @@ export default function BottomNav({ activeTab, onTabChange, showBetTracker = fal
             ))}
             <button
               onClick={handleMoreClick}
-              className={`w-full flex flex-row items-center justify-start gap-3 px-6 py-4 transition-all ${
-                showMoreMenu
-                  ? 'bg-orange-500 text-black font-black border-l-4 border-black'
-                  : 'text-black hover:bg-amber-400 font-bold'
-              }`}
+              className="w-full flex flex-row items-center justify-start gap-3 px-6 py-4 transition-all text-black hover:bg-amber-400 font-bold"
             >
               <MoreHorizontal className="w-6 h-6 flex-shrink-0" />
               <span className="text-sm uppercase font-black">More</span>
@@ -148,13 +144,9 @@ export default function BottomNav({ activeTab, onTabChange, showBetTracker = fal
           ))}
           <button
             onClick={handleMoreClick}
-            className={`flex flex-col items-center justify-center flex-1 h-full transition-all ${
-              showMoreMenu
-                ? 'bg-orange-500 text-black font-black'
-                : 'text-black hover:bg-amber-400 font-bold'
-            }`}
+            className="flex flex-col items-center justify-center flex-1 h-full transition-all text-black hover:bg-amber-400 font-bold"
           >
-            <MoreHorizontal className={`w-6 h-6 ${showMoreMenu ? 'scale-110' : ''} transition-transform`} />
+            <MoreHorizontal className="w-6 h-6 transition-transform" />
             <span className="text-xs mt-1 uppercase">More</span>
           </button>
         </div>
