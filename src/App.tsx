@@ -1,17 +1,21 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, lazy, Suspense } from 'react';
 import BottomNav from './components/BottomNav';
-import Dashboard from './pages/Dashboard';
-import AddGame from './pages/AddGame';
-import Players from './pages/Players';
-import Debts from './pages/Debts';
-import BetTracker from './pages/BetTracker';
-import Designs from './pages/Designs';
-import DebtsDesigns from './pages/DebtsDesigns';
-import ColorPalettes from './pages/ColorPalettes';
-import Login from './pages/Login';
-import Signup from './pages/Signup';
 import { supabase } from './lib/supabase';
 import { initializeDefaultData, getTeam } from './utils/storage';
+
+// Lazy load main pages
+const Dashboard = lazy(() => import('./pages/Dashboard'));
+const AddGame = lazy(() => import('./pages/AddGame'));
+const Players = lazy(() => import('./pages/Players'));
+const Debts = lazy(() => import('./pages/Debts'));
+const BetTracker = lazy(() => import('./pages/BetTracker'));
+const Login = lazy(() => import('./pages/Login'));
+const Signup = lazy(() => import('./pages/Signup'));
+
+// Lazy load design/preview pages (rarely used)
+const Designs = lazy(() => import('./pages/Designs'));
+const DebtsDesigns = lazy(() => import('./pages/DebtsDesigns'));
+const ColorPalettes = lazy(() => import('./pages/ColorPalettes'));
 
 function App() {
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -115,32 +119,43 @@ function App() {
   }
 
   if (!user) {
+    const LoadingSpinner = () => (
+      <div className="min-h-screen bg-orange-50 flex items-center justify-center">
+        <div className="text-black font-black text-xl">Loading...</div>
+      </div>
+    );
     if (activeTab === 'signup' || window.location.pathname === '/signup') {
-      return <Signup />;
+      return <Suspense fallback={<LoadingSpinner />}><Signup /></Suspense>;
     }
-    return <Login />;
+    return <Suspense fallback={<LoadingSpinner />}><Login /></Suspense>;
   }
+
+  const LoadingSpinner = () => (
+    <div className="min-h-screen bg-orange-50 flex items-center justify-center">
+      <div className="text-black font-black text-xl">Loading...</div>
+    </div>
+  );
 
   const renderContent = () => {
     switch (activeTab) {
       case 'dashboard':
-        return <Dashboard />;
+        return <Suspense fallback={<LoadingSpinner />}><Dashboard /></Suspense>;
       case 'add-game':
-        return <AddGame />;
+        return <Suspense fallback={<LoadingSpinner />}><AddGame /></Suspense>;
       case 'players':
-        return <Players />;
+        return <Suspense fallback={<LoadingSpinner />}><Players /></Suspense>;
       case 'debts':
-        return <Debts />;
+        return <Suspense fallback={<LoadingSpinner />}><Debts /></Suspense>;
       case 'bet-tracker':
-        return <BetTracker />;
+        return <Suspense fallback={<LoadingSpinner />}><BetTracker /></Suspense>;
       case 'designs':
-        return <Designs />;
+        return <Suspense fallback={<LoadingSpinner />}><Designs /></Suspense>;
       case 'debts-designs':
-        return <DebtsDesigns />;
+        return <Suspense fallback={<LoadingSpinner />}><DebtsDesigns /></Suspense>;
       case 'color':
-        return <ColorPalettes />;
+        return <Suspense fallback={<LoadingSpinner />}><ColorPalettes /></Suspense>;
       default:
-        return <Dashboard />;
+        return <Suspense fallback={<LoadingSpinner />}><Dashboard /></Suspense>;
     }
   };
 

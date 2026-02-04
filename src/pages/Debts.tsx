@@ -229,12 +229,18 @@ export default function Debts() {
           amount: 0,
           paidBy: '',
           splitBetween: [],
-        splitMethod: 'equal',
-      });
-      setExpenseType('tag');
-      setCustomExpenseName('');
-      setIsClosingDebt(false);
-    }, 300);
+          splitMethod: 'equal',
+        });
+        setExpenseType('tag');
+        setCustomExpenseName('');
+        setIsClosingDebt(false);
+      }, 300);
+    } catch (error) {
+      console.error('Error saving debt:', error);
+      alert('Error saving expense. Please try again.');
+    } finally {
+      setIsSavingDebt(false);
+    }
   };
 
   const handleCancelDebt = () => {

@@ -126,7 +126,7 @@ export const getTopTeamSumGames = async (limit: number = 5): Promise<Array<{ dat
     }
   });
   
-  const teamSumGames = Array.from(gamesBySession.entries()).map(([sessionId, sessionGames]) => {
+  const teamSumGames = Array.from(gamesBySession.entries()).map(([_sessionId, sessionGames]) => {
     // All games in this session are from the same team game
     const totalSum = sessionGames.reduce((sum, g) => sum + g.totalScore, 0);
     const players = sessionGames.map(g => g.playerId);
