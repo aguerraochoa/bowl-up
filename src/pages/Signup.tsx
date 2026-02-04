@@ -69,9 +69,9 @@ export default function Signup() {
     <div className="min-h-screen bg-orange-50 flex items-center justify-center px-4">
       <div className="w-full max-w-md">
         <div className="bg-white border-4 border-black p-6 sm:p-8">
-          <h1 className="text-3xl sm:text-4xl font-black text-black mb-2 uppercase text-center">
-            BowlUp
-          </h1>
+          <div className="flex justify-center mb-6">
+            <img src="/logo_text.png" alt="BowlUp" className="h-16 w-auto" />
+          </div>
           <p className="text-sm text-black font-bold mb-6 text-center">
             Create your team account
           </p>
