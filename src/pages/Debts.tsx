@@ -422,7 +422,12 @@ export default function Debts() {
                   </div>
                 ) : (
                   debts
-                    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+                    .sort((a, b) => {
+                      // Sort by created_at if available (newest first), otherwise by date
+                      const createdA = (a as any).created_at || a.date;
+                      const createdB = (b as any).created_at || b.date;
+                      return new Date(createdB).getTime() - new Date(createdA).getTime();
+                    })
                     .map(debt => (
                       <div key={debt.id} className="bg-white rounded-none border-4 border-black p-4 hover:bg-amber-400 transition-all ">
                         <div className="flex items-start justify-between mb-3 gap-2">
@@ -644,7 +649,12 @@ export default function Debts() {
                   </div>
                 ) : (
                   debts
-                    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+                    .sort((a, b) => {
+                      // Sort by created_at if available (newest first), otherwise by date
+                      const createdA = (a as any).created_at || a.date;
+                      const createdB = (b as any).created_at || b.date;
+                      return new Date(createdB).getTime() - new Date(createdA).getTime();
+                    })
                     .map(debt => (
                       <div key={debt.id} className="bg-white rounded-none border-4 border-black p-5 hover:bg-amber-400 transition-all">
                         <div className="flex items-start justify-between mb-3 gap-4">

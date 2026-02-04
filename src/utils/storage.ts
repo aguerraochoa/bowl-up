@@ -155,7 +155,7 @@ export const getGames = async (): Promise<Game[]> => {
     .from('games')
     .select('id, player_id, date, total_score, strikes_frames_1_to_9, spares_frames_1_to_9, tenth_frame, game_session_id')
     .eq('team_id', teamId)
-    .order('date', { ascending: false });
+    .order('created_at', { ascending: false });
 
   if (error) {
     console.error('Error fetching games:', error);
@@ -246,10 +246,11 @@ export const getDebts = async (): Promise<Debt[]> => {
       split_method,
       game_counts,
       custom_amounts,
-      date
+      date,
+      created_at
     `)
     .eq('team_id', teamId)
-    .order('date', { ascending: false });
+    .order('created_at', { ascending: false });
 
   if (error) {
     console.error('Error fetching debts:', error);
@@ -289,6 +290,7 @@ export const getDebts = async (): Promise<Debt[]> => {
       Object.entries(d.custom_amounts).map(([k, v]) => [k, parseFloat(v as string)])
     ) : undefined,
     date: d.date,
+    created_at: d.created_at || d.date, // Fallback to date if created_at not available
   }));
 };
 

@@ -415,7 +415,26 @@ export default function AddGame() {
                           }
                         });
 
-                        const sessions = Array.from(gamesBySession.entries());
+                        // Sort sessions by created_at (newest first) - use the most recent game's created_at in the session
+                        const sessions = Array.from(gamesBySession.entries()).sort(([_, gamesA], [__, gamesB]) => {
+                          // Get the most recent created_at from each session
+                          const createdA = gamesA.reduce((latest, game) => {
+                            const gameCreated = (game as any).created_at || '';
+                            return gameCreated > latest ? gameCreated : latest;
+                          }, '');
+                          const createdB = gamesB.reduce((latest, game) => {
+                            const gameCreated = (game as any).created_at || '';
+                            return gameCreated > latest ? gameCreated : latest;
+                          }, '');
+                          return new Date(createdB).getTime() - new Date(createdA).getTime();
+                        });
+                        
+                        // Sort individual games without session by created_at (newest first)
+                        const sortedGamesWithoutSession = gamesWithoutSession.sort((a, b) => {
+                          const createdA = (a as any).created_at || a.date;
+                          const createdB = (b as any).created_at || b.date;
+                          return new Date(createdB).getTime() - new Date(createdA).getTime();
+                        });
                         
                         return (
                           <>
@@ -495,7 +514,7 @@ export default function AddGame() {
                             })}
                             
                             {/* Individual games (without session) */}
-                            {gamesWithoutSession.map(game => {
+                            {sortedGamesWithoutSession.map(game => {
                               const player = allPlayers.find(p => p.id === game.playerId);
                               return (
                                 <div key={game.id} className="flex items-center justify-between bg-white border-4 border-black p-3 sm:p-4">

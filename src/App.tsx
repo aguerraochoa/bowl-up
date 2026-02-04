@@ -18,9 +18,26 @@ const DebtsDesigns = lazy(() => import('./pages/DebtsDesigns'));
 const ColorPalettes = lazy(() => import('./pages/ColorPalettes'));
 
 function App() {
-  const [activeTab, setActiveTab] = useState('dashboard');
+  // Initialize activeTab from sessionStorage or default to 'dashboard'
+  const [activeTab, setActiveTab] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const savedTab = sessionStorage.getItem('activeTab');
+      if (savedTab) {
+        return savedTab;
+      }
+    }
+    return 'dashboard';
+  });
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [hasInitialized, setHasInitialized] = useState(false);
+
+  // Save activeTab to sessionStorage whenever it changes
+  useEffect(() => {
+    if (typeof window !== 'undefined' && activeTab !== 'login' && activeTab !== 'signup') {
+      sessionStorage.setItem('activeTab', activeTab);
+    }
+  }, [activeTab]);
 
   useEffect(() => {
     // Check authentication state
@@ -44,31 +61,41 @@ function App() {
       return;
     }
 
-    // Initialize default data on first load
-    initializeDefaultData();
-    
-    // Handle routing
-    const handleRoute = () => {
-      const path = window.location.pathname;
-      if (path === '/login') {
-        setActiveTab('login');
-      } else if (path === '/signup') {
-        setActiveTab('signup');
-      } else if (path === '/designs') {
-        setActiveTab('designs');
-      } else if (path === '/debts-designs') {
-        setActiveTab('debts-designs');
-      } else if (path === '/color') {
-        setActiveTab('color');
-      } else if (path === '/' || path === '') {
-        setActiveTab('dashboard');
-      }
-    };
+    // Only initialize once
+    if (!hasInitialized) {
+      // Initialize default data on first load
+      initializeDefaultData();
+      
+      // Handle routing only on initial mount
+      const handleRoute = () => {
+        const path = window.location.pathname;
+        if (path === '/login') {
+          setActiveTab('login');
+        } else if (path === '/signup') {
+          setActiveTab('signup');
+        } else if (path === '/designs') {
+          setActiveTab('designs');
+        } else if (path === '/debts-designs') {
+          setActiveTab('debts-designs');
+        } else if (path === '/color') {
+          setActiveTab('color');
+        } else if (path === '/' || path === '') {
+          // Only set to dashboard if no saved tab exists
+          const savedTab = sessionStorage.getItem('activeTab');
+          if (savedTab && savedTab !== 'login' && savedTab !== 'signup') {
+            setActiveTab(savedTab);
+          } else {
+            setActiveTab('dashboard');
+          }
+        }
+      };
 
-    handleRoute();
-    window.addEventListener('popstate', handleRoute);
-    return () => window.removeEventListener('popstate', handleRoute);
-  }, [user]);
+      handleRoute();
+      setHasInitialized(true);
+      window.addEventListener('popstate', handleRoute);
+      return () => window.removeEventListener('popstate', handleRoute);
+    }
+  }, [user, hasInitialized]);
 
   const handleSignOut = async () => {
     await supabase.auth.signOut();

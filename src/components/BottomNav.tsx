@@ -16,6 +16,7 @@ export default function BottomNav({ activeTab, onTabChange, onSignOut }: BottomN
     { id: 'add-game', label: 'Add Game', icon: Plus },
     { id: 'players', label: 'Players', icon: Users },
     { id: 'debts', label: 'Debts', icon: DollarSign },
+    { id: 'bet-tracker', label: 'Bet Tracker', icon: Target },
   ];
 
   // Prevent body scroll when modal is open
@@ -76,53 +77,19 @@ export default function BottomNav({ activeTab, onTabChange, onSignOut }: BottomN
                 <span className="text-sm uppercase font-black">{label}</span>
               </button>
             ))}
+          </div>
+          {/* Sign Out at bottom */}
+          <div className="w-full border-t-4 border-black">
             <button
-              onClick={handleMoreClick}
-              className="w-full flex flex-row items-center justify-start gap-3 px-6 py-4 transition-all text-black hover:bg-amber-400 font-bold"
+              onClick={() => onSignOut && onSignOut()}
+              className="w-full flex flex-row items-center justify-start gap-3 px-6 py-4 transition-all text-black hover:bg-red-600 hover:text-white font-bold"
             >
-              <MoreHorizontal className="w-6 h-6 flex-shrink-0" />
-              <span className="text-sm uppercase font-black">More</span>
+              <LogOut className="w-6 h-6 flex-shrink-0" />
+              <span className="text-sm uppercase font-black">Sign Out</span>
             </button>
           </div>
         </div>
       </nav>
-
-      {/* Desktop More Menu Dropdown */}
-      {showMoreMenu && (
-        <div className="hidden lg:block fixed left-64 top-0 bottom-0 w-64 bg-white border-r-4 border-black z-40">
-          <div className="flex flex-col items-start w-full h-full pt-6">
-            <div className="w-full px-6 py-4 border-b-4 border-black bg-amber-400">
-              <div className="flex items-center justify-between">
-                <span className="text-sm uppercase font-black">More</span>
-                <button
-                  onClick={handleCloseMenu}
-                  className="p-2 bg-red-600 border-4 border-black text-black hover:bg-red-700 font-black transition-all"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-            </div>
-            <div className="w-full">
-              {menuOptions.map(({ id, label, icon: Icon, action }) => (
-                <button
-                  key={id}
-                  onClick={() => handleMenuOptionClick(action)}
-                  className={`w-full flex flex-row items-center justify-start gap-3 px-6 py-4 transition-all ${
-                    id === 'sign-out'
-                      ? 'text-black hover:bg-red-600 hover:text-white font-bold'
-                      : activeTab === id
-                        ? 'bg-orange-500 text-black font-black border-l-4 border-black'
-                        : 'text-black hover:bg-amber-400 font-bold'
-                  }`}
-                >
-                  <Icon className="w-6 h-6 flex-shrink-0" />
-                  <span className="text-sm uppercase font-black">{label}</span>
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Mobile Bottom Nav */}
       <nav className="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t-4 border-black safe-bottom z-50">
