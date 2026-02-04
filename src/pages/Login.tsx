@@ -52,10 +52,10 @@ export default function Login() {
   return (
     <div className="min-h-screen bg-orange-50 flex items-center justify-center px-4">
       <div className="w-full max-w-md">
+        <div className="flex justify-center mb-8">
+          <img src="/logo_text.png" alt="BowlUp" className="h-28 w-auto" />
+        </div>
         <div className="bg-white border-4 border-black p-6 sm:p-8">
-          <div className="flex justify-center mb-6">
-            <img src="/logo_text.png" alt="BowlUp" className="h-16 w-auto" />
-          </div>
           <p className="text-sm text-black font-bold mb-6 text-center">
             Sign in to your team
           </p>
