@@ -22,7 +22,6 @@ export default function Players() {
     const loadPlayers = async () => {
       const loadedPlayers = await getPlayers();
       setPlayers(loadedPlayers);
-      setShowAddPlayer(loadedPlayers.length === 0);
       
       // Calculate stats for all players
       const statsMap: Record<string, Stats> = {};
@@ -134,7 +133,7 @@ export default function Players() {
   };
 
   return (
-    <div className="min-h-screen bg-orange-50 pb-20 safe-top">
+    <div className="min-h-screen bg-orange-50 pb-20 safe-top relative">
       <div className="max-w-2xl mx-auto px-4 py-4 sm:py-6">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-0 mb-4 sm:mb-6">
           <div>

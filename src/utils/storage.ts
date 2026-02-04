@@ -23,7 +23,7 @@ export const getTeam = async (): Promise<Team | null> => {
 
   const { data: team, error } = await supabase
     .from('teams')
-    .select('id, name, league, features')
+    .select('id, name, league, league_id, features')
     .eq('user_id', user.id)
     .single();
 
@@ -39,6 +39,7 @@ export const getTeam = async (): Promise<Team | null> => {
     id: team.id,
     name: team.name,
     league: team.league || '',
+    leagueId: team.league_id || undefined,
     players: (playersResult.data || []).map(p => ({
       id: p.id,
       name: p.name,
@@ -612,19 +613,8 @@ export const disableBetTracker = async (): Promise<void> => {
   }
 };
 
-// Initialize default data (creates default debt tag if team has none)
+// Initialize default data
 export const initializeDefaultData = async (): Promise<void> => {
-  const team = await getTeam();
-  if (!team) return;
-
-  // Check if team has any debt tags
-  const tags = await getDebtTags();
-  if (tags.length === 0) {
-    // Create default debt tag
-    await addDebtTag({
-      id: crypto.randomUUID(),
-      name: 'Weekly Payment',
-      defaultAmount: 1400,
-    });
-  }
+  // No default data to initialize
+  // Users can create their own tags as needed
 };

@@ -37,14 +37,24 @@ function App() {
   }, []);
 
   useEffect(() => {
-    if (!user) return;
+    if (!user) {
+      setShowBetTracker(false);
+      return;
+    }
 
     // Initialize default data on first load
     initializeDefaultData();
     
     // Check if tracker feature is enabled
     getTeam().then(team => {
-      setShowBetTracker(team?.features?.betTracker === true);
+      if (team) {
+        setShowBetTracker(team.features?.betTracker === true);
+      } else {
+        setShowBetTracker(false);
+      }
+    }).catch(error => {
+      console.error('Error loading team:', error);
+      setShowBetTracker(false);
     });
     
     // Handle routing
@@ -69,6 +79,14 @@ function App() {
     window.addEventListener('popstate', handleRoute);
     return () => window.removeEventListener('popstate', handleRoute);
   }, [user]);
+
+  const handleSignOut = async () => {
+    await supabase.auth.signOut();
+    setUser(null);
+    setShowBetTracker(false);
+    setActiveTab('login');
+    window.history.pushState({}, '', '/login');
+  };
 
   const handleTabChange = (tab: string) => {
     setActiveTab(tab);
@@ -131,7 +149,7 @@ function App() {
       <div className="md:pl-64">
         {renderContent()}
       </div>
-      {activeTab !== 'designs' && activeTab !== 'debts-designs' && activeTab !== 'color' && <BottomNav activeTab={activeTab} onTabChange={handleTabChange} showBetTracker={showBetTracker} />}
+      {activeTab !== 'designs' && activeTab !== 'debts-designs' && activeTab !== 'color' && <BottomNav activeTab={activeTab} onTabChange={handleTabChange} showBetTracker={showBetTracker} onSignOut={handleSignOut} />}
       {(activeTab === 'designs' || activeTab === 'debts-designs' || activeTab === 'color') && (
         <div className="fixed bottom-4 right-4">
           <a

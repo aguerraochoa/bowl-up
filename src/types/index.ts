@@ -40,10 +40,16 @@ export interface DebtTag {
   defaultAmount: number;
 }
 
+export interface League {
+  id: string;
+  name: string;
+}
+
 export interface Team {
   id: string;
   name: string;
   league: string;
+  leagueId?: string;
   players: Player[];
   debtTags: DebtTag[];
   features?: {

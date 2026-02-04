@@ -38,7 +38,7 @@ export default function BetTracker() {
   };
 
   return (
-    <div className="min-h-screen bg-orange-50 pb-20 md:pb-6 safe-top">
+    <div className="min-h-screen bg-orange-50 pb-20 md:pb-6 safe-top relative">
       <div className="max-w-2xl mx-auto px-4 py-4 sm:py-6">
         <div className="mb-4 sm:mb-6">
           <h1 className="text-3xl sm:text-4xl md:text-5xl font-black text-black mb-2 uppercase">Tracker</h1>

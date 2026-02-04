@@ -166,7 +166,7 @@ export default function AddGame() {
 
   if (allPlayers.length === 0) {
     return (
-      <div className="min-h-screen bg-orange-50 pb-20 safe-top flex items-center justify-center px-4">
+      <div className="min-h-screen bg-orange-50 pb-20 safe-top flex items-center justify-center px-4 relative">
         <div className="text-center">
           <p className="text-black mb-4 font-bold">No players added yet.</p>
           <p className="text-sm text-black font-bold">Add players in the Players tab first.</p>
@@ -177,7 +177,7 @@ export default function AddGame() {
 
   if (currentStep === 0) {
     return (
-      <div className="min-h-screen bg-orange-50 pb-20 safe-top">
+      <div className="min-h-screen bg-orange-50 pb-20 safe-top relative">
         <div className="max-w-2xl mx-auto px-4 py-4 sm:py-6">
           <div className="flex items-center justify-between mb-4 sm:mb-6">
             <div>
@@ -256,7 +256,7 @@ export default function AddGame() {
   if (currentStep === 2) {
     // Review step
     return (
-      <div className="min-h-screen bg-orange-50 pb-20 safe-top">
+      <div className="min-h-screen bg-orange-50 pb-20 safe-top relative">
         <div className="max-w-2xl mx-auto px-4 py-4 sm:py-6">
           <h1 className="text-3xl sm:text-4xl md:text-5xl font-black text-black mb-4 sm:mb-6 uppercase">Review Games</h1>
           <div className="space-y-3 sm:space-y-4 mb-4 sm:mb-6">

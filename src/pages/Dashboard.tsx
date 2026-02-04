@@ -7,7 +7,13 @@ import { Target, Zap, Gamepad2, TrendingUp, X, Award } from 'lucide-react';
 import type { Game } from '../types';
 
 export default function Dashboard() {
-  const [teamStats, setTeamStats] = useState(calculateTeamStats());
+  const [teamStats, setTeamStats] = useState({
+    teamGameAverage: 0,
+    totalGames: 0,
+    totalStrikePercentage: 0,
+    totalSparePercentage: 0,
+    averageTenthFrame: 0,
+  });
   const [topGames, setTopGames] = useState<Array<{ playerName: string; totalScore: number; date: string }>>([]);
   const [topTeamSums, setTopTeamSums] = useState<Array<{ date: string; totalSum: number; players: string[]; games: Game[] }>>([]);
   const [topAverages, setTopAverages] = useState<Array<{ playerName: string; average: number }>>([]);
@@ -76,7 +82,7 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="min-h-screen bg-orange-50 pb-20 md:pb-6 safe-top">
+    <div className="min-h-screen bg-orange-50 pb-20 md:pb-6 safe-top relative">
       <div className="max-w-7xl mx-auto px-4 py-4 md:py-6">
         {/* Header */}
         <div className="mb-4 md:mb-6">

@@ -327,7 +327,7 @@ export default function Debts() {
   const selectedTag = tags.find(t => t.id === newDebt.tag);
 
   return (
-    <div className="min-h-screen bg-orange-50 pb-20 safe-top">
+    <div className="min-h-screen bg-orange-50 pb-20 safe-top relative">
       {/* Mobile Layout */}
       <div className="md:hidden">
         <div className="max-w-2xl mx-auto px-4 py-6">
