@@ -12,6 +12,7 @@ export interface Game {
   strikesFrames1to9: number;
   sparesFrames1to9: number;
   tenthFrame: string; // e.g., "X9/", "9/8", "72"
+  gameSessionId?: string; // Links games from the same team game session
 }
 
 export interface TeamSumGame {

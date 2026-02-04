@@ -113,24 +113,26 @@ export const getTopIndividualGames = async (limit: number = 10): Promise<Array<G
 
 export const getTopTeamSumGames = async (limit: number = 5): Promise<Array<{ date: string; totalSum: number; players: string[]; games: Game[] }>> => {
   const games = await getGames();
-  const gamesByDate = new Map<string, Game[]>();
+  
+  // Group by game_session_id instead of date
+  const gamesBySession = new Map<string, Game[]>();
   
   games.forEach(game => {
-    const dateGames = gamesByDate.get(game.date) || [];
-    dateGames.push(game);
-    gamesByDate.set(game.date, dateGames);
+    // Only include games that have a session ID (actual team games)
+    if (game.gameSessionId) {
+      const sessionGames = gamesBySession.get(game.gameSessionId) || [];
+      sessionGames.push(game);
+      gamesBySession.set(game.gameSessionId, sessionGames);
+    }
   });
   
-  const teamSumGames = Array.from(gamesByDate.entries()).map(([date, dateGames]) => {
-    // Take up to 4 players per date (assuming 4 players per game)
-    const top4Games = dateGames
-      .sort((a, b) => b.totalScore - a.totalScore)
-      .slice(0, 4);
+  const teamSumGames = Array.from(gamesBySession.entries()).map(([sessionId, sessionGames]) => {
+    // All games in this session are from the same team game
+    const totalSum = sessionGames.reduce((sum, g) => sum + g.totalScore, 0);
+    const players = sessionGames.map(g => g.playerId);
+    const date = sessionGames[0]?.date || ''; // Get date from first game
     
-    const totalSum = top4Games.reduce((sum, g) => sum + g.totalScore, 0);
-    const players = top4Games.map(g => g.playerId);
-    
-    return { date, totalSum, players, games: top4Games };
+    return { date, totalSum, players, games: sessionGames };
   });
   
   return teamSumGames

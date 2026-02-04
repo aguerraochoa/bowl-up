@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
-import { getPlayers, addGame } from '../utils/storage';
+import { getPlayers, addGame, getGames, removeGame } from '../utils/storage';
 import { validateGame } from '../utils/scoring';
 import type { Player, Game } from '../types';
-import { Check, X, ArrowRight, ArrowLeft, RotateCcw } from 'lucide-react';
+import { Check, X, ArrowRight, ArrowLeft, RotateCcw, Loader2, Trash2, History } from 'lucide-react';
 
 export default function AddGame() {
   const [allPlayers, setAllPlayers] = useState<Player[]>([]);
@@ -17,6 +17,10 @@ export default function AddGame() {
     tenthFrame: '',
   });
   const [error, setError] = useState<string>('');
+  const [isSaving, setIsSaving] = useState(false);
+  const [games, setGames] = useState<Game[]>([]);
+  const [showHistory, setShowHistory] = useState(false);
+  const [deletingGameId, setDeletingGameId] = useState<string | null>(null);
 
   useEffect(() => {
     const loadPlayers = async () => {
@@ -24,6 +28,14 @@ export default function AddGame() {
       setAllPlayers(players);
     };
     loadPlayers();
+  }, []);
+
+  useEffect(() => {
+    const loadGames = async () => {
+      const loadedGames = await getGames();
+      setGames(loadedGames);
+    };
+    loadGames();
   }, []);
 
   const handleAddPlayer = (playerId: string) => {
@@ -127,37 +139,72 @@ export default function AddGame() {
   };
 
   const handleSave = async () => {
-    const playersList = getSelectedPlayersList();
-    // Save all games
-    const date = new Date().toISOString().split('T')[0];
-    for (let index = 0; index < gameData.length; index++) {
-      const game = gameData[index];
-      if (game.totalScore !== undefined && game.tenthFrame) {
-        const newGame: Game = {
-          id: crypto.randomUUID(),
-          playerId: playersList[index].id,
-          date,
-          totalScore: game.totalScore!,
-          strikesFrames1to9: game.strikesFrames1to9 || 0,
-          sparesFrames1to9: game.sparesFrames1to9 || 0,
-          tenthFrame: game.tenthFrame,
-        };
-        await addGame(newGame);
+    if (isSaving) return; // Prevent multiple submissions
+    
+    setIsSaving(true);
+    try {
+      const playersList = getSelectedPlayersList();
+      // Generate ONE session ID for this team game
+      const gameSessionId = crypto.randomUUID();
+      const date = new Date().toISOString().split('T')[0];
+      
+      for (let index = 0; index < gameData.length; index++) {
+        const game = gameData[index];
+        if (game.totalScore !== undefined && game.tenthFrame) {
+          const newGame: Game = {
+            id: crypto.randomUUID(),
+            playerId: playersList[index].id,
+            date,
+            totalScore: game.totalScore!,
+            strikesFrames1to9: game.strikesFrames1to9 || 0,
+            sparesFrames1to9: game.sparesFrames1to9 || 0,
+            tenthFrame: game.tenthFrame,
+            gameSessionId: gameSessionId, // Same session ID for all players in this game
+          };
+          await addGame(newGame);
+        }
       }
+
+      // Reset
+      setCurrentStep(0);
+      setSelectedPlayers([]);
+      setCurrentPlayerIndex(0);
+      setGameData([]);
+      setCurrentGame({
+        totalScore: undefined,
+        strikesFrames1to9: 0,
+        sparesFrames1to9: 0,
+        tenthFrame: '',
+      });
+      alert('Games saved successfully!');
+      // Reload games to show the new ones
+      const loadedGames = await getGames();
+      setGames(loadedGames);
+    } catch (error) {
+      console.error('Error saving games:', error);
+      alert('Error saving games. Please try again.');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleDeleteGame = async (gameId: string) => {
+    if (!confirm('Are you sure you want to delete this game? This action cannot be undone.')) {
+      return;
     }
 
-    // Reset
-    setCurrentStep(0);
-    setSelectedPlayers([]);
-    setCurrentPlayerIndex(0);
-    setGameData([]);
-    setCurrentGame({
-      totalScore: undefined,
-      strikesFrames1to9: 0,
-      sparesFrames1to9: 0,
-      tenthFrame: '',
-    });
-    alert('Games saved successfully!');
+    setDeletingGameId(gameId);
+    try {
+      await removeGame(gameId);
+      // Reload games after deletion
+      const loadedGames = await getGames();
+      setGames(loadedGames);
+    } catch (error) {
+      console.error('Error deleting game:', error);
+      alert('Error deleting game. Please try again.');
+    } finally {
+      setDeletingGameId(null);
+    }
   };
 
   const selectedPlayersList = getSelectedPlayersList();
@@ -184,15 +231,26 @@ export default function AddGame() {
               <h1 className="text-3xl sm:text-4xl md:text-5xl font-black text-black mb-2 uppercase">Add New Game</h1>
               <p className="text-sm sm:text-base text-black font-bold">Click players to add them in order</p>
             </div>
-            {selectedPlayers.length > 0 && (
+            <div className="flex gap-2">
               <button
-                onClick={handleClearSelection}
-                className="bg-amber-400 border-4 border-black text-black px-3 sm:px-4 py-2 sm:py-3 rounded-none font-black  flex items-center gap-2 text-sm sm:text-base"
+                onClick={() => setShowHistory(!showHistory)}
+                className={`border-4 border-black text-black px-3 sm:px-4 py-2 sm:py-3 rounded-none font-black flex items-center gap-2 text-sm sm:text-base ${
+                  showHistory ? 'bg-orange-500' : 'bg-amber-400'
+                }`}
               >
-                <RotateCcw className="w-4 h-4 sm:w-5 sm:h-5" />
-                <span className="hidden sm:inline">Clear</span>
+                <History className="w-4 h-4 sm:w-5 sm:h-5" />
+                <span className="hidden sm:inline">History</span>
               </button>
-            )}
+              {selectedPlayers.length > 0 && (
+                <button
+                  onClick={handleClearSelection}
+                  className="bg-amber-400 border-4 border-black text-black px-3 sm:px-4 py-2 sm:py-3 rounded-none font-black  flex items-center gap-2 text-sm sm:text-base"
+                >
+                  <RotateCcw className="w-4 h-4 sm:w-5 sm:h-5" />
+                  <span className="hidden sm:inline">Clear</span>
+                </button>
+              )}
+            </div>
           </div>
 
           {error && (
@@ -239,6 +297,116 @@ export default function AddGame() {
               })}
             </div>
           </div>
+
+          {/* Game History Section */}
+          {showHistory && (
+            <div className="bg-white rounded-none border-4 border-black p-4 sm:p-6 mb-4 sm:mb-6">
+              <h2 className="text-lg sm:text-xl font-black mb-4 uppercase">Game History</h2>
+              {games.length === 0 ? (
+                <p className="text-black font-bold text-sm sm:text-base">No games recorded yet.</p>
+              ) : (
+                <div className="space-y-4">
+                  {/* Group games by session */}
+                  {(() => {
+                    const gamesBySession = new Map<string, Game[]>();
+                    const gamesWithoutSession: Game[] = [];
+
+                    games.forEach(game => {
+                      if (game.gameSessionId) {
+                        const sessionGames = gamesBySession.get(game.gameSessionId) || [];
+                        sessionGames.push(game);
+                        gamesBySession.set(game.gameSessionId, sessionGames);
+                      } else {
+                        gamesWithoutSession.push(game);
+                      }
+                    });
+
+                    const sessions = Array.from(gamesBySession.entries());
+                    
+                    return (
+                      <>
+                        {/* Team games (with session) */}
+                        {sessions.map(([sessionId, sessionGames]) => {
+                          const totalSum = sessionGames.reduce((sum, g) => sum + g.totalScore, 0);
+                          const date = sessionGames[0]?.date || '';
+                          return (
+                            <div key={sessionId} className="bg-amber-400 border-4 border-black p-3 sm:p-4">
+                              <div className="flex items-center justify-between mb-2">
+                                <div>
+                                  <p className="font-black text-black text-sm sm:text-base">
+                                    {new Date(date).toLocaleDateString()}
+                                  </p>
+                                  <p className="text-xs sm:text-sm text-black font-bold">
+                                    Team Total: {totalSum}
+                                  </p>
+                                </div>
+                              </div>
+                              <div className="space-y-2">
+                                {sessionGames.map(game => {
+                                  const player = allPlayers.find(p => p.id === game.playerId);
+                                  return (
+                                    <div key={game.id} className="flex items-center justify-between bg-white border-2 border-black p-2">
+                                      <div className="flex-1">
+                                        <p className="font-black text-black text-sm sm:text-base">{player?.name || 'Unknown'}</p>
+                                        <p className="text-xs text-black font-bold">
+                                          Score: {game.totalScore} | Strikes: {game.strikesFrames1to9} | Spares: {game.sparesFrames1to9}
+                                        </p>
+                                      </div>
+                                      <button
+                                        onClick={() => handleDeleteGame(game.id)}
+                                        disabled={deletingGameId === game.id}
+                                        className="bg-red-600 border-2 border-black text-white p-2 hover:bg-red-700 font-black disabled:bg-gray-300 disabled:cursor-not-allowed disabled:opacity-70"
+                                        aria-label="Delete game"
+                                      >
+                                        {deletingGameId === game.id ? (
+                                          <Loader2 className="w-4 h-4 animate-spin" />
+                                        ) : (
+                                          <Trash2 className="w-4 h-4" />
+                                        )}
+                                      </button>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          );
+                        })}
+                        
+                        {/* Individual games (without session) */}
+                        {gamesWithoutSession.map(game => {
+                          const player = allPlayers.find(p => p.id === game.playerId);
+                          return (
+                            <div key={game.id} className="flex items-center justify-between bg-white border-4 border-black p-3 sm:p-4">
+                              <div className="flex-1">
+                                <p className="font-black text-black text-sm sm:text-base">
+                                  {player?.name || 'Unknown'} - {new Date(game.date).toLocaleDateString()}
+                                </p>
+                                <p className="text-xs sm:text-sm text-black font-bold">
+                                  Score: {game.totalScore} | Strikes: {game.strikesFrames1to9} | Spares: {game.sparesFrames1to9}
+                                </p>
+                              </div>
+                              <button
+                                onClick={() => handleDeleteGame(game.id)}
+                                disabled={deletingGameId === game.id}
+                                className="bg-red-600 border-2 border-black text-white p-2 hover:bg-red-700 font-black disabled:bg-gray-300 disabled:cursor-not-allowed disabled:opacity-70"
+                                aria-label="Delete game"
+                              >
+                                {deletingGameId === game.id ? (
+                                  <Loader2 className="w-4 h-4 animate-spin" />
+                                ) : (
+                                  <Trash2 className="w-4 h-4" />
+                                )}
+                              </button>
+                            </div>
+                          );
+                        })}
+                      </>
+                    );
+                  })()}
+                </div>
+              )}
+            </div>
+          )}
 
           <button
             onClick={handleStartGame}
@@ -297,10 +465,20 @@ export default function AddGame() {
             </button>
             <button
               onClick={handleSave}
-              className="flex-1 bg-lime-500 border-4 border-black text-black py-3 sm:py-4 rounded-none font-black flex items-center justify-center gap-2  text-sm sm:text-base"
+              disabled={isSaving}
+              className="flex-1 bg-lime-500 border-4 border-black text-black py-3 sm:py-4 rounded-none font-black flex items-center justify-center gap-2 text-sm sm:text-base disabled:bg-gray-300 disabled:cursor-not-allowed disabled:opacity-70"
             >
-              Save Games
-              <Check className="w-4 h-4 sm:w-5 sm:h-5" />
+              {isSaving ? (
+                <>
+                  <Loader2 className="w-4 h-4 sm:w-5 sm:h-5 animate-spin" />
+                  Saving...
+                </>
+              ) : (
+                <>
+                  Save Games
+                  <Check className="w-4 h-4 sm:w-5 sm:h-5" />
+                </>
+              )}
             </button>
           </div>
         </div>

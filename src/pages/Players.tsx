@@ -3,7 +3,7 @@ import { getPlayers, addPlayer, removePlayer } from '../utils/storage';
 import { calculatePlayerStats } from '../utils/stats';
 import { supabase } from '../lib/supabase';
 import type { Player, Stats } from '../types';
-import { Plus, X, TrendingUp, TrendingDown, Target, Pencil, Check } from 'lucide-react';
+import { Plus, X, TrendingUp, TrendingDown, Target, Pencil, Check, Loader2 } from 'lucide-react';
 
 export default function Players() {
   const [players, setPlayers] = useState<Player[]>([]);
@@ -17,6 +17,8 @@ export default function Players() {
   const [isEditMode, setIsEditMode] = useState(false);
   const [editingPlayerId, setEditingPlayerId] = useState<string | null>(null);
   const [editingPlayerName, setEditingPlayerName] = useState('');
+  const [isAddingPlayer, setIsAddingPlayer] = useState(false);
+  const [savingPlayerId, setSavingPlayerId] = useState<string | null>(null);
 
   useEffect(() => {
     const loadPlayers = async () => {
@@ -57,7 +59,10 @@ export default function Players() {
   }, [selectedPlayer, playerStats, isClosingStats, showAddPlayer, isClosingAddPlayer]);
 
   const handleAddPlayer = async () => {
-    if (newPlayerName.trim()) {
+    if (isAddingPlayer || !newPlayerName.trim()) return; // Prevent multiple submissions
+    
+    setIsAddingPlayer(true);
+    try {
       const newPlayer: Player = {
         id: crypto.randomUUID(),
         name: newPlayerName.trim(),
@@ -72,6 +77,11 @@ export default function Players() {
         setShowAddPlayer(false);
         setIsClosingAddPlayer(false);
       }, 300);
+    } catch (error) {
+      console.error('Error adding player:', error);
+      alert('Error adding player. Please try again.');
+    } finally {
+      setIsAddingPlayer(false);
     }
   };
 
@@ -102,7 +112,10 @@ export default function Players() {
   };
 
   const handleSaveEdit = async (playerId: string) => {
-    if (editingPlayerName.trim()) {
+    if (savingPlayerId || !editingPlayerName.trim()) return; // Prevent multiple submissions
+    
+    setSavingPlayerId(playerId);
+    try {
       // Update player in Supabase
       const { error } = await supabase
         .from('players')
@@ -114,7 +127,14 @@ export default function Players() {
         setPlayers(loadedPlayers);
         setEditingPlayerId(null);
         setEditingPlayerName('');
+      } else {
+        alert('Error updating player. Please try again.');
       }
+    } catch (error) {
+      console.error('Error updating player:', error);
+      alert('Error updating player. Please try again.');
+    } finally {
+      setSavingPlayerId(null);
     }
   };
 
@@ -239,9 +259,17 @@ export default function Players() {
                   </button>
                   <button
                     onClick={handleAddPlayer}
-                    className="flex-1 bg-lime-500 border-4 border-black text-black py-3 sm:py-4 rounded-none font-black  text-sm sm:text-base"
+                    disabled={isAddingPlayer}
+                    className="flex-1 bg-lime-500 border-4 border-black text-black py-3 sm:py-4 rounded-none font-black text-sm sm:text-base flex items-center justify-center gap-2 disabled:bg-gray-300 disabled:cursor-not-allowed disabled:opacity-70"
                   >
-                    Add Player
+                    {isAddingPlayer ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        Adding...
+                      </>
+                    ) : (
+                      'Add Player'
+                    )}
                   </button>
                 </div>
               </div>
@@ -300,9 +328,14 @@ export default function Players() {
                               e.stopPropagation();
                               handleSaveEdit(player.id);
                             }}
-                            className="bg-lime-500 border-4 border-black text-black px-3 py-2 hover:bg-lime-600 font-black"
+                            disabled={savingPlayerId === player.id}
+                            className="bg-lime-500 border-4 border-black text-black px-3 py-2 hover:bg-lime-600 font-black disabled:bg-gray-300 disabled:cursor-not-allowed disabled:opacity-70"
                           >
-                            <Check className="w-4 h-4 sm:w-5 sm:h-5" />
+                            {savingPlayerId === player.id ? (
+                              <Loader2 className="w-4 h-4 sm:w-5 sm:h-5 animate-spin" />
+                            ) : (
+                              <Check className="w-4 h-4 sm:w-5 sm:h-5" />
+                            )}
                           </button>
                           <button
                             onClick={(e) => {

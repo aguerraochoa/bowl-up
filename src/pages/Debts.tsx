@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { getDebts, getDebtTags, getPlayers, addDebt, updateDebt, removeDebt, addDebtTag, updateDebtTag, removeDebtTag } from '../utils/storage';
 import type { Debt, DebtTag, Player } from '../types';
-import { Plus, Tag, X, Edit2, Trash2, Check } from 'lucide-react';
+import { Plus, Tag, X, Edit2, Trash2, Check, Loader2 } from 'lucide-react';
 
 export default function Debts() {
   const [debts, setDebts] = useState<Debt[]>([]);
@@ -18,6 +18,8 @@ export default function Debts() {
   const [activeTab, setActiveTab] = useState<'expenses' | 'balances' | 'tags'>('expenses');
   const [expenseType, setExpenseType] = useState<'tag' | 'custom'>('tag');
   const [customExpenseName, setCustomExpenseName] = useState('');
+  const [isSavingDebt, setIsSavingDebt] = useState(false);
+  const [isSavingTag, setIsSavingTag] = useState(false);
   const [newDebt, setNewDebt] = useState<Partial<Debt>>({
     tag: '',
     amount: 0,
@@ -177,6 +179,8 @@ export default function Debts() {
   };
 
   const handleSaveDebt = async () => {
+    if (isSavingDebt) return; // Prevent multiple submissions
+    
     // Validate required fields
     if (expenseType === 'tag' && !newDebt.tag) {
       alert('Please select a tag or switch to custom expense');
@@ -191,38 +195,40 @@ export default function Debts() {
       return;
     }
 
-    const debt: Debt = {
-      id: editingDebtId || crypto.randomUUID(),
-      tag: expenseType === 'tag' ? newDebt.tag : undefined,
-      customName: expenseType === 'custom' ? customExpenseName.trim() : undefined,
-      amount: newDebt.amount || 0,
-      paidBy: newDebt.paidBy!,
-      splitBetween: newDebt.splitBetween!,
-      splitMethod: newDebt.splitMethod || 'equal',
-      gameCounts: newDebt.splitMethod === 'games' ? newDebt.gameCounts : undefined,
-      customAmounts: newDebt.splitMethod === 'custom' ? newDebt.customAmounts : undefined,
-      date: editingDebtId 
-        ? debts.find(d => d.id === editingDebtId)?.date || new Date().toISOString().split('T')[0]
-        : new Date().toISOString().split('T')[0],
-    };
+    setIsSavingDebt(true);
+    try {
+      const debt: Debt = {
+        id: editingDebtId || crypto.randomUUID(),
+        tag: expenseType === 'tag' ? newDebt.tag : undefined,
+        customName: expenseType === 'custom' ? customExpenseName.trim() : undefined,
+        amount: newDebt.amount || 0,
+        paidBy: newDebt.paidBy!,
+        splitBetween: newDebt.splitBetween!,
+        splitMethod: newDebt.splitMethod || 'equal',
+        gameCounts: newDebt.splitMethod === 'games' ? newDebt.gameCounts : undefined,
+        customAmounts: newDebt.splitMethod === 'custom' ? newDebt.customAmounts : undefined,
+        date: editingDebtId 
+          ? debts.find(d => d.id === editingDebtId)?.date || new Date().toISOString().split('T')[0]
+          : new Date().toISOString().split('T')[0],
+      };
 
-    if (editingDebtId) {
-      await updateDebt(editingDebtId, debt);
-    } else {
-      await addDebt(debt);
-    }
-    
-    const loadedDebts = await getDebts();
-    setDebts(loadedDebts);
-    setIsClosingDebt(true);
-    setTimeout(() => {
-      setShowAddDebt(false);
-      setEditingDebtId(null);
-      setNewDebt({
-        tag: '',
-        amount: 0,
-        paidBy: '',
-        splitBetween: [],
+      if (editingDebtId) {
+        await updateDebt(editingDebtId, debt);
+      } else {
+        await addDebt(debt);
+      }
+      
+      const loadedDebts = await getDebts();
+      setDebts(loadedDebts);
+      setIsClosingDebt(true);
+      setTimeout(() => {
+        setShowAddDebt(false);
+        setEditingDebtId(null);
+        setNewDebt({
+          tag: '',
+          amount: 0,
+          paidBy: '',
+          splitBetween: [],
         splitMethod: 'equal',
       });
       setExpenseType('tag');
@@ -269,41 +275,51 @@ export default function Debts() {
   };
 
   const handleSaveTag = async () => {
+    if (isSavingTag) return; // Prevent multiple submissions
+    
     if (!newTagName.trim() || newTagAmount <= 0) {
       alert('Please enter a tag name and a valid amount');
       return;
     }
 
-    if (editingTagId) {
-      // Update existing tag
-      const tagToUpdate = tags.find(t => t.id === editingTagId);
-      if (tagToUpdate) {
-        await updateDebtTag(editingTagId, {
-          ...tagToUpdate,
+    setIsSavingTag(true);
+    try {
+      if (editingTagId) {
+        // Update existing tag
+        const tagToUpdate = tags.find(t => t.id === editingTagId);
+        if (tagToUpdate) {
+          await updateDebtTag(editingTagId, {
+            ...tagToUpdate,
+            name: newTagName.trim(),
+            defaultAmount: newTagAmount,
+          });
+        }
+      } else {
+        // Create new tag
+        const newTag: DebtTag = {
+          id: crypto.randomUUID(),
           name: newTagName.trim(),
           defaultAmount: newTagAmount,
-        });
+        };
+        await addDebtTag(newTag);
       }
-    } else {
-      // Create new tag
-      const newTag: DebtTag = {
-        id: crypto.randomUUID(),
-        name: newTagName.trim(),
-        defaultAmount: newTagAmount,
-      };
-      await addDebtTag(newTag);
+      
+      const loadedTags = await getDebtTags();
+      setTags(loadedTags);
+      setNewTagName('');
+      setNewTagAmount(0);
+      setEditingTagId(null);
+      setIsClosingTag(true);
+      setTimeout(() => {
+        setShowAddTag(false);
+        setIsClosingTag(false);
+      }, 300);
+    } catch (error) {
+      console.error('Error saving tag:', error);
+      alert('Error saving tag. Please try again.');
+    } finally {
+      setIsSavingTag(false);
     }
-    
-    const loadedTags = await getDebtTags();
-    setTags(loadedTags);
-    setNewTagName('');
-    setNewTagAmount(0);
-    setEditingTagId(null);
-    setIsClosingTag(true);
-    setTimeout(() => {
-      setShowAddTag(false);
-      setIsClosingTag(false);
-    }, 300);
   };
 
   const handleCancelTag = () => {
@@ -824,9 +840,17 @@ export default function Debts() {
                   </button>
                   <button
                     onClick={handleSaveTag}
-                    className="flex-1 bg-lime-500 border-4 border-black text-black py-3 sm:py-4 rounded-none font-black  text-sm sm:text-base"
+                    disabled={isSavingTag}
+                    className="flex-1 bg-lime-500 border-4 border-black text-black py-3 sm:py-4 rounded-none font-black text-sm sm:text-base flex items-center justify-center gap-2 disabled:bg-gray-300 disabled:cursor-not-allowed disabled:opacity-70"
                   >
-                    {editingTagId ? 'Save Changes' : 'Create Tag'}
+                    {isSavingTag ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        Saving...
+                      </>
+                    ) : (
+                      editingTagId ? 'Save Changes' : 'Create Tag'
+                    )}
                   </button>
                 </div>
               </div>
@@ -1081,9 +1105,17 @@ export default function Debts() {
                   </button>
                   <button
                     onClick={handleSaveDebt}
-                    className="flex-1 bg-lime-500 border-4 border-black text-black py-2 sm:py-3 rounded-none font-black  text-sm sm:text-base"
+                    disabled={isSavingDebt}
+                    className="flex-1 bg-lime-500 border-4 border-black text-black py-2 sm:py-3 rounded-none font-black text-sm sm:text-base flex items-center justify-center gap-2 disabled:bg-gray-300 disabled:cursor-not-allowed disabled:opacity-70"
                   >
-                    {editingDebtId ? 'Save Changes' : 'Add Expense'}
+                    {isSavingDebt ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        Saving...
+                      </>
+                    ) : (
+                      editingDebtId ? 'Save Changes' : 'Add Expense'
+                    )}
                   </button>
                 </div>
               </div>

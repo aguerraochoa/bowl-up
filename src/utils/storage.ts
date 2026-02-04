@@ -155,7 +155,7 @@ export const getGames = async (): Promise<Game[]> => {
 
   const { data, error } = await supabase
     .from('games')
-    .select('id, player_id, date, total_score, strikes_frames_1_to_9, spares_frames_1_to_9, tenth_frame')
+    .select('id, player_id, date, total_score, strikes_frames_1_to_9, spares_frames_1_to_9, tenth_frame, game_session_id')
     .eq('team_id', teamId)
     .order('date', { ascending: false });
 
@@ -172,6 +172,7 @@ export const getGames = async (): Promise<Game[]> => {
     strikesFrames1to9: g.strikes_frames_1_to_9,
     sparesFrames1to9: g.spares_frames_1_to_9,
     tenthFrame: g.tenth_frame || '',
+    gameSessionId: g.game_session_id || undefined,
   }));
 };
 
@@ -198,10 +199,24 @@ export const addGame = async (game: Game): Promise<void> => {
     strikes_frames_1_to_9: game.strikesFrames1to9,
     spares_frames_1_to_9: game.sparesFrames1to9,
     tenth_frame: game.tenthFrame,
+    game_session_id: game.gameSessionId || null,
   });
 
   if (error) {
     console.error('Error adding game:', error);
+    throw error;
+  }
+};
+
+export const removeGame = async (gameId: string): Promise<void> => {
+  const { error } = await supabase
+    .from('games')
+    .delete()
+    .eq('id', gameId);
+
+  if (error) {
+    console.error('Error removing game:', error);
+    throw error;
   }
 };
 
