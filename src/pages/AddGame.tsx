@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { getPlayers, addGame } from '../utils/storage';
-import { validateGame, parseTenthFrame } from '../utils/scoring';
+import { validateGame } from '../utils/scoring';
 import type { Player, Game } from '../types';
 import { Check, X, ArrowRight, ArrowLeft, RotateCcw } from 'lucide-react';
 
@@ -262,7 +262,6 @@ export default function AddGame() {
           <div className="space-y-3 sm:space-y-4 mb-4 sm:mb-6">
             {gameData.map((game, index) => {
               const player = selectedPlayersList[index];
-              const tenthFrame = parseTenthFrame(game.tenthFrame || '');
               return (
                 <div key={index} className="bg-white rounded-none border-4 border-black p-4 sm:p-5 ">
                   <h3 className="font-black text-base sm:text-lg mb-3 text-black truncate">{player.name}</h3>

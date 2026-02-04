@@ -1,26 +1,40 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { getPlayers, getDebts, getDebtTags } from '../utils/storage';
-import { ChevronDown, ChevronUp, Plus, Tag, DollarSign, Edit2, Trash2, X } from 'lucide-react';
+import { ChevronDown, ChevronUp, Plus, Tag } from 'lucide-react';
 import type { Debt, DebtTag, Player } from '../types';
 
 export default function DebtsDesigns() {
-  const players = getPlayers();
-  const debts = getDebts();
-  const tags = getDebtTags();
+  const [players, setPlayers] = useState<Player[]>([]);
+  const [debts, setDebts] = useState<Debt[]>([]);
+  const [tags, setTags] = useState<DebtTag[]>([]);
   const [selectedDesign, setSelectedDesign] = useState<number | null>(null);
+
+  useEffect(() => {
+    const loadData = async () => {
+      const [loadedPlayers, loadedDebts, loadedTags] = await Promise.all([
+        getPlayers(),
+        getDebts(),
+        getDebtTags(),
+      ]);
+      setPlayers(loadedPlayers);
+      setDebts(loadedDebts);
+      setTags(loadedTags);
+    };
+    loadData();
+  }, []);
 
   // Mock balances calculation
   const calculateBalances = () => {
     const balances: Record<string, number> = {};
-    players.forEach(player => {
+    players.forEach((player: Player) => {
       balances[player.id] = 0;
     });
 
-    debts.forEach(debt => {
+    debts.forEach((debt: Debt) => {
       balances[debt.paidBy] = (balances[debt.paidBy] || 0) + debt.amount;
       if (debt.splitMethod === 'equal') {
         const perPerson = debt.amount / debt.splitBetween.length;
-        debt.splitBetween.forEach(playerId => {
+        debt.splitBetween.forEach((playerId: string) => {
           balances[playerId] = (balances[playerId] || 0) - perPerson;
         });
       }
@@ -30,8 +44,11 @@ export default function DebtsDesigns() {
   };
 
   const balances = calculateBalances();
-  const getPlayerName = (playerId: string) => players.find(p => p.id === playerId)?.name || 'Unknown';
-  const getTagName = (tagId: string) => tags.find(t => t.id === tagId)?.name || tagId;
+  const getPlayerName = (playerId: string) => players.find((p: Player) => p.id === playerId)?.name || 'Unknown';
+  const getTagName = (tagId: string | undefined) => {
+    if (!tagId) return 'Custom Expense';
+    return tags.find((t: DebtTag) => t.id === tagId)?.name || tagId;
+  };
 
   // Design 1: Collapsible Sections
   const Design1 = () => {

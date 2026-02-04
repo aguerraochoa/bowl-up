@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { getDebts, getDebtTags, getPlayers, addDebt, updateDebt, removeDebt, addDebtTag, updateDebtTag, removeDebtTag } from '../utils/storage';
 import type { Debt, DebtTag, Player } from '../types';
-import { Plus, DollarSign, Users, Tag, X, Edit2, Trash2, Check } from 'lucide-react';
+import { Plus, Tag, X, Edit2, Trash2, Check } from 'lucide-react';
 
 export default function Debts() {
   const [debts, setDebts] = useState<Debt[]>([]);
@@ -168,10 +168,11 @@ export default function Debts() {
     setShowAddDebt(true);
   };
 
-  const handleDeleteDebt = (debtId: string) => {
+  const handleDeleteDebt = async (debtId: string) => {
     if (confirm('Are you sure you want to delete this expense?')) {
-      removeDebt(debtId);
-      setDebts(getDebts());
+      await removeDebt(debtId);
+      const loadedDebts = await getDebts();
+      setDebts(loadedDebts);
     }
   };
 
@@ -323,8 +324,6 @@ export default function Debts() {
       setTags(loadedTags);
     }
   };
-
-  const selectedTag = tags.find(t => t.id === newDebt.tag);
 
   return (
     <div className="min-h-screen bg-orange-50 pb-20 safe-top relative">

@@ -3,10 +3,11 @@ import KPICard from '../components/KPICard';
 import LeaderboardCard from '../components/LeaderboardCard';
 import { calculateTeamStats, getTopIndividualGames, getTopTeamSumGames, getTopIndividualAverages, getTopTenthFrameAverages } from '../utils/stats';
 import { getPlayers } from '../utils/storage';
-import { Target, Zap, Gamepad2, TrendingUp, X, Award } from 'lucide-react';
+import { Target, Zap, Gamepad2, TrendingUp, X } from 'lucide-react';
 import type { Game } from '../types';
 
 export default function Dashboard() {
+  const [players, setPlayers] = useState<any[]>([]);
   const [teamStats, setTeamStats] = useState({
     teamGameAverage: 0,
     totalGames: 0,
@@ -25,6 +26,9 @@ export default function Dashboard() {
   const refreshData = async () => {
     const stats = await calculateTeamStats();
     setTeamStats(stats);
+    
+    const loadedPlayers = await getPlayers();
+    setPlayers(loadedPlayers);
     
     const games = await getTopIndividualGames(10);
     setTopGames(games.map(g => ({
@@ -319,7 +323,7 @@ export default function Dashboard() {
                   {selectedTeamGame.games
                     .sort((a, b) => b.totalScore - a.totalScore)
                     .map((game, index) => {
-                      const player = getPlayers().find(p => p.id === game.playerId);
+                      const player = players.find((p: any) => p.id === game.playerId);
                       return (
                         <div
                           key={game.id}
