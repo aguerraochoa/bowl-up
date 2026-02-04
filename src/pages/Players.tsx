@@ -19,9 +19,11 @@ export default function Players() {
   const [editingPlayerName, setEditingPlayerName] = useState('');
   const [isAddingPlayer, setIsAddingPlayer] = useState(false);
   const [savingPlayerId, setSavingPlayerId] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     const loadPlayers = async () => {
+      setIsLoading(true);
       const loadedPlayers = await getPlayers();
       setPlayers(loadedPlayers);
       
@@ -31,6 +33,7 @@ export default function Players() {
         statsMap[player.id] = await calculatePlayerStats(player.id);
       }
       setPlayersStats(statsMap);
+      setIsLoading(false);
     };
     loadPlayers();
   }, []);
@@ -277,7 +280,12 @@ export default function Players() {
           </div>
         )}
 
-        {players.length === 0 ? (
+        {isLoading ? (
+          <div className="bg-white rounded-none border-4 border-black p-12 text-center">
+            <Loader2 className="w-8 h-8 animate-spin mx-auto mb-4 text-black" />
+            <p className="text-black font-bold">Loading players...</p>
+          </div>
+        ) : players.length === 0 ? (
           <div className="bg-white rounded-none border-4 border-black p-12 text-center ">
             <p className="text-black mb-2 font-bold">No players added yet.</p>
             <p className="text-sm text-black font-bold">Click the + button to add your first player.</p>

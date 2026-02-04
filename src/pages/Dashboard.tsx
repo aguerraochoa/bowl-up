@@ -3,7 +3,7 @@ import KPICard from '../components/KPICard';
 import LeaderboardCard from '../components/LeaderboardCard';
 import { calculateTeamStats, getTopIndividualGames, getTopTeamSumGames, getTopIndividualAverages, getTopTenthFrameAverages } from '../utils/stats';
 import { getPlayers } from '../utils/storage';
-import { Target, Zap, Gamepad2, TrendingUp, X } from 'lucide-react';
+import { Target, Zap, Gamepad2, TrendingUp, X, Loader2 } from 'lucide-react';
 import type { Game } from '../types';
 
 export default function Dashboard() {
@@ -22,8 +22,14 @@ export default function Dashboard() {
   const [selectedTeamGame, setSelectedTeamGame] = useState<{ date: string; totalSum: number; games: Game[] } | null>(null);
   const [isClosingModal, setIsClosingModal] = useState(false);
   const [showMoreGames, setShowMoreGames] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isInitialLoad, setIsInitialLoad] = useState(true);
 
-  const refreshData = async () => {
+  const refreshData = async (showLoading = false) => {
+    if (showLoading) {
+      setIsLoading(true);
+    }
+    
     const stats = await calculateTeamStats();
     setTeamStats(stats);
     
@@ -51,12 +57,19 @@ export default function Dashboard() {
       playerName: a.playerName,
       average: a.average,
     })));
+    
+    if (showLoading) {
+      setIsLoading(false);
+    }
+    setIsInitialLoad(false);
   };
 
   useEffect(() => {
-    refreshData();
+    // Initial load with loading state
+    refreshData(true);
     // Refresh every 5 seconds to catch updates (Supabase is real-time, but keeping for safety)
-    const interval = setInterval(refreshData, 5000);
+    // Don't show loading spinner on subsequent refreshes
+    const interval = setInterval(() => refreshData(false), 5000);
     return () => clearInterval(interval);
   }, []);
 
@@ -84,6 +97,17 @@ export default function Dashboard() {
       setIsClosingModal(false);
     }, 300);
   };
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-orange-50 pb-20 md:pb-6 safe-top relative flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="w-12 h-12 animate-spin mx-auto mb-4 text-black" />
+          <p className="text-black font-black text-xl uppercase">Loading Dashboard...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-orange-50 pb-20 md:pb-6 safe-top relative">

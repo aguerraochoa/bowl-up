@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Plus, Minus } from 'lucide-react';
+import { Plus, Minus, Loader2 } from 'lucide-react';
 import { getPlayers } from '../utils/storage';
 import { getBetTallies, incrementBetTally, decrementBetTally } from '../utils/storage';
 import type { Player } from '../types';
@@ -7,16 +7,19 @@ import type { Player } from '../types';
 export default function BetTracker() {
   const [players, setPlayers] = useState<Player[]>([]);
   const [tallies, setTallies] = useState<Record<string, number>>({});
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     // Refresh players and tallies when component mounts or updates
     const loadData = async () => {
+      setIsLoading(true);
       const [loadedPlayers, loadedTallies] = await Promise.all([
         getPlayers(),
         getBetTallies(),
       ]);
       setPlayers(loadedPlayers);
       setTallies(loadedTallies);
+      setIsLoading(false);
     };
     loadData();
   }, []);
@@ -45,7 +48,12 @@ export default function BetTracker() {
           <p className="text-sm sm:text-base text-black font-bold">Track 5-pin misses and strike penalties</p>
         </div>
 
-        {players.length === 0 ? (
+        {isLoading ? (
+          <div className="bg-white rounded-none border-4 border-black p-12 text-center">
+            <Loader2 className="w-8 h-8 animate-spin mx-auto mb-4 text-black" />
+            <p className="text-black font-bold">Loading tracker...</p>
+          </div>
+        ) : players.length === 0 ? (
           <div className="bg-white rounded-none border-4 border-black p-12 text-center">
             <p className="text-black font-bold text-lg">No players added yet.</p>
             <p className="text-sm text-black font-bold mt-2">Add players in the Players tab first.</p>

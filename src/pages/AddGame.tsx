@@ -21,19 +21,25 @@ export default function AddGame() {
   const [games, setGames] = useState<Game[]>([]);
   const [showHistory, setShowHistory] = useState(false);
   const [deletingGameId, setDeletingGameId] = useState<string | null>(null);
+  const [isLoadingPlayers, setIsLoadingPlayers] = useState(true);
+  const [isLoadingGames, setIsLoadingGames] = useState(true);
 
   useEffect(() => {
     const loadPlayers = async () => {
+      setIsLoadingPlayers(true);
       const players = await getPlayers();
       setAllPlayers(players);
+      setIsLoadingPlayers(false);
     };
     loadPlayers();
   }, []);
 
   useEffect(() => {
     const loadGames = async () => {
+      setIsLoadingGames(true);
       const loadedGames = await getGames();
       setGames(loadedGames);
+      setIsLoadingGames(false);
     };
     loadGames();
   }, []);
@@ -211,6 +217,19 @@ export default function AddGame() {
   const currentPlayer = selectedPlayersList[currentPlayerIndex];
   const isLastPlayer = currentPlayerIndex === selectedPlayersList.length - 1;
 
+  // Show loading state first
+  if (isLoadingPlayers) {
+    return (
+      <div className="min-h-screen bg-orange-50 pb-20 safe-top flex items-center justify-center px-4 relative">
+        <div className="text-center">
+          <Loader2 className="w-8 h-8 animate-spin mx-auto mb-4 text-black" />
+          <p className="text-black font-bold">Loading players...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Then check if players are empty
   if (allPlayers.length === 0) {
     return (
       <div className="min-h-screen bg-orange-50 pb-20 safe-top flex items-center justify-center px-4 relative">
@@ -302,7 +321,12 @@ export default function AddGame() {
           {showHistory && (
             <div className="bg-white rounded-none border-4 border-black p-4 sm:p-6 mb-4 sm:mb-6">
               <h2 className="text-lg sm:text-xl font-black mb-4 uppercase">Game History</h2>
-              {games.length === 0 ? (
+              {isLoadingGames ? (
+                <div className="flex items-center justify-center py-8">
+                  <Loader2 className="w-6 h-6 animate-spin text-black mr-2" />
+                  <p className="text-black font-bold text-sm sm:text-base">Loading games...</p>
+                </div>
+              ) : games.length === 0 ? (
                 <p className="text-black font-bold text-sm sm:text-base">No games recorded yet.</p>
               ) : (
                 <div className="space-y-4">

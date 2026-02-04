@@ -20,6 +20,7 @@ export default function Debts() {
   const [customExpenseName, setCustomExpenseName] = useState('');
   const [isSavingDebt, setIsSavingDebt] = useState(false);
   const [isSavingTag, setIsSavingTag] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [newDebt, setNewDebt] = useState<Partial<Debt>>({
     tag: '',
     amount: 0,
@@ -30,6 +31,7 @@ export default function Debts() {
 
   useEffect(() => {
     const loadData = async () => {
+      setIsLoading(true);
       const [loadedDebts, loadedTags, loadedPlayers] = await Promise.all([
         getDebts(),
         getDebtTags(),
@@ -38,6 +40,7 @@ export default function Debts() {
       setDebts(loadedDebts);
       setTags(loadedTags);
       setPlayers(loadedPlayers);
+      setIsLoading(false);
     };
     loadData();
   }, []);
@@ -408,7 +411,12 @@ export default function Debts() {
             {/* Expenses Tab */}
             {activeTab === 'expenses' && (
               <div className="space-y-3">
-                {debts.length === 0 ? (
+                {isLoading ? (
+                  <div className="bg-white rounded-none border-4 border-black p-12 text-center">
+                    <Loader2 className="w-8 h-8 animate-spin mx-auto mb-4 text-black" />
+                    <p className="text-black font-bold">Loading expenses...</p>
+                  </div>
+                ) : debts.length === 0 ? (
                   <div className="bg-white rounded-none border-4 border-black p-12 text-center ">
                     <p className="text-black font-bold">No expenses recorded yet.</p>
                   </div>
@@ -525,7 +533,12 @@ export default function Debts() {
                     <span>New Tag</span>
                   </button>
                 </div>
-                {tags.length === 0 ? (
+                {isLoading ? (
+                  <div className="text-center py-4">
+                    <Loader2 className="w-6 h-6 animate-spin mx-auto mb-2 text-black" />
+                    <p className="text-black font-bold">Loading tags...</p>
+                  </div>
+                ) : tags.length === 0 ? (
                   <p className="text-black text-center py-4 font-bold">No tags created yet. Click "New Tag" to create one.</p>
                 ) : (
                   <div className="grid grid-cols-1 gap-3">
@@ -620,7 +633,12 @@ export default function Debts() {
             {/* Expenses Tab */}
             {activeTab === 'expenses' && (
               <div className="space-y-4">
-                {debts.length === 0 ? (
+                {isLoading ? (
+                  <div className="bg-white rounded-none border-4 border-black p-12 text-center">
+                    <Loader2 className="w-8 h-8 animate-spin mx-auto mb-4 text-black" />
+                    <p className="text-black font-bold text-lg">Loading expenses...</p>
+                  </div>
+                ) : debts.length === 0 ? (
                   <div className="bg-white rounded-none border-4 border-black p-12 text-center">
                     <p className="text-black font-bold text-lg">No expenses recorded yet.</p>
                   </div>
@@ -738,7 +756,12 @@ export default function Debts() {
                     <span>New Tag</span>
                   </button>
                 </div>
-                {tags.length === 0 ? (
+                {isLoading ? (
+                  <div className="text-center py-8">
+                    <Loader2 className="w-6 h-6 animate-spin mx-auto mb-2 text-black" />
+                    <p className="text-black font-bold text-lg">Loading tags...</p>
+                  </div>
+                ) : tags.length === 0 ? (
                   <p className="text-black text-center py-8 font-bold text-lg">No tags created yet. Click "New Tag" to create one.</p>
                 ) : (
                   <div className="grid grid-cols-1 gap-4">
