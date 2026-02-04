@@ -220,6 +220,18 @@ export const removeGame = async (gameId: string): Promise<void> => {
   }
 };
 
+export const removeGamesBySession = async (gameSessionId: string): Promise<void> => {
+  const { error } = await supabase
+    .from('games')
+    .delete()
+    .eq('game_session_id', gameSessionId);
+
+  if (error) {
+    console.error('Error removing games by session:', error);
+    throw error;
+  }
+};
+
 // Debts
 export const getDebts = async (): Promise<Debt[]> => {
   const teamId = await getTeamId();

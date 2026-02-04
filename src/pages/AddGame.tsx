@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { getPlayers, addGame, getGames, removeGame } from '../utils/storage';
+import { getPlayers, addGame, getGames, removeGame, removeGamesBySession } from '../utils/storage';
 import { validateGame } from '../utils/scoring';
 import type { Player, Game } from '../types';
 import { Check, X, ArrowRight, ArrowLeft, RotateCcw, Loader2, Trash2, History } from 'lucide-react';
@@ -20,7 +20,8 @@ export default function AddGame() {
   const [isSaving, setIsSaving] = useState(false);
   const [games, setGames] = useState<Game[]>([]);
   const [showHistory, setShowHistory] = useState(false);
-  const [deletingGameId, setDeletingGameId] = useState<string | null>(null);
+  const [isClosingHistory, setIsClosingHistory] = useState(false);
+  const [deletingSessionId, setDeletingSessionId] = useState<string | null>(null);
   const [isLoadingPlayers, setIsLoadingPlayers] = useState(true);
   const [isLoadingGames, setIsLoadingGames] = useState(true);
 
@@ -194,12 +195,31 @@ export default function AddGame() {
     }
   };
 
+  const handleDeleteSession = async (sessionId: string) => {
+    if (!confirm('Are you sure you want to delete this team game? This will delete all player games in this session. This action cannot be undone.')) {
+      return;
+    }
+
+    setDeletingSessionId(sessionId);
+    try {
+      await removeGamesBySession(sessionId);
+      // Reload games after deletion
+      const loadedGames = await getGames();
+      setGames(loadedGames);
+    } catch (error) {
+      console.error('Error deleting session:', error);
+      alert('Error deleting team game. Please try again.');
+    } finally {
+      setDeletingSessionId(null);
+    }
+  };
+
   const handleDeleteGame = async (gameId: string) => {
     if (!confirm('Are you sure you want to delete this game? This action cannot be undone.')) {
       return;
     }
 
-    setDeletingGameId(gameId);
+    setDeletingSessionId(gameId);
     try {
       await removeGame(gameId);
       // Reload games after deletion
@@ -209,8 +229,16 @@ export default function AddGame() {
       console.error('Error deleting game:', error);
       alert('Error deleting game. Please try again.');
     } finally {
-      setDeletingGameId(null);
+      setDeletingSessionId(null);
     }
+  };
+
+  const handleCloseHistory = () => {
+    setIsClosingHistory(true);
+    setTimeout(() => {
+      setShowHistory(false);
+      setIsClosingHistory(false);
+    }, 300);
   };
 
   const selectedPlayersList = getSelectedPlayersList();
@@ -252,10 +280,11 @@ export default function AddGame() {
             </div>
             <div className="flex gap-2">
               <button
-                onClick={() => setShowHistory(!showHistory)}
-                className={`border-4 border-black text-black px-3 sm:px-4 py-2 sm:py-3 rounded-none font-black flex items-center gap-2 text-sm sm:text-base ${
-                  showHistory ? 'bg-orange-500' : 'bg-amber-400'
-                }`}
+                onClick={() => {
+                  setIsClosingHistory(false);
+                  setShowHistory(true);
+                }}
+                className="border-4 border-black text-black px-3 sm:px-4 py-2 sm:py-3 rounded-none font-black flex items-center gap-2 text-sm sm:text-base bg-amber-400 hover:bg-amber-500"
               >
                 <History className="w-4 h-4 sm:w-5 sm:h-5" />
                 <span className="hidden sm:inline">History</span>
@@ -317,118 +346,155 @@ export default function AddGame() {
             </div>
           </div>
 
-          {/* Game History Section */}
+          {/* Game History Modal */}
           {showHistory && (
-            <div className="bg-white rounded-none border-4 border-black p-4 sm:p-6 mb-4 sm:mb-6">
-              <h2 className="text-lg sm:text-xl font-black mb-4 uppercase">Game History</h2>
-              {isLoadingGames ? (
-                <div className="flex items-center justify-center py-8">
-                  <Loader2 className="w-6 h-6 animate-spin text-black mr-2" />
-                  <p className="text-black font-bold text-sm sm:text-base">Loading games...</p>
+            <div 
+              className="fixed inset-0 z-[100] flex items-end justify-center safe-top"
+              onClick={(e) => {
+                if (e.target === e.currentTarget) {
+                  handleCloseHistory();
+                }
+              }}
+            >
+              {/* Backdrop */}
+              <div className="absolute inset-0 bg-orange-50/90" />
+              
+              {/* Modal Content */}
+              <div 
+                className={`relative bg-white rounded-none border-4 border-black border-b-0 w-full sm:max-w-2xl sm:mx-4 sm:rounded-none sm:border-b-4 max-h-[100vh] sm:max-h-[90vh] flex flex-col ${
+                  isClosingHistory ? 'animate-slide-down' : 'animate-slide-up'
+                }`}
+                onClick={(e) => e.stopPropagation()}
+              >
+                {/* Header */}
+                <div className="flex items-center justify-between px-4 sm:px-6 pt-4 sm:pt-6 pb-3 sm:pb-4 border-b-4 border-black bg-amber-400 flex-shrink-0">
+                  <h2 className="text-lg sm:text-xl md:text-2xl font-black text-black uppercase flex-1">
+                    Game History
+                  </h2>
+                  <button
+                    onClick={handleCloseHistory}
+                    className="p-2 bg-red-600 border-4 border-black text-black hover:bg-red-700 font-black flex-shrink-0 ml-2"
+                  >
+                    <X className="w-4 h-4 sm:w-5 sm:h-5" />
+                  </button>
                 </div>
-              ) : games.length === 0 ? (
-                <p className="text-black font-bold text-sm sm:text-base">No games recorded yet.</p>
-              ) : (
-                <div className="space-y-4">
-                  {/* Group games by session */}
-                  {(() => {
-                    const gamesBySession = new Map<string, Game[]>();
-                    const gamesWithoutSession: Game[] = [];
+                
+                {/* Content */}
+                <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-4 sm:py-6 bg-white min-h-0">
+                  {isLoadingGames ? (
+                    <div className="flex items-center justify-center py-8">
+                      <Loader2 className="w-6 h-6 animate-spin text-black mr-2" />
+                      <p className="text-black font-bold text-sm sm:text-base">Loading games...</p>
+                    </div>
+                  ) : games.length === 0 ? (
+                    <p className="text-black font-bold text-sm sm:text-base">No games recorded yet.</p>
+                  ) : (
+                    <div className="space-y-4">
+                      {/* Group games by session */}
+                      {(() => {
+                        const gamesBySession = new Map<string, Game[]>();
+                        const gamesWithoutSession: Game[] = [];
 
-                    games.forEach(game => {
-                      if (game.gameSessionId) {
-                        const sessionGames = gamesBySession.get(game.gameSessionId) || [];
-                        sessionGames.push(game);
-                        gamesBySession.set(game.gameSessionId, sessionGames);
-                      } else {
-                        gamesWithoutSession.push(game);
-                      }
-                    });
+                        games.forEach(game => {
+                          if (game.gameSessionId) {
+                            const sessionGames = gamesBySession.get(game.gameSessionId) || [];
+                            sessionGames.push(game);
+                            gamesBySession.set(game.gameSessionId, sessionGames);
+                          } else {
+                            gamesWithoutSession.push(game);
+                          }
+                        });
 
-                    const sessions = Array.from(gamesBySession.entries());
-                    
-                    return (
-                      <>
-                        {/* Team games (with session) */}
-                        {sessions.map(([sessionId, sessionGames]) => {
-                          const totalSum = sessionGames.reduce((sum, g) => sum + g.totalScore, 0);
-                          const date = sessionGames[0]?.date || '';
-                          return (
-                            <div key={sessionId} className="bg-amber-400 border-4 border-black p-3 sm:p-4">
-                              <div className="flex items-center justify-between mb-2">
-                                <div>
-                                  <p className="font-black text-black text-sm sm:text-base">
-                                    {new Date(date).toLocaleDateString()}
-                                  </p>
-                                  <p className="text-xs sm:text-sm text-black font-bold">
-                                    Team Total: {totalSum}
-                                  </p>
-                                </div>
-                              </div>
-                              <div className="space-y-2">
-                                {sessionGames.map(game => {
-                                  const player = allPlayers.find(p => p.id === game.playerId);
-                                  return (
-                                    <div key={game.id} className="flex items-center justify-between bg-white border-2 border-black p-2">
-                                      <div className="flex-1">
-                                        <p className="font-black text-black text-sm sm:text-base">{player?.name || 'Unknown'}</p>
-                                        <p className="text-xs text-black font-bold">
-                                          Score: {game.totalScore} | Strikes: {game.strikesFrames1to9} | Spares: {game.sparesFrames1to9}
-                                        </p>
-                                      </div>
-                                      <button
-                                        onClick={() => handleDeleteGame(game.id)}
-                                        disabled={deletingGameId === game.id}
-                                        className="bg-red-600 border-2 border-black text-white p-2 hover:bg-red-700 font-black disabled:bg-gray-300 disabled:cursor-not-allowed disabled:opacity-70"
-                                        aria-label="Delete game"
-                                      >
-                                        {deletingGameId === game.id ? (
-                                          <Loader2 className="w-4 h-4 animate-spin" />
-                                        ) : (
-                                          <Trash2 className="w-4 h-4" />
-                                        )}
-                                      </button>
-                                    </div>
-                                  );
-                                })}
-                              </div>
-                            </div>
-                          );
-                        })}
+                        const sessions = Array.from(gamesBySession.entries());
                         
-                        {/* Individual games (without session) */}
-                        {gamesWithoutSession.map(game => {
-                          const player = allPlayers.find(p => p.id === game.playerId);
-                          return (
-                            <div key={game.id} className="flex items-center justify-between bg-white border-4 border-black p-3 sm:p-4">
-                              <div className="flex-1">
-                                <p className="font-black text-black text-sm sm:text-base">
-                                  {player?.name || 'Unknown'} - {new Date(game.date).toLocaleDateString()}
-                                </p>
-                                <p className="text-xs sm:text-sm text-black font-bold">
-                                  Score: {game.totalScore} | Strikes: {game.strikesFrames1to9} | Spares: {game.sparesFrames1to9}
-                                </p>
-                              </div>
-                              <button
-                                onClick={() => handleDeleteGame(game.id)}
-                                disabled={deletingGameId === game.id}
-                                className="bg-red-600 border-2 border-black text-white p-2 hover:bg-red-700 font-black disabled:bg-gray-300 disabled:cursor-not-allowed disabled:opacity-70"
-                                aria-label="Delete game"
-                              >
-                                {deletingGameId === game.id ? (
-                                  <Loader2 className="w-4 h-4 animate-spin" />
-                                ) : (
-                                  <Trash2 className="w-4 h-4" />
-                                )}
-                              </button>
-                            </div>
-                          );
-                        })}
-                      </>
-                    );
-                  })()}
+                        return (
+                          <>
+                            {/* Team games (with session) */}
+                            {sessions.map(([sessionId, sessionGames]) => {
+                              const totalSum = sessionGames.reduce((sum, g) => sum + g.totalScore, 0);
+                              const date = sessionGames[0]?.date || '';
+                              return (
+                                <div key={sessionId} className="bg-amber-400 border-4 border-black p-3 sm:p-4">
+                                  <div className="flex items-center justify-between mb-2">
+                                    <div className="flex-1">
+                                      <p className="font-black text-black text-sm sm:text-base">
+                                        {new Date(date).toLocaleDateString()}
+                                      </p>
+                                      <p className="text-xs sm:text-sm text-black font-bold">
+                                        Team Total: {totalSum} | {sessionGames.length} players
+                                      </p>
+                                    </div>
+                                    <button
+                                      onClick={() => handleDeleteSession(sessionId)}
+                                      disabled={deletingSessionId === sessionId}
+                                      className="bg-red-600 border-4 border-black text-white px-3 sm:px-4 py-2 hover:bg-red-700 font-black disabled:bg-gray-300 disabled:cursor-not-allowed disabled:opacity-70 flex items-center gap-2"
+                                      aria-label="Delete team game"
+                                    >
+                                      {deletingSessionId === sessionId ? (
+                                        <>
+                                          <Loader2 className="w-4 h-4 animate-spin" />
+                                          <span className="text-xs sm:text-sm">Deleting...</span>
+                                        </>
+                                      ) : (
+                                        <>
+                                          <Trash2 className="w-4 h-4" />
+                                          <span className="text-xs sm:text-sm">Delete</span>
+                                        </>
+                                      )}
+                                    </button>
+                                  </div>
+                                  <div className="space-y-2 mt-3">
+                                    {sessionGames.map(game => {
+                                      const player = allPlayers.find(p => p.id === game.playerId);
+                                      return (
+                                        <div key={game.id} className="bg-white border-2 border-black p-2">
+                                          <p className="font-black text-black text-sm sm:text-base">{player?.name || 'Unknown'}</p>
+                                          <p className="text-xs text-black font-bold">
+                                            Score: {game.totalScore} | Strikes: {game.strikesFrames1to9} | Spares: {game.sparesFrames1to9}
+                                          </p>
+                                        </div>
+                                      );
+                                    })}
+                                  </div>
+                                </div>
+                              );
+                            })}
+                            
+                            {/* Individual games (without session) */}
+                            {gamesWithoutSession.map(game => {
+                              const player = allPlayers.find(p => p.id === game.playerId);
+                              return (
+                                <div key={game.id} className="flex items-center justify-between bg-white border-4 border-black p-3 sm:p-4">
+                                  <div className="flex-1">
+                                    <p className="font-black text-black text-sm sm:text-base">
+                                      {player?.name || 'Unknown'} - {new Date(game.date).toLocaleDateString()}
+                                    </p>
+                                    <p className="text-xs sm:text-sm text-black font-bold">
+                                      Score: {game.totalScore} | Strikes: {game.strikesFrames1to9} | Spares: {game.sparesFrames1to9}
+                                    </p>
+                                  </div>
+                                  <button
+                                    onClick={() => handleDeleteGame(game.id)}
+                                    disabled={deletingSessionId === game.id}
+                                    className="bg-red-600 border-2 border-black text-white p-2 hover:bg-red-700 font-black disabled:bg-gray-300 disabled:cursor-not-allowed disabled:opacity-70"
+                                    aria-label="Delete game"
+                                  >
+                                    {deletingSessionId === game.id ? (
+                                      <Loader2 className="w-4 h-4 animate-spin" />
+                                    ) : (
+                                      <Trash2 className="w-4 h-4" />
+                                    )}
+                                  </button>
+                                </div>
+                              );
+                            })}
+                          </>
+                        );
+                      })()}
+                    </div>
+                  )}
                 </div>
-              )}
+              </div>
             </div>
           )}
 
