@@ -1,10 +1,20 @@
 import { supabase } from '../lib/supabase';
 import type { Team, Player, Game, Debt, DebtTag, BetTallies } from '../types';
+import { cache } from './cache';
 
-// Helper to get current user's team ID
+// Helper to get current user's team ID (cached for 5 minutes since it rarely changes)
 const getTeamId = async (): Promise<string | null> => {
+  const cacheKey = 'team_id';
+  
+  // Check cache first
+  const cached = cache.get<string | null>(cacheKey);
+  if (cached !== null) return cached;
+
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return null;
+  if (!user) {
+    cache.set(cacheKey, null, 60000); // Cache null for 1 minute
+    return null;
+  }
 
   const { data: team, error } = await supabase
     .from('teams')
@@ -12,7 +22,13 @@ const getTeamId = async (): Promise<string | null> => {
     .eq('user_id', user.id)
     .single();
 
-  if (error || !team) return null;
+  if (error || !team) {
+    cache.set(cacheKey, null, 60000); // Cache null for 1 minute
+    return null;
+  }
+
+  // Cache for 5 minutes (team ID rarely changes)
+  cache.set(cacheKey, team.id, 5 * 60 * 1000);
   return team.id;
 };
 
@@ -71,7 +87,19 @@ export const saveTeam = async (team: Team): Promise<void> => {
 };
 
 // Players
-export const getPlayers = async (): Promise<Player[]> => {
+export const getPlayers = async (forceRefresh = false): Promise<Player[]> => {
+  const cacheKey = 'players';
+  
+  // Return cached data immediately if available (stale-while-revalidate)
+  if (!forceRefresh) {
+    const cached = cache.get<Player[]>(cacheKey);
+    if (cached) {
+      // Fetch fresh data in background (don't await)
+      getPlayers(true).catch(() => {}); // Silently fail background refresh
+      return cached;
+    }
+  }
+
   const teamId = await getTeamId();
   if (!teamId) return [];
 
@@ -86,11 +114,15 @@ export const getPlayers = async (): Promise<Player[]> => {
     return [];
   }
 
-  return (data || []).map(p => ({
+  const players = (data || []).map(p => ({
     id: p.id,
     name: p.name,
     teamId: p.team_id,
   }));
+
+  // Cache for 2 minutes (players don't change often)
+  cache.set(cacheKey, players, 2 * 60 * 1000);
+  return players;
 };
 
 export const savePlayers = async (players: Player[]): Promise<void> => {
@@ -133,6 +165,9 @@ export const addPlayer = async (player: Player): Promise<void> => {
     console.error('Error adding player:', error);
     throw error;
   }
+
+  // Invalidate cache
+  cache.invalidate('players');
 };
 
 export const removePlayer = async (playerId: string): Promise<void> => {
@@ -143,17 +178,33 @@ export const removePlayer = async (playerId: string): Promise<void> => {
 
   if (error) {
     console.error('Error removing player:', error);
+    return;
   }
+
+  // Invalidate cache
+  cache.invalidate('players');
 };
 
 // Games
-export const getGames = async (): Promise<Game[]> => {
+export const getGames = async (forceRefresh = false): Promise<Game[]> => {
+  const cacheKey = 'games';
+  
+  // Return cached data immediately if available (stale-while-revalidate)
+  if (!forceRefresh) {
+    const cached = cache.get<Game[]>(cacheKey);
+    if (cached) {
+      // Fetch fresh data in background (don't await)
+      getGames(true).catch(() => {}); // Silently fail background refresh
+      return cached;
+    }
+  }
+
   const teamId = await getTeamId();
   if (!teamId) return [];
 
   const { data, error } = await supabase
     .from('games')
-    .select('id, player_id, date, total_score, strikes_frames_1_to_9, spares_frames_1_to_9, tenth_frame, game_session_id')
+    .select('id, player_id, date, total_score, strikes_frames_1_to_9, spares_frames_1_to_9, tenth_frame, game_session_id, created_at')
     .eq('team_id', teamId)
     .order('created_at', { ascending: false });
 
@@ -162,7 +213,7 @@ export const getGames = async (): Promise<Game[]> => {
     return [];
   }
 
-  return (data || []).map(g => ({
+  const games = (data || []).map(g => ({
     id: g.id,
     playerId: g.player_id,
     date: g.date,
@@ -171,7 +222,12 @@ export const getGames = async (): Promise<Game[]> => {
     sparesFrames1to9: g.spares_frames_1_to_9,
     tenthFrame: g.tenth_frame || '',
     gameSessionId: g.game_session_id || undefined,
+    created_at: g.created_at || g.date,
   }));
+
+  // Cache for 30 seconds (games change more frequently)
+  cache.set(cacheKey, games, 30000);
+  return games;
 };
 
 export const saveGames = async (games: Game[]): Promise<void> => {
@@ -204,6 +260,9 @@ export const addGame = async (game: Game): Promise<void> => {
     console.error('Error adding game:', error);
     throw error;
   }
+
+  // Invalidate cache
+  cache.invalidate('games');
 };
 
 export const removeGame = async (gameId: string): Promise<void> => {
@@ -216,6 +275,9 @@ export const removeGame = async (gameId: string): Promise<void> => {
     console.error('Error removing game:', error);
     throw error;
   }
+
+  // Invalidate cache
+  cache.invalidate('games');
 };
 
 export const removeGamesBySession = async (gameSessionId: string): Promise<void> => {
@@ -228,10 +290,25 @@ export const removeGamesBySession = async (gameSessionId: string): Promise<void>
     console.error('Error removing games by session:', error);
     throw error;
   }
+
+  // Invalidate cache
+  cache.invalidate('games');
 };
 
 // Debts
-export const getDebts = async (): Promise<Debt[]> => {
+export const getDebts = async (forceRefresh = false): Promise<Debt[]> => {
+  const cacheKey = 'debts';
+  
+  // Return cached data immediately if available (stale-while-revalidate)
+  if (!forceRefresh) {
+    const cached = cache.get<Debt[]>(cacheKey);
+    if (cached) {
+      // Fetch fresh data in background (don't await)
+      getDebts(true).catch(() => {}); // Silently fail background refresh
+      return cached;
+    }
+  }
+
   const teamId = await getTeamId();
   if (!teamId) return [];
 
@@ -277,7 +354,7 @@ export const getDebts = async (): Promise<Debt[]> => {
     splitsByDebt[split.debt_id].push(split.player_id);
   });
 
-  return (debts || []).map(d => ({
+  const result = (debts || []).map(d => ({
     id: d.id,
     tag: d.tag_id || undefined,
     customName: d.custom_name || undefined,
@@ -292,6 +369,10 @@ export const getDebts = async (): Promise<Debt[]> => {
     date: d.date,
     created_at: d.created_at || d.date, // Fallback to date if created_at not available
   }));
+
+  // Cache for 30 seconds (debts change more frequently)
+  cache.set(cacheKey, result, 30000);
+  return result;
 };
 
 export const saveDebts = async (debts: Debt[]): Promise<void> => {
@@ -354,6 +435,9 @@ export const addDebt = async (debt: Debt): Promise<void> => {
       console.error('Error adding debt splits:', splitError);
     }
   }
+
+  // Invalidate cache
+  cache.invalidate('debts');
 };
 
 export const updateDebt = async (debtId: string, updatedDebt: Debt): Promise<void> => {
@@ -401,6 +485,9 @@ export const updateDebt = async (debtId: string, updatedDebt: Debt): Promise<voi
       console.error('Error updating debt splits:', splitError);
     }
   }
+
+  // Invalidate cache
+  cache.invalidate('debts');
 };
 
 export const removeDebt = async (debtId: string): Promise<void> => {
@@ -418,11 +505,27 @@ export const removeDebt = async (debtId: string): Promise<void> => {
 
   if (error) {
     console.error('Error removing debt:', error);
+    return;
   }
+
+  // Invalidate cache
+  cache.invalidate('debts');
 };
 
 // Debt Tags
-export const getDebtTags = async (): Promise<DebtTag[]> => {
+export const getDebtTags = async (forceRefresh = false): Promise<DebtTag[]> => {
+  const cacheKey = 'debt_tags';
+  
+  // Return cached data immediately if available (stale-while-revalidate)
+  if (!forceRefresh) {
+    const cached = cache.get<DebtTag[]>(cacheKey);
+    if (cached) {
+      // Fetch fresh data in background (don't await)
+      getDebtTags(true).catch(() => {}); // Silently fail background refresh
+      return cached;
+    }
+  }
+
   const teamId = await getTeamId();
   if (!teamId) return [];
 
@@ -437,11 +540,15 @@ export const getDebtTags = async (): Promise<DebtTag[]> => {
     return [];
   }
 
-  return (data || []).map(t => ({
+  const tags = (data || []).map(t => ({
     id: t.id,
     name: t.name,
     defaultAmount: parseFloat(t.default_amount.toString()),
   }));
+
+  // Cache for 2 minutes (tags don't change often)
+  cache.set(cacheKey, tags, 2 * 60 * 1000);
+  return tags;
 };
 
 export const saveDebtTags = async (tags: DebtTag[]): Promise<void> => {
@@ -481,7 +588,11 @@ export const addDebtTag = async (tag: DebtTag): Promise<void> => {
 
   if (error) {
     console.error('Error adding debt tag:', error);
+    return;
   }
+
+  // Invalidate cache
+  cache.invalidate('debt_tags');
 };
 
 export const updateDebtTag = async (tagId: string, updatedTag: DebtTag): Promise<void> => {
@@ -495,7 +606,11 @@ export const updateDebtTag = async (tagId: string, updatedTag: DebtTag): Promise
 
   if (error) {
     console.error('Error updating debt tag:', error);
+    return;
   }
+
+  // Invalidate cache
+  cache.invalidate('debt_tags');
 };
 
 export const removeDebtTag = async (tagId: string): Promise<void> => {
@@ -506,11 +621,27 @@ export const removeDebtTag = async (tagId: string): Promise<void> => {
 
   if (error) {
     console.error('Error removing debt tag:', error);
+    return;
   }
+
+  // Invalidate cache
+  cache.invalidate('debt_tags');
 };
 
 // Bet Tallies
-export const getBetTallies = async (): Promise<BetTallies> => {
+export const getBetTallies = async (forceRefresh = false): Promise<BetTallies> => {
+  const cacheKey = 'bet_tallies';
+  
+  // Return cached data immediately if available (stale-while-revalidate)
+  if (!forceRefresh) {
+    const cached = cache.get<BetTallies>(cacheKey);
+    if (cached) {
+      // Fetch fresh data in background (don't await)
+      getBetTallies(true).catch(() => {}); // Silently fail background refresh
+      return cached;
+    }
+  }
+
   const teamId = await getTeamId();
   if (!teamId) return {};
 
@@ -529,6 +660,8 @@ export const getBetTallies = async (): Promise<BetTallies> => {
     tallies[item.player_id] = item.tally;
   });
 
+  // Cache for 15 seconds (tallies change frequently but not constantly)
+  cache.set(cacheKey, tallies, 15000);
   return tallies;
 };
 
@@ -576,7 +709,11 @@ export const incrementBetTally = async (playerId: string): Promise<void> => {
 
   if (error) {
     console.error('Error incrementing bet tally:', error);
+    return;
   }
+
+  // Invalidate cache
+  cache.invalidate('bet_tallies');
 };
 
 export const decrementBetTally = async (playerId: string): Promise<void> => {
@@ -603,10 +740,19 @@ export const decrementBetTally = async (playerId: string): Promise<void> => {
 
     if (error) {
       console.error('Error decrementing bet tally:', error);
+      return;
     }
+
+    // Invalidate cache
+    cache.invalidate('bet_tallies');
   }
 };
 
+
+// Clear all cache (useful on logout or when switching users)
+export const clearCache = (): void => {
+  cache.clear();
+};
 
 // Initialize default data
 export const initializeDefaultData = async (): Promise<void> => {

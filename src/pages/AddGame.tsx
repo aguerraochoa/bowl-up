@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { getPlayers, addGame, getGames, removeGame, removeGamesBySession } from '../utils/storage';
-import { validateGame } from '../utils/scoring';
+import { validateGame, validateTenthFrame } from '../utils/scoring';
 import type { Player, Game } from '../types';
 import { Check, X, ArrowRight, ArrowLeft, Loader2, Trash2, Clock, Eraser, ChevronDown, ChevronUp } from 'lucide-react';
 
@@ -17,6 +17,7 @@ export default function AddGame() {
     tenthFrame: '',
   });
   const [error, setError] = useState<string>('');
+  const [tenthFrameError, setTenthFrameError] = useState<string>('');
   const [isSaving, setIsSaving] = useState(false);
   const [games, setGames] = useState<Game[]>([]);
   const [showHistory, setShowHistory] = useState(false);
@@ -91,15 +92,40 @@ export default function AddGame() {
   };
 
   const handleTenthFrameChange = (value: string) => {
+    const upperValue = value.toUpperCase();
     setCurrentGame(prev => ({
       ...prev,
-      tenthFrame: value.toUpperCase(),
+      tenthFrame: upperValue,
     }));
-    setError('');
+    
+    // Real-time validation of 10th frame
+    if (upperValue.trim() === '') {
+      setTenthFrameError('');
+      setError('');
+    } else {
+      const validation = validateTenthFrame(upperValue);
+      if (!validation.valid) {
+        setTenthFrameError(validation.error || 'Invalid 10th frame');
+      } else {
+        setTenthFrameError('');
+      }
+      setError(''); // Clear general error when typing
+    }
   };
 
   const handleNext = () => {
     const playersList = getSelectedPlayersList();
+    
+    // Validate 10th frame first
+    if (currentGame.tenthFrame) {
+      const tenthFrameValidation = validateTenthFrame(currentGame.tenthFrame);
+      if (!tenthFrameValidation.valid) {
+        setTenthFrameError(tenthFrameValidation.error || 'Invalid 10th frame');
+        setError(tenthFrameValidation.error || 'Invalid 10th frame');
+        return;
+      }
+    }
+    
     // Validate current game
     const validation = validateGame({
       ...currentGame,
@@ -109,6 +135,9 @@ export default function AddGame() {
 
     if (!validation.valid) {
       setError(validation.error || 'Invalid game data');
+      if (validation.error?.includes('10th frame')) {
+        setTenthFrameError(validation.error);
+      }
       return;
     }
 
@@ -127,6 +156,7 @@ export default function AddGame() {
         tenthFrame: '',
       });
       setError('');
+      setTenthFrameError('');
       // Scroll to top when moving to next player (after state update)
       setTimeout(() => {
         window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -140,19 +170,105 @@ export default function AddGame() {
       }, 0);
     }
   };
+  
+  // Check if current game is valid and complete
+  const isCurrentGameValid = (): boolean => {
+    if (!currentGame.totalScore || currentGame.totalScore <= 0) {
+      return false;
+    }
+    if (!currentGame.tenthFrame || currentGame.tenthFrame.trim() === '') {
+      return false;
+    }
+    const tenthFrameValidation = validateTenthFrame(currentGame.tenthFrame);
+    if (!tenthFrameValidation.valid) {
+      return false;
+    }
+    const fullValidation = validateGame({
+      ...currentGame,
+      playerId: getSelectedPlayersList()[currentPlayerIndex]?.id || '',
+      date: new Date().toISOString().split('T')[0],
+    });
+    return fullValidation.valid;
+  };
+  
+  // Check if all games are valid and complete for review
+  const areAllGamesValid = (): boolean => {
+    const playersList = getSelectedPlayersList();
+    for (let i = 0; i < playersList.length; i++) {
+      const game = i === currentPlayerIndex ? currentGame : gameData[i];
+      if (!game || !game.totalScore || game.totalScore <= 0) {
+        return false;
+      }
+      if (!game.tenthFrame || game.tenthFrame.trim() === '') {
+        return false;
+      }
+      const tenthFrameValidation = validateTenthFrame(game.tenthFrame);
+      if (!tenthFrameValidation.valid) {
+        return false;
+      }
+      const fullValidation = validateGame({
+        ...game,
+        playerId: playersList[i]?.id || '',
+        date: new Date().toISOString().split('T')[0],
+      });
+      if (!fullValidation.valid) {
+        return false;
+      }
+    }
+    return true;
+  };
 
   const handleBack = () => {
     if (currentPlayerIndex > 0) {
       const prevIndex = currentPlayerIndex - 1;
-      setCurrentPlayerIndex(prevIndex);
-      setCurrentGame(gameData[prevIndex] || {
+      const prevGame = gameData[prevIndex] || {
         totalScore: undefined,
         strikesFrames1to9: 0,
         sparesFrames1to9: 0,
         tenthFrame: '',
-      });
+      };
+      setCurrentPlayerIndex(prevIndex);
+      setCurrentGame(prevGame);
+      setError('');
+      // Validate 10th frame when loading previous player's data
+      if (prevGame.tenthFrame) {
+        const validation = validateTenthFrame(prevGame.tenthFrame);
+        if (!validation.valid) {
+          setTenthFrameError(validation.error || 'Invalid 10th frame');
+        } else {
+          setTenthFrameError('');
+        }
+      } else {
+        setTenthFrameError('');
+      }
       // Scroll to top when going to previous player
       window.scrollTo({ top: 0, behavior: 'smooth' });
+    } else if (currentStep === 2) {
+      setCurrentStep(1); // Go back from review to last player's score entry
+      const lastIndex = getSelectedPlayersList().length - 1;
+      const lastGame = gameData[lastIndex] || {
+        totalScore: undefined,
+        strikesFrames1to9: 0,
+        sparesFrames1to9: 0,
+        tenthFrame: '',
+      };
+      setCurrentPlayerIndex(lastIndex);
+      setCurrentGame(lastGame);
+      setError('');
+      // Validate 10th frame when loading last player's data
+      if (lastGame.tenthFrame) {
+        const validation = validateTenthFrame(lastGame.tenthFrame);
+        if (!validation.valid) {
+          setTenthFrameError(validation.error || 'Invalid 10th frame');
+        } else {
+          setTenthFrameError('');
+        }
+      } else {
+        setTenthFrameError('');
+      }
+      setTimeout(() => {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }, 0);
     }
   };
 
@@ -608,7 +724,7 @@ export default function AddGame() {
             </button>
             <button
               onClick={handleSave}
-              disabled={isSaving}
+              disabled={isSaving || !areAllGamesValid()}
               className="flex-1 bg-lime-500 border-4 border-black text-black py-3 sm:py-4 rounded-none font-black flex items-center justify-center gap-2 text-sm sm:text-base disabled:bg-gray-300 disabled:cursor-not-allowed disabled:opacity-70"
             >
               {isSaving ? (
@@ -796,7 +912,9 @@ export default function AddGame() {
             
             {/* Current Notation Display */}
             <div className="mb-4 flex items-center justify-center relative">
-              <div className="inline-block px-4 py-3 border-4 border-black bg-white min-w-[200px] text-center">
+              <div className={`inline-block px-4 py-3 border-4 min-w-[200px] text-center ${
+                tenthFrameError ? 'border-red-600 bg-red-100' : 'border-black bg-white'
+              }`}>
                 <span className="text-2xl sm:text-3xl font-mono font-black text-black">
                   {currentGame.tenthFrame || '---'}
                 </span>
@@ -811,6 +929,13 @@ export default function AddGame() {
                 </button>
               )}
             </div>
+            
+            {/* Error message for 10th frame */}
+            {tenthFrameError && (
+              <div className="mb-4 p-3 bg-red-600 border-4 border-black rounded-none text-black text-sm font-black">
+                {tenthFrameError}
+              </div>
+            )}
 
             {/* Notation Pad */}
             <div className="space-y-2">
@@ -915,7 +1040,8 @@ export default function AddGame() {
             )}
             <button
               onClick={handleNext}
-                className="flex-1 bg-orange-500 border-4 border-black text-black py-3 sm:py-4 rounded-none font-black flex items-center justify-center gap-2  text-sm sm:text-base"
+              disabled={!isCurrentGameValid()}
+              className="flex-1 bg-orange-500 border-4 border-black text-black py-3 sm:py-4 rounded-none font-black flex items-center justify-center gap-2 text-sm sm:text-base disabled:bg-gray-300 disabled:cursor-not-allowed disabled:opacity-70"
             >
               {isLastPlayer ? 'Review' : 'Next'}
               <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5" />

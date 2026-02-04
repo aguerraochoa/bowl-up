@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { getPlayers, addPlayer, removePlayer, getGames } from '../utils/storage';
+import { cache } from '../utils/cache';
 import { calculatePlayerStatsFromData } from '../utils/stats';
 import { supabase } from '../lib/supabase';
 import type { Player, Stats } from '../types';
@@ -8,6 +9,7 @@ import { Plus, X, TrendingUp, TrendingDown, Target, Pencil, Check, Loader2 } fro
 export default function Players() {
   const [players, setPlayers] = useState<Player[]>([]);
   const [playersStats, setPlayersStats] = useState<Record<string, Stats>>({});
+  const [allGames, setAllGames] = useState<any[]>([]); // Store games to avoid refetching
   const [selectedPlayer, setSelectedPlayer] = useState<Player | null>(null);
   const [playerStats, setPlayerStats] = useState<Stats | null>(null);
   const [isClosingStats, setIsClosingStats] = useState(false);
@@ -26,17 +28,18 @@ export default function Players() {
       setIsLoading(true);
       
       // Fetch all data in parallel
-      const [loadedPlayers, allGames] = await Promise.all([
+      const [loadedPlayers, loadedGames] = await Promise.all([
         getPlayers(),
         getGames(),
       ]);
       
       setPlayers(loadedPlayers);
+      setAllGames(loadedGames); // Store games for later use
       
       // Calculate stats for all players in parallel using the fetched games data
       const statsMap: Record<string, Stats> = {};
       loadedPlayers.forEach(player => {
-        statsMap[player.id] = calculatePlayerStatsFromData(player.id, allGames);
+        statsMap[player.id] = calculatePlayerStatsFromData(player.id, loadedGames);
       });
       
       setPlayersStats(statsMap);
@@ -46,17 +49,13 @@ export default function Players() {
   }, []);
 
   useEffect(() => {
-    if (selectedPlayer) {
-      const loadStats = async () => {
-        // Fetch games once and calculate stats
-        const allGames = await getGames();
-        const stats = calculatePlayerStatsFromData(selectedPlayer.id, allGames);
-        setPlayerStats(stats);
-        setIsClosingStats(false);
-      };
-      loadStats();
+    if (selectedPlayer && allGames.length >= 0) {
+      // Use already-loaded games data instead of fetching again
+      const stats = calculatePlayerStatsFromData(selectedPlayer.id, allGames);
+      setPlayerStats(stats);
+      setIsClosingStats(false);
     }
-  }, [selectedPlayer]);
+  }, [selectedPlayer, allGames]);
 
   // Prevent body scroll when modal is open
   useEffect(() => {
@@ -83,17 +82,18 @@ export default function Players() {
       await addPlayer(newPlayer);
       
       // Reload players and games in parallel, then recalculate stats
-      const [loadedPlayers, allGames] = await Promise.all([
+      const [loadedPlayers, loadedGames] = await Promise.all([
         getPlayers(),
         getGames(),
       ]);
       
       setPlayers(loadedPlayers);
+      setAllGames(loadedGames); // Update stored games
       
       // Recalculate stats for all players (new player will have default stats)
       const statsMap: Record<string, Stats> = {};
       loadedPlayers.forEach(player => {
-        statsMap[player.id] = calculatePlayerStatsFromData(player.id, allGames);
+        statsMap[player.id] = calculatePlayerStatsFromData(player.id, loadedGames);
       });
       setPlayersStats(statsMap);
       
@@ -124,18 +124,19 @@ export default function Players() {
     if (confirm('Are you sure you want to remove this player?')) {
       await removePlayer(playerId);
       
-      // Reload players and recalculate stats
-      const [loadedPlayers, allGames] = await Promise.all([
+      // Reload players and games in parallel, then recalculate stats
+      const [loadedPlayers, loadedGames] = await Promise.all([
         getPlayers(),
         getGames(),
       ]);
       
       setPlayers(loadedPlayers);
+      setAllGames(loadedGames); // Update stored games
       
       // Recalculate stats for all players
       const statsMap: Record<string, Stats> = {};
       loadedPlayers.forEach(player => {
-        statsMap[player.id] = calculatePlayerStatsFromData(player.id, allGames);
+        statsMap[player.id] = calculatePlayerStatsFromData(player.id, loadedGames);
       });
       setPlayersStats(statsMap);
       
@@ -163,6 +164,9 @@ export default function Players() {
         .eq('id', playerId);
 
       if (!error) {
+        // Invalidate cache
+        cache.invalidate('players');
+        
         // Optimistically update the player name in the list (no need to reload stats)
         setPlayers(prev => prev.map(p => 
           p.id === playerId ? { ...p, name: editingPlayerName.trim() } : p

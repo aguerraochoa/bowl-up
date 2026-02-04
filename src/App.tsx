@@ -1,7 +1,7 @@
 import { useState, useEffect, lazy, Suspense } from 'react';
 import BottomNav from './components/BottomNav';
 import { supabase } from './lib/supabase';
-import { initializeDefaultData } from './utils/storage';
+import { initializeDefaultData, clearCache } from './utils/storage';
 
 // Lazy load main pages
 const Dashboard = lazy(() => import('./pages/Dashboard'));
@@ -99,6 +99,7 @@ function App() {
 
   const handleSignOut = async () => {
     await supabase.auth.signOut();
+    clearCache(); // Clear cache on logout
     setUser(null);
     setActiveTab('login');
     window.history.pushState({}, '', '/login');

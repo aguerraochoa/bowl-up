@@ -48,8 +48,8 @@ export default function Dashboard() {
       calculateTeamStatsFromData(allGames),
       getTopIndividualGamesFromData(allGames, loadedPlayers, 10),
       getTopTeamSumGamesFromData(allGames, 5),
-      getTopIndividualAveragesFromData(allGames, loadedPlayers, 100),
-      getTopTenthFrameAveragesFromData(allGames, loadedPlayers, 100),
+      getTopIndividualAveragesFromData(allGames, loadedPlayers, 10),
+      getTopTenthFrameAveragesFromData(allGames, loadedPlayers, 10),
     ]);
     
     setTeamStats(stats);
@@ -76,9 +76,9 @@ export default function Dashboard() {
   useEffect(() => {
     // Initial load with loading state
     refreshData(true);
-    // Refresh every 5 seconds to catch updates (Supabase is real-time, but keeping for safety)
+    // Refresh every 30 seconds to catch updates (Supabase is real-time, but keeping for safety)
     // Don't show loading spinner on subsequent refreshes
-    const interval = setInterval(() => refreshData(false), 5000);
+    const interval = setInterval(() => refreshData(false), 30000);
     return () => clearInterval(interval);
   }, []);
 

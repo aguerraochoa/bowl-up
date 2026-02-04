@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { getDebts, getDebtTags, getPlayers, addDebt, updateDebt, removeDebt, addDebtTag, updateDebtTag, removeDebtTag } from '../utils/storage';
 import type { Debt, DebtTag, Player } from '../types';
 import { Plus, Tag, X, Edit2, Trash2, Check, Loader2 } from 'lucide-react';
@@ -57,7 +57,8 @@ export default function Debts() {
     };
   }, [showAddDebt, showAddTag, isClosingDebt, isClosingTag]);
 
-  const calculateBalances = () => {
+  // Memoize balances calculation to avoid recalculating on every render
+  const balances = useMemo(() => {
     const balances: Record<string, number> = {};
     players.forEach(player => {
       balances[player.id] = 0;
@@ -87,11 +88,10 @@ export default function Debts() {
     });
 
     return balances;
-  };
+  }, [players, debts]);
 
-  const balances = calculateBalances();
-
-  const calculateSettlements = () => {
+  // Memoize settlements calculation to avoid recalculating on every render
+  const settlements = useMemo(() => {
     // Get players with positive balances (owed money) and negative balances (owe money)
     const creditors: Array<{ playerId: string; amount: number }> = [];
     const debtors: Array<{ playerId: string; amount: number }> = [];
@@ -137,9 +137,7 @@ export default function Debts() {
     }
 
     return settlements;
-  };
-
-  const settlements = calculateSettlements();
+  }, [players, balances]);
 
   const handleSettlePayment = (from: string, to: string, amount: number) => {
     // Pre-fill the expense modal with settlement details using custom name
