@@ -385,7 +385,7 @@ export default function Dashboard() {
                               {index + 1}
                             </span>
                             <span className="font-black text-base sm:text-lg text-black">
-                              {player?.name || 'Unknown'}
+                              {player?.name || t('dashboard.removedPlayer')}
                             </span>
                           </div>
                           <span className="text-2xl sm:text-3xl font-black text-black">

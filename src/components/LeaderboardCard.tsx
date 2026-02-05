@@ -46,8 +46,8 @@ export default function LeaderboardCard({
                   item.onClick ? 'cursor-pointer hover:opacity-80 transition-opacity' : ''
                 }`}
               >
-                <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
-                  <span className="text-lg sm:text-xl font-black w-6 sm:w-8 text-center flex-shrink-0">
+                <div className="flex items-center gap-4 sm:gap-5 min-w-0 flex-1">
+                  <span className="text-lg sm:text-xl font-black w-10 sm:w-12 text-center flex-shrink-0">
                     #{item.rank}
                   </span>
                   <div className="min-w-0 flex-1">

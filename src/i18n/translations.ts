@@ -59,6 +59,7 @@ export const translations = {
     'dashboard.date': 'Date',
     'dashboard.total': 'Total',
     'dashboard.players': 'players',
+    'dashboard.removedPlayer': 'Removed Player',
     
     // Players
     'players.title': 'Players',
@@ -98,6 +99,9 @@ export const translations = {
     'players.declining': 'Declining',
     'players.stable': 'Stable',
     'players.overallAverage': 'Overall average',
+    'players.confirmDelete': 'Are you sure you want to remove this player?',
+    'players.deleteWarning': 'This will remove the player from individual leaderboards and averages, but their games will be preserved in team game history as "Removed Player".',
+    'players.cannotDeleteHasDebts': 'Cannot delete player. This player has outstanding debts in the expenses section. Please settle all debts before removing the player.',
     
     // Add Game
     'addGame.title': 'Add New Game',
@@ -272,6 +276,7 @@ export const translations = {
     'dashboard.date': 'Fecha',
     'dashboard.total': 'Total',
     'dashboard.players': 'jugadores',
+    'dashboard.removedPlayer': 'Jugador Eliminado',
     
     // Players
     'players.title': 'Jugadores',
@@ -311,6 +316,9 @@ export const translations = {
     'players.declining': 'Bajando',
     'players.stable': 'Estable',
     'players.overallAverage': 'Promedio general',
+    'players.confirmDelete': '¿Estás seguro de que quieres eliminar este jugador?',
+    'players.deleteWarning': 'Esto eliminará al jugador de las tablas de clasificación individuales y promedios, pero sus juegos se conservarán en el historial de juegos en equipo como "Jugador Eliminado".',
+    'players.cannotDeleteHasDebts': 'No se puede eliminar el jugador. Este jugador tiene deudas pendientes en la sección de gastos. Por favor, liquida todas las deudas antes de eliminar al jugador.',
     
     // Add Game
     'addGame.title': 'Agregar Nuevo Juego',

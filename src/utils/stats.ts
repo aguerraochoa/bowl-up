@@ -70,7 +70,11 @@ export const calculatePlayerStats = async (playerId: string): Promise<Stats> => 
 
 // Optimized version that accepts games data
 export const calculateTeamStatsFromData = (games: Game[]) => {
-  if (games.length === 0) {
+  // Filter out games from deleted players (null playerId) for team averages
+  // This ensures team stats reflect current team performance
+  const activePlayerGames = games.filter(g => g.playerId !== null);
+  
+  if (activePlayerGames.length === 0) {
     return {
       teamGameAverage: 0,
       totalGames: 0,
@@ -80,29 +84,29 @@ export const calculateTeamStatsFromData = (games: Game[]) => {
     };
   }
   
-  const totalScore = games.reduce((sum, g) => sum + g.totalScore, 0);
-  const teamGameAverage = totalScore / games.length;
+  const totalScore = activePlayerGames.reduce((sum, g) => sum + g.totalScore, 0);
+  const teamGameAverage = totalScore / activePlayerGames.length;
   
-  // Total individual games played
-  const totalGames = games.length;
+  // Total individual games played (only active players)
+  const totalGames = activePlayerGames.length;
   
   // Overall strike and spare percentages
   let totalStrikePct = 0;
   let totalSparePct = 0;
-  games.forEach(game => {
+  activePlayerGames.forEach(game => {
     totalStrikePct += calculateStrikePercentage(game);
     totalSparePct += calculateSparePercentage(game);
   });
-  const totalStrikePercentage = games.length > 0 ? totalStrikePct / games.length : 0;
-  const totalSparePercentage = games.length > 0 ? totalSparePct / games.length : 0;
+  const totalStrikePercentage = activePlayerGames.length > 0 ? totalStrikePct / activePlayerGames.length : 0;
+  const totalSparePercentage = activePlayerGames.length > 0 ? totalSparePct / activePlayerGames.length : 0;
   
   // Calculate average 10th frame score
   let totalTenthFramePins = 0;
-  games.forEach(game => {
+  activePlayerGames.forEach(game => {
     const tenthFrame = parseTenthFrame(game.tenthFrame);
     totalTenthFramePins += tenthFrame.totalPins;
   });
-  const averageTenthFrame = games.length > 0 ? totalTenthFramePins / games.length : 0;
+  const averageTenthFrame = activePlayerGames.length > 0 ? totalTenthFramePins / activePlayerGames.length : 0;
   
   return {
     teamGameAverage: Math.round(teamGameAverage * 10) / 10,
@@ -121,7 +125,10 @@ export const calculateTeamStats = async () => {
 
 // Optimized version that accepts games and players data
 export const getTopIndividualGamesFromData = (games: Game[], players: Player[], limit: number = 10): Array<Game & { playerName: string }> => {
-  const gamesWithNames = games.map(game => ({
+  // Filter out games from deleted players (null playerId) for individual leaderboards
+  const activePlayerGames = games.filter(g => g.playerId !== null);
+  
+  const gamesWithNames = activePlayerGames.map(game => ({
     ...game,
     playerName: players.find((p: Player) => p.id === game.playerId)?.name || 'Unknown',
   }));
@@ -141,6 +148,7 @@ export const getTopIndividualGames = async (limit: number = 10): Promise<Array<G
 // Optimized version that accepts games data
 export const getTopTeamSumGamesFromData = (games: Game[], limit: number = 5): Array<{ date: string; totalSum: number; players: string[]; games: Game[] }> => {
   // Group by game_session_id instead of date
+  // Include ALL games (even from deleted players) to preserve historical team game accuracy
   const gamesBySession = new Map<string, Game[]>();
   
   games.forEach(game => {
@@ -154,8 +162,9 @@ export const getTopTeamSumGamesFromData = (games: Game[], limit: number = 5): Ar
   
   const teamSumGames = Array.from(gamesBySession.entries()).map(([_sessionId, sessionGames]) => {
     // All games in this session are from the same team game
+    // Include ALL games (even with null playerId) to preserve historical accuracy
     const totalSum = sessionGames.reduce((sum, g) => sum + g.totalScore, 0);
-    const players = sessionGames.map(g => g.playerId);
+    const players = sessionGames.map(g => g.playerId).filter((id): id is string => id !== null);
     const date = sessionGames[0]?.date || ''; // Get date from first game
     
     return { date, totalSum, players, games: sessionGames };
@@ -174,8 +183,11 @@ export const getTopTeamSumGames = async (limit: number = 5): Promise<Array<{ dat
 
 // Optimized version that accepts games and players data
 export const getTopIndividualAveragesFromData = (games: Game[], players: Player[], limit: number = 5): Array<{ playerId: string; playerName: string; average: number }> => {
+  // Filter out games from deleted players (null playerId) for individual averages
+  const activePlayerGames = games.filter(g => g.playerId !== null);
+  
   const playerAverages = players.map((player: Player) => {
-    const playerGames = games.filter(g => g.playerId === player.id);
+    const playerGames = activePlayerGames.filter(g => g.playerId === player.id);
     if (playerGames.length === 0) return null;
     
     const total = playerGames.reduce((sum, g) => sum + g.totalScore, 0);
@@ -202,8 +214,11 @@ export const getTopIndividualAverages = async (limit: number = 5): Promise<Array
 
 // Optimized version that accepts games and players data
 export const getTopTenthFrameAveragesFromData = (games: Game[], players: Player[], limit: number = 5): Array<{ playerId: string; playerName: string; average: number }> => {
+  // Filter out games from deleted players (null playerId) for individual averages
+  const activePlayerGames = games.filter(g => g.playerId !== null);
+  
   const playerTenthFrameAverages = players.map((player: Player) => {
-    const playerGames = games.filter(g => g.playerId === player.id);
+    const playerGames = activePlayerGames.filter(g => g.playerId === player.id);
     if (playerGames.length === 0) return null;
     
     let totalTenthFramePins = 0;

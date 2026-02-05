@@ -6,7 +6,7 @@ export interface Player {
 
 export interface Game {
   id: string;
-  playerId: string;
+  playerId: string | null; // null when player is deleted (preserves team game history)
   date: string;
   totalScore: number;
   strikesFrames1to9: number;

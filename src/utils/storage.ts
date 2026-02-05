@@ -174,7 +174,67 @@ export const addPlayer = async (player: Player): Promise<void> => {
   cache.invalidate('players');
 };
 
+// Check if a player has any outstanding debts
+export const playerHasDebts = async (playerId: string): Promise<boolean> => {
+  const teamId = await getTeamId();
+  if (!teamId) return false;
+
+  // Check if player is the payer of any debt for this team
+  const { data: debtsAsPayer, error: payerError } = await supabase
+    .from('debts')
+    .select('id')
+    .eq('team_id', teamId)
+    .eq('paid_by', playerId)
+    .limit(1);
+
+  if (payerError) {
+    console.error('Error checking debts as payer:', payerError);
+    return false;
+  }
+
+  if (debtsAsPayer && debtsAsPayer.length > 0) {
+    return true;
+  }
+
+  // Get all debt IDs for this team first
+  const { data: teamDebts, error: debtsError } = await supabase
+    .from('debts')
+    .select('id')
+    .eq('team_id', teamId);
+
+  if (debtsError || !teamDebts || teamDebts.length === 0) {
+    return false;
+  }
+
+  const debtIds = teamDebts.map(d => d.id);
+
+  // Check if player is in the split_between of any debt for this team
+  const { data: debtsInSplit, error: splitError } = await supabase
+    .from('debt_split_between')
+    .select('debt_id')
+    .eq('player_id', playerId)
+    .in('debt_id', debtIds)
+    .limit(1);
+
+  if (splitError) {
+    console.error('Error checking debts in split:', splitError);
+    return false;
+  }
+
+  if (debtsInSplit && debtsInSplit.length > 0) {
+    return true;
+  }
+
+  return false;
+};
+
 export const removePlayer = async (playerId: string): Promise<void> => {
+  // Check if player has outstanding debts
+  const hasDebts = await playerHasDebts(playerId);
+  if (hasDebts) {
+    throw new Error('PLAYER_HAS_DEBTS');
+  }
+
   const { error } = await supabase
     .from('players')
     .delete()
@@ -182,7 +242,7 @@ export const removePlayer = async (playerId: string): Promise<void> => {
 
   if (error) {
     console.error('Error removing player:', error);
-    return;
+    throw error;
   }
 
   // Invalidate cache
@@ -219,7 +279,7 @@ export const getGames = async (forceRefresh = false): Promise<Game[]> => {
 
   const games = (data || []).map(g => ({
     id: g.id,
-    playerId: g.player_id,
+    playerId: g.player_id || null, // null when player is deleted
     date: g.date,
     totalScore: g.total_score,
     strikesFrames1to9: g.strikes_frames_1_to_9,

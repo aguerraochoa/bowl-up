@@ -139,28 +139,37 @@ export default function Players() {
   };
 
   const handleRemovePlayer = async (playerId: string) => {
-    if (confirm('Are you sure you want to remove this player?')) {
-      await removePlayer(playerId);
-      
-      // Reload players and games in parallel, then recalculate stats
-      const [loadedPlayers, loadedGames] = await Promise.all([
-        getPlayers(),
-        getGames(),
-      ]);
-      
-      setPlayers(loadedPlayers);
-      setAllGames(loadedGames); // Update stored games
-      
-      // Recalculate stats for all players
-      const statsMap: Record<string, Stats> = {};
-      loadedPlayers.forEach(player => {
-        statsMap[player.id] = calculatePlayerStatsFromData(player.id, loadedGames);
-      });
-      setPlayersStats(statsMap);
-      
-      if (selectedPlayer?.id === playerId) {
-        setSelectedPlayer(null);
-        setPlayerStats(null);
+    const confirmMessage = `${t('players.confirmDelete')}\n\n${t('players.deleteWarning')}`;
+    if (confirm(confirmMessage)) {
+      try {
+        await removePlayer(playerId);
+        
+        // Reload players and games in parallel, then recalculate stats
+        const [loadedPlayers, loadedGames] = await Promise.all([
+          getPlayers(),
+          getGames(),
+        ]);
+        
+        setPlayers(loadedPlayers);
+        setAllGames(loadedGames); // Update stored games
+        
+        // Recalculate stats for all players
+        const statsMap: Record<string, Stats> = {};
+        loadedPlayers.forEach(player => {
+          statsMap[player.id] = calculatePlayerStatsFromData(player.id, loadedGames);
+        });
+        setPlayersStats(statsMap);
+        
+        if (selectedPlayer?.id === playerId) {
+          setSelectedPlayer(null);
+          setPlayerStats(null);
+        }
+      } catch (error: any) {
+        if (error.message === 'PLAYER_HAS_DEBTS') {
+          alert(t('players.cannotDeleteHasDebts'));
+        } else {
+          alert(t('players.errorRemoving'));
+        }
       }
     }
   };
