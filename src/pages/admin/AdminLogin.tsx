@@ -1,9 +1,10 @@
 import { useState } from 'react';
-import { supabase } from '../lib/supabase';
-import { Eye, EyeOff } from 'lucide-react';
+import { supabase } from '../../lib/supabase';
+import { isUserAdmin } from '../../utils/adminStorage';
+import { Lock, Eye, EyeOff } from 'lucide-react';
 
-export default function Login() {
-  const [identifier, setIdentifier] = useState(''); // email or team name
+export default function AdminLogin() {
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
@@ -15,25 +16,6 @@ export default function Login() {
     setLoading(true);
 
     try {
-      let email = identifier;
-
-      // Check if identifier is a team name (not an email)
-      if (!identifier.includes('@')) {
-        // Use database function to get user email by team name
-        const { data: userEmail, error: emailError } = await supabase.rpc('get_user_email_by_team_name', {
-          team_name: identifier
-        });
-
-        if (emailError || !userEmail) {
-          setError('Team name not found');
-          setLoading(false);
-          return;
-        }
-
-        email = userEmail;
-      }
-
-      // Sign in with email and password
       const { error: signInError } = await supabase.auth.signInWithPassword({
         email,
         password,
@@ -41,9 +23,21 @@ export default function Login() {
 
       if (signInError) {
         setError(signInError.message);
-      } else {
-        window.location.href = '/';
+        setLoading(false);
+        return;
       }
+
+      // Check if user is admin (no team)
+      const admin = await isUserAdmin();
+      if (!admin) {
+        setError('This account is not an admin account');
+        await supabase.auth.signOut();
+        setLoading(false);
+        return;
+      }
+
+      // Redirect to admin dashboard
+      window.location.href = '/admin/dashboard';
     } catch (err) {
       setError('An error occurred. Please try again.');
     } finally {
@@ -59,23 +53,34 @@ export default function Login() {
             <img src="/logo_text.png" alt="BowlUp" className="h-32 w-auto" />
           </div>
 
+          <div className="mb-6">
+            <h1 className="text-2xl font-black text-black mb-2 text-center uppercase">
+              Admin Login
+            </h1>
+            <p className="text-sm text-gray-600 text-center font-bold">
+              Administrator access only
+            </p>
+          </div>
+
           <form onSubmit={handleLogin} className="space-y-4">
             <div>
-              <label className="block text-sm font-black text-black mb-2 uppercase">
-                Email or Team Name
+              <label className="block text-sm font-black text-black mb-2 uppercase flex items-center gap-2">
+                <Lock className="w-4 h-4" />
+                Admin Email
               </label>
               <input
-                type="text"
-                value={identifier}
-                onChange={(e) => setIdentifier(e.target.value)}
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
                 className="w-full px-4 py-3 h-[56px] rounded-none border-4 border-black focus:outline-none font-bold bg-white"
-                placeholder="Enter email or team name"
+                placeholder="admin@bowlup.com"
                 required
               />
             </div>
 
             <div>
-              <label className="block text-sm font-black text-black mb-2 uppercase">
+              <label className="block text-sm font-black text-black mb-2 uppercase flex items-center gap-2">
+                <Lock className="w-4 h-4" />
                 Password
               </label>
               <div className="relative">
@@ -84,7 +89,7 @@ export default function Login() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   className="w-full px-4 py-3 pr-12 h-[56px] rounded-none border-4 border-black focus:outline-none font-bold bg-white"
-                  placeholder="Enter password"
+                  placeholder="Enter admin password"
                   required
                 />
                 <button
@@ -113,23 +118,14 @@ export default function Login() {
             </button>
           </form>
 
-          <div className="mt-6 space-y-2 text-center">
+          <div className="mt-6 text-center">
             <p className="text-sm text-black font-bold">
-              Don't have an account?{' '}
+              Regular user?{' '}
               <a
-                href="/signup"
+                href="/login"
                 className="text-orange-500 font-black hover:underline"
               >
-                Sign up
-              </a>
-            </p>
-            <p className="text-sm text-black font-bold">
-              Are you an administrator?{' '}
-              <a
-                href="/admin/login"
-                className="text-orange-500 font-black hover:underline"
-              >
-                Admin Login
+                Go to Login
               </a>
             </p>
           </div>

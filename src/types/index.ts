@@ -47,6 +47,7 @@ export interface DebtTag {
 export interface League {
   id: string;
   name: string;
+  currentSeason?: string;
 }
 
 export interface Team {
@@ -55,6 +56,7 @@ export interface Team {
   league: string;
   leagueId?: string;
   currentSeason: string; // e.g., "Season 1", "Season 2"
+  isEnabled?: boolean;
   players: Player[];
   debtTags: DebtTag[];
 }

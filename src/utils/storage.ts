@@ -1,5 +1,5 @@
 import { supabase } from '../lib/supabase';
-import type { Team, Player, Game, Debt, DebtTag, BetTallies } from '../types';
+import type { Team, Player, Game, Debt, DebtTag, BetTallies, League } from '../types';
 import { cache } from './cache';
 
 // Helper to get current user's team ID (cached for 5 minutes since it rarely changes)
@@ -20,7 +20,7 @@ const getTeamId = async (): Promise<string | null> => {
     .from('teams')
     .select('id')
     .eq('user_id', user.id)
-    .single();
+    .maybeSingle(); // Use maybeSingle() to avoid errors when no team exists
 
   if (error || !team) {
     cache.set(cacheKey, null, 60000); // Cache null for 1 minute
@@ -32,18 +32,33 @@ const getTeamId = async (): Promise<string | null> => {
   return team.id;
 };
 
+// Helper to check if user has a team (for admin detection)
+export const userHasTeam = async (): Promise<boolean> => {
+  const teamId = await getTeamId();
+  return teamId !== null;
+};
+
 // Team
 export const getTeam = async (): Promise<Team | null> => {
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return null;
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return null;
 
-  const { data: team, error } = await supabase
-    .from('teams')
-    .select('id, name, league, league_id, current_season')
-    .eq('user_id', user.id)
-    .single();
+    const { data: team, error } = await supabase
+      .from('teams')
+      .select('id, name, league, league_id, current_season, is_enabled')
+      .eq('user_id', user.id)
+      .maybeSingle(); // Use maybeSingle() to avoid errors when no team exists
 
-  if (error || !team) return null;
+    if (error) {
+      // PGRST116 is "no rows returned" which is fine
+      if (error.code !== 'PGRST116') {
+        console.error('Error fetching team:', error);
+      }
+      return null;
+    }
+
+    if (!team) return null;
 
   // Get players and debt tags for the team
   const [playersResult, tagsResult] = await Promise.all([
@@ -57,6 +72,7 @@ export const getTeam = async (): Promise<Team | null> => {
     league: team.league || '',
     leagueId: team.league_id || undefined,
     currentSeason: team.current_season || 'Season 1',
+    isEnabled: team.is_enabled ?? true,
     players: (playersResult.data || []).map(p => ({
       id: p.id,
       name: p.name,
@@ -68,6 +84,65 @@ export const getTeam = async (): Promise<Team | null> => {
       name: t.name,
       defaultAmount: parseFloat(t.default_amount.toString()),
     })),
+  };
+  } catch (error) {
+    console.error('Exception in getTeam:', error);
+    return null;
+  }
+};
+
+// Create a new team (for signup)
+export const createTeam = async (name: string, leagueId?: string | null, userId?: string): Promise<Team> => {
+  // If userId is provided (from signup), use it directly. Otherwise, get from session.
+  let user;
+  if (userId) {
+    user = { id: userId };
+  } else {
+    const { data: { user: sessionUser } } = await supabase.auth.getUser();
+    if (!sessionUser) throw new Error('Not authenticated');
+    user = sessionUser;
+  }
+
+  // Use database function to create team (bypasses RLS)
+  const { data: teamId, error: rpcError } = await supabase.rpc('create_team_for_user', {
+    p_user_id: user.id,
+    p_name: name,
+    p_league_id: leagueId || null,
+  });
+
+  if (rpcError) {
+    console.error('Error creating team via RPC:', rpcError);
+    throw rpcError;
+  }
+
+  if (!teamId) {
+    throw new Error('Failed to create team');
+  }
+
+  // Fetch the created team to return full data
+  const { data: team, error: fetchError } = await supabase
+    .from('teams')
+    .select('id, name, league, league_id, current_season, is_enabled')
+    .eq('id', teamId)
+    .single();
+
+  if (fetchError) {
+    console.error('Error fetching created team:', fetchError);
+    throw fetchError;
+  }
+
+  // Invalidate cache
+  cache.invalidate('team_id');
+
+  return {
+    id: team.id,
+    name: team.name,
+    league: team.league || '',
+    leagueId: team.league_id || undefined,
+    currentSeason: team.current_season || 'Season 1',
+    isEnabled: team.is_enabled ?? true,
+    players: [],
+    debtTags: [],
   };
 };
 
@@ -93,13 +168,27 @@ export const saveTeam = async (team: Team): Promise<void> => {
   cache.invalidate('team_id');
 };
 
-// Get current season for the team
+// Get current season for the team (from league)
 export const getCurrentSeason = async (): Promise<string> => {
   const team = await getTeam();
-  return team?.currentSeason || 'Season 1';
+  if (!team || !team.leagueId) return 'Season 1';
+
+  // Get current season from league
+  const { data: league, error } = await supabase
+    .from('leagues')
+    .select('current_season')
+    .eq('id', team.leagueId)
+    .single();
+
+  if (error || !league) {
+    console.error('Error fetching league season:', error);
+    return 'Season 1';
+  }
+
+  return league.current_season || 'Season 1';
 };
 
-// Get all available seasons for the team
+// Get all available seasons for the team (from games in their league)
 export const getAvailableSeasons = async (): Promise<string[]> => {
   const teamId = await getTeamId();
   if (!teamId) return ['Season 1'];
@@ -117,9 +206,10 @@ export const getAvailableSeasons = async (): Promise<string[]> => {
   const uniqueSeasons = Array.from(new Set((data || []).map(g => g.season || 'Season 1')))
     .filter(s => s)
     .sort((a, b) => {
-      // Sort by season number: "Season 1", "Season 2", etc.
-      const numA = parseInt(a.replace('Season ', '')) || 0;
-      const numB = parseInt(b.replace('Season ', '')) || 0;
+      // Sort by season number: "League Name - Season 1", "League Name - Season 2", etc.
+      // Extract season number from format like "League Name - Season X"
+      const numA = parseInt(a.match(/Season\s+(\d+)/)?.[1] || '0') || 0;
+      const numB = parseInt(b.match(/Season\s+(\d+)/)?.[1] || '0') || 0;
       return numA - numB;
     });
 
@@ -957,6 +1047,53 @@ export const clearCache = (): void => {
 };
 
 // Initialize default data
+// Get all leagues (for signup dropdown - simple version)
+export const getAllLeagues = async (): Promise<League[]> => {
+  const { data, error } = await supabase
+    .from('leagues')
+    .select('id, name')
+    .order('name');
+
+  if (error) {
+    console.error('Error fetching leagues:', error);
+    return [];
+  }
+
+  return (data || []).map(l => ({
+    id: l.id,
+    name: l.name,
+  }));
+};
+
+// Check if current team is enabled (optimized - only fetches is_enabled field)
+export const checkTeamEnabled = async (): Promise<boolean> => {
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return true; // No user = allow access (will show login)
+
+    const { data: team, error } = await supabase
+      .from('teams')
+      .select('is_enabled')
+      .eq('user_id', user.id)
+      .maybeSingle();
+
+    if (error) {
+      // PGRST116 is "no rows returned" which is fine (user is admin)
+      if (error.code !== 'PGRST116') {
+        console.error('Error checking team enabled status:', error);
+      }
+      return true; // Default to enabled on error (fail open)
+    }
+
+    // Default to true if team not found (fail open)
+    return team?.is_enabled ?? true;
+  } catch (error) {
+    console.error('Exception checking team enabled status:', error);
+    // Default to true on error (fail open - allow access)
+    return true;
+  }
+};
+
 export const initializeDefaultData = async (): Promise<void> => {
   // No default data to initialize
   // Users can create their own tags as needed
