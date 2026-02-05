@@ -39,7 +39,7 @@ export const getTeam = async (): Promise<Team | null> => {
 
   const { data: team, error } = await supabase
     .from('teams')
-    .select('id, name, league, league_id')
+    .select('id, name, league, league_id, current_season')
     .eq('user_id', user.id)
     .single();
 
@@ -47,7 +47,7 @@ export const getTeam = async (): Promise<Team | null> => {
 
   // Get players and debt tags for the team
   const [playersResult, tagsResult] = await Promise.all([
-    supabase.from('players').select('id, name, team_id').eq('team_id', team.id),
+    supabase.from('players').select('id, name, team_id, deleted_at').eq('team_id', team.id),
     supabase.from('debt_tags').select('id, name, default_amount').eq('team_id', team.id),
   ]);
 
@@ -56,10 +56,12 @@ export const getTeam = async (): Promise<Team | null> => {
     name: team.name,
     league: team.league || '',
     leagueId: team.league_id || undefined,
+    currentSeason: team.current_season || 'Season 1',
     players: (playersResult.data || []).map(p => ({
       id: p.id,
       name: p.name,
       teamId: p.team_id,
+      deletedAt: p.deleted_at || null,
     })),
     debtTags: (tagsResult.data || []).map(t => ({
       id: t.id,
@@ -78,6 +80,7 @@ export const saveTeam = async (team: Team): Promise<void> => {
     .update({
       name: team.name,
       league: team.league,
+      current_season: team.currentSeason,
     })
     .eq('id', teamId);
 
@@ -88,6 +91,72 @@ export const saveTeam = async (team: Team): Promise<void> => {
 
   // Invalidate team cache when team is updated
   cache.invalidate('team_id');
+};
+
+// Get current season for the team
+export const getCurrentSeason = async (): Promise<string> => {
+  const team = await getTeam();
+  return team?.currentSeason || 'Season 1';
+};
+
+// Get all available seasons for the team
+export const getAvailableSeasons = async (): Promise<string[]> => {
+  const teamId = await getTeamId();
+  if (!teamId) return ['Season 1'];
+
+  const { data, error } = await supabase
+    .from('games')
+    .select('season')
+    .eq('team_id', teamId);
+
+  if (error) {
+    console.error('Error fetching seasons:', error);
+    return ['Season 1'];
+  }
+
+  const uniqueSeasons = Array.from(new Set((data || []).map(g => g.season || 'Season 1')))
+    .filter(s => s)
+    .sort((a, b) => {
+      // Sort by season number: "Season 1", "Season 2", etc.
+      const numA = parseInt(a.replace('Season ', '')) || 0;
+      const numB = parseInt(b.replace('Season ', '')) || 0;
+      return numA - numB;
+    });
+
+  return uniqueSeasons.length > 0 ? uniqueSeasons : ['Season 1'];
+};
+
+// Start a new season
+export const startNewSeason = async (): Promise<string> => {
+  const team = await getTeam();
+  if (!team) throw new Error('Team not found');
+
+  const availableSeasons = await getAvailableSeasons();
+  const currentSeasonNum = parseInt(team.currentSeason.replace('Season ', '')) || 1;
+  const nextSeasonNum = availableSeasons.length > 0 
+    ? Math.max(...availableSeasons.map(s => parseInt(s.replace('Season ', '')) || 0)) + 1
+    : currentSeasonNum + 1;
+  const newSeason = `Season ${nextSeasonNum}`;
+
+  const teamId = await getTeamId();
+  if (!teamId) throw new Error('Team ID not found');
+
+  const { error } = await supabase
+    .from('teams')
+    .update({ current_season: newSeason })
+    .eq('id', teamId);
+
+  if (error) {
+    console.error('Error starting new season:', error);
+    throw error;
+  }
+
+  // Invalidate caches
+  cache.invalidate('team_id');
+  cache.invalidate('games');
+  cache.invalidate('players');
+
+  return newSeason;
 };
 
 // Players
@@ -109,7 +178,7 @@ export const getPlayers = async (forceRefresh = false): Promise<Player[]> => {
 
   const { data, error } = await supabase
     .from('players')
-    .select('id, name, team_id')
+    .select('id, name, team_id, deleted_at')
     .eq('team_id', teamId)
     .order('created_at', { ascending: true });
 
@@ -122,6 +191,7 @@ export const getPlayers = async (forceRefresh = false): Promise<Player[]> => {
     id: p.id,
     name: p.name,
     teamId: p.team_id,
+    deletedAt: p.deleted_at || null,
   }));
 
   // Cache for 2 minutes (players don't change often)
@@ -235,9 +305,10 @@ export const removePlayer = async (playerId: string): Promise<void> => {
     throw new Error('PLAYER_HAS_DEBTS');
   }
 
+  // Soft delete: set deleted_at instead of actually deleting
   const { error } = await supabase
     .from('players')
-    .delete()
+    .update({ deleted_at: new Date().toISOString() })
     .eq('id', playerId);
 
   if (error) {
@@ -249,16 +320,36 @@ export const removePlayer = async (playerId: string): Promise<void> => {
   cache.invalidate('players');
 };
 
+// Reactivate a deleted player
+export const reactivatePlayer = async (playerId: string): Promise<void> => {
+  const { error } = await supabase
+    .from('players')
+    .update({ deleted_at: null })
+    .eq('id', playerId);
+
+  if (error) {
+    console.error('Error reactivating player:', error);
+    throw error;
+  }
+
+  // Invalidate cache
+  cache.invalidate('players');
+};
+
 // Games
-export const getGames = async (forceRefresh = false): Promise<Game[]> => {
-  const cacheKey = 'games';
+export const getGames = async (forceRefresh = false, season?: string | null): Promise<Game[]> => {
+  // If season is null, it means "All Seasons" - don't filter
+  // If season is undefined, use current season
+  // If season is specified, filter by that season
+  
+  const cacheKey = season === null ? 'games_all' : `games_${season || 'current'}`;
   
   // Return cached data immediately if available (stale-while-revalidate)
   if (!forceRefresh) {
     const cached = cache.get<Game[]>(cacheKey);
     if (cached) {
       // Fetch fresh data in background (don't await)
-      getGames(true).catch(() => {}); // Silently fail background refresh
+      getGames(true, season).catch(() => {}); // Silently fail background refresh
       return cached;
     }
   }
@@ -266,11 +357,22 @@ export const getGames = async (forceRefresh = false): Promise<Game[]> => {
   const teamId = await getTeamId();
   if (!teamId) return [];
 
-  const { data, error } = await supabase
+  let query = supabase
     .from('games')
-    .select('id, player_id, date, total_score, strikes_frames_1_to_9, spares_frames_1_to_9, tenth_frame, game_session_id, created_at')
-    .eq('team_id', teamId)
-    .order('created_at', { ascending: false });
+    .select('id, player_id, date, total_score, strikes_frames_1_to_9, spares_frames_1_to_9, tenth_frame, game_session_id, season, created_at')
+    .eq('team_id', teamId);
+
+  // Filter by season if specified (null means all seasons, undefined means current)
+  if (season !== null && season !== undefined) {
+    query = query.eq('season', season);
+  } else if (season === undefined) {
+    // Use current season
+    const currentSeason = await getCurrentSeason();
+    query = query.eq('season', currentSeason);
+  }
+  // If season is null, don't filter (show all seasons)
+
+  const { data, error } = await query.order('created_at', { ascending: false });
 
   if (error) {
     console.error('Error fetching games:', error);
@@ -286,6 +388,7 @@ export const getGames = async (forceRefresh = false): Promise<Game[]> => {
     sparesFrames1to9: g.spares_frames_1_to_9,
     tenthFrame: g.tenth_frame || '',
     gameSessionId: g.game_session_id || undefined,
+    season: g.season || 'Season 1',
     created_at: g.created_at || g.date,
   }));
 
@@ -308,6 +411,9 @@ export const addGame = async (game: Game): Promise<void> => {
   const teamId = await getTeamId();
   if (!teamId) return;
 
+  // Get current season if not specified
+  const season = game.season || await getCurrentSeason();
+
   const { error } = await supabase.from('games').insert({
     id: game.id,
     team_id: teamId,
@@ -318,6 +424,7 @@ export const addGame = async (game: Game): Promise<void> => {
     spares_frames_1_to_9: game.sparesFrames1to9,
     tenth_frame: game.tenthFrame,
     game_session_id: game.gameSessionId || null,
+    season: season,
   });
 
   if (error) {

@@ -4,10 +4,12 @@ import LeaderboardCard from '../components/LeaderboardCard';
 import { calculateTeamStatsFromData, getTopIndividualGamesFromData, getTopTeamSumGamesFromData, getTopIndividualAveragesFromData, getTopTenthFrameAveragesFromData } from '../utils/stats';
 import { getPlayers, getGames } from '../utils/storage';
 import { t, getLanguage } from '../i18n';
+import { useSeason } from '../contexts/SeasonContext';
 import { Target, Zap, Gamepad2, TrendingUp, X, Loader2 } from 'lucide-react';
 import type { Game } from '../types';
 
 export default function Dashboard() {
+  const { querySeason, isViewingAllSeasons, selectedSeason, currentSeason } = useSeason();
   const [players, setPlayers] = useState<any[]>([]);
   const [teamStats, setTeamStats] = useState({
     teamGameAverage: 0,
@@ -47,9 +49,9 @@ export default function Dashboard() {
       setIsLoading(true);
     }
     
-    // Fetch data once
+    // Fetch data once - use querySeason from context
     const [allGames, loadedPlayers] = await Promise.all([
-      getGames(),
+      getGames(false, querySeason),
       getPlayers(),
     ]);
     
@@ -98,7 +100,7 @@ export default function Dashboard() {
     // Don't show loading spinner on subsequent refreshes
     const interval = setInterval(() => refreshData(false), 30000);
     return () => clearInterval(interval);
-  }, []);
+  }, [querySeason]); // Refresh when season changes
 
   // Prevent body scroll when modal is open
   useEffect(() => {
@@ -142,7 +144,10 @@ export default function Dashboard() {
         {/* Header */}
         <div className="mb-4 md:mb-6">
           <h1 className="text-3xl sm:text-4xl md:text-5xl font-black text-black mb-2 uppercase">{t('dashboard.title')}</h1>
-          <p className="text-sm sm:text-base text-black font-bold">{t('dashboard.subtitle')}</p>
+          <p className="text-sm sm:text-base text-black font-bold">
+            {t('dashboard.subtitle')}
+            {isViewingAllSeasons ? ` - ${t('profile.allSeasons')}` : selectedSeason && selectedSeason !== currentSeason ? ` - ${selectedSeason}` : ''}
+          </p>
         </div>
 
         {/* Desktop One-Pager Layout */}

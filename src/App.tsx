@@ -2,6 +2,7 @@ import { useState, useEffect, lazy, Suspense } from 'react';
 import BottomNav from './components/BottomNav';
 import { supabase } from './lib/supabase';
 import { initializeDefaultData, clearCache } from './utils/storage';
+import { SeasonProvider } from './contexts/SeasonContext';
 
 // Lazy load main pages
 const Dashboard = lazy(() => import('./pages/Dashboard'));
@@ -179,22 +180,24 @@ function App() {
   };
 
   return (
-    <div className="min-h-screen bg-orange-50">
-      <div className="lg:pl-64">
-        {renderContent()}
-      </div>
-      {activeTab !== 'designs' && activeTab !== 'debts-designs' && activeTab !== 'color' && <BottomNav activeTab={activeTab} onTabChange={handleTabChange} onSignOut={handleSignOut} />}
-      {(activeTab === 'designs' || activeTab === 'debts-designs' || activeTab === 'color') && (
-        <div className="fixed bottom-4 right-4">
-          <a
-            href="/"
-            className="bg-orange-500 border-4 border-black text-black px-6 py-3 rounded-none font-black  hover:bg-orange-600 transition-all"
-          >
-            Back to App
-          </a>
+    <SeasonProvider>
+      <div className="min-h-screen bg-orange-50">
+        <div className="lg:pl-64">
+          {renderContent()}
         </div>
-      )}
-    </div>
+        {activeTab !== 'designs' && activeTab !== 'debts-designs' && activeTab !== 'color' && <BottomNav activeTab={activeTab} onTabChange={handleTabChange} onSignOut={handleSignOut} />}
+        {(activeTab === 'designs' || activeTab === 'debts-designs' || activeTab === 'color') && (
+          <div className="fixed bottom-4 right-4">
+            <a
+              href="/"
+              className="bg-orange-500 border-4 border-black text-black px-6 py-3 rounded-none font-black  hover:bg-orange-600 transition-all"
+            >
+              Back to App
+            </a>
+          </div>
+        )}
+      </div>
+    </SeasonProvider>
   );
 }
 

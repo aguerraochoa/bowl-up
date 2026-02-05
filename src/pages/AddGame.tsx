@@ -2,10 +2,12 @@ import { useState, useEffect } from 'react';
 import { getPlayers, addGame, getGames, removeGame, removeGamesBySession } from '../utils/storage';
 import { validateGame, validateTenthFrame } from '../utils/scoring';
 import { t, getLanguage } from '../i18n';
+import { useSeason } from '../contexts/SeasonContext';
 import type { Player, Game } from '../types';
 import { Check, X, ArrowRight, ArrowLeft, Loader2, Trash2, Clock, Eraser, ChevronDown, ChevronUp } from 'lucide-react';
 
 export default function AddGame() {
+  const { currentSeason } = useSeason();
   const [allPlayers, setAllPlayers] = useState<Player[]>([]);
   const [selectedPlayers, setSelectedPlayers] = useState<string[]>([]); // Array of player IDs in order
   const [currentStep, setCurrentStep] = useState(0); // 0 = select players, 1 = enter scores, 2 = review
@@ -56,7 +58,8 @@ export default function AddGame() {
         getGames(),
       ]);
       
-      setAllPlayers(players);
+      // Filter out deleted players (only show active players for adding games)
+      setAllPlayers(players.filter(p => !p.deletedAt));
       setGames(loadedGames);
       setIsLoadingPlayers(false);
       setIsLoadingGames(false);
@@ -312,6 +315,7 @@ export default function AddGame() {
             sparesFrames1to9: game.sparesFrames1to9 || 0,
             tenthFrame: game.tenthFrame,
             gameSessionId: gameSessionId, // Same session ID for all players in this game
+            season: currentSeason, // Assign to current season
           };
           await addGame(newGame);
         }
@@ -389,6 +393,7 @@ export default function AddGame() {
   const selectedPlayersList = getSelectedPlayersList();
   const currentPlayer = selectedPlayersList[currentPlayerIndex];
   const isLastPlayer = currentPlayerIndex === selectedPlayersList.length - 1;
+
 
   // Show loading state first
   if (isLoadingPlayers) {

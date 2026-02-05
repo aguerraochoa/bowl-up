@@ -27,6 +27,16 @@ export const translations = {
     'profile.account': 'Account',
     'profile.language': 'Language',
     'profile.selectLanguage': 'Select Language',
+    'profile.season': 'Season',
+    'profile.currentSeason': 'Current Season',
+    'profile.selectSeason': 'Select Season',
+    'profile.allSeasons': 'All Seasons',
+    'profile.startNewSeason': 'Start New Season',
+    'profile.startNewSeasonWarning': 'Starting a new season will set all future games to the new season. Expenses and Bet Tracker are not affected by seasons.',
+    'profile.confirmStartNewSeason': 'Are you sure you want to start a new season?',
+    'profile.seasonStarted': 'New season started successfully',
+    'profile.errorStartingSeason': 'Error starting new season. Please try again.',
+    'profile.readOnly': 'Read Only',
     
     // Dashboard
     'dashboard.title': 'Dashboard',
@@ -100,8 +110,14 @@ export const translations = {
     'players.stable': 'Stable',
     'players.overallAverage': 'Overall average',
     'players.confirmDelete': 'Are you sure you want to remove this player?',
-    'players.deleteWarning': 'This will remove the player from individual leaderboards and averages, but their games will be preserved in team game history as "Removed Player".',
+    'players.deleteWarning': 'This will mark the player as inactive. They will be removed from current season individual leaderboards and averages, but their games and stats will remain visible in past seasons with their name. You can reactivate them later.',
     'players.cannotDeleteHasDebts': 'Cannot delete player. This player has outstanding debts in the expenses section. Please settle all debts before removing the player.',
+    'players.errorReactivating': 'Error reactivating player. Please try again.',
+    'players.reactivate': 'Reactivate',
+    'players.reactivatePlayer': 'Reactivate Player',
+    'players.inactivePlayers': 'Inactive Players',
+    'players.noInactivePlayers': 'No inactive players',
+    'players.inactive': 'Inactive',
     
     // Add Game
     'addGame.title': 'Add New Game',
@@ -133,6 +149,8 @@ export const translations = {
     'addGame.score': 'Score',
     'addGame.date': 'Date',
     'addGame.examples': 'Examples: X9/ (strike + spare), 9/8 (spare), 72 (open), X-X (two strikes)',
+    'addGame.disabledPastSeason': 'Adding games is disabled when viewing past seasons.',
+    'addGame.switchToCurrentSeason': 'Switch to the current season in Profile to add games.',
     
     // Debts
     'debts.title': 'Debts Tracker',
@@ -244,6 +262,16 @@ export const translations = {
     'profile.account': 'Cuenta',
     'profile.language': 'Idioma',
     'profile.selectLanguage': 'Seleccionar Idioma',
+    'profile.season': 'Temporada',
+    'profile.currentSeason': 'Temporada Actual',
+    'profile.selectSeason': 'Seleccionar Temporada',
+    'profile.allSeasons': 'Todas las Temporadas',
+    'profile.startNewSeason': 'Iniciar Nueva Temporada',
+    'profile.startNewSeasonWarning': 'Iniciar una nueva temporada establecerá que todos los juegos futuros pertenezcan a la nueva temporada. Los gastos y el rastreador de apuestas no se ven afectados por las temporadas.',
+    'profile.confirmStartNewSeason': '¿Estás seguro de que quieres iniciar una nueva temporada?',
+    'profile.seasonStarted': 'Nueva temporada iniciada exitosamente',
+    'profile.errorStartingSeason': 'Error al iniciar nueva temporada. Por favor intenta de nuevo.',
+    'profile.readOnly': 'Solo Lectura',
     
     // Dashboard
     'dashboard.title': 'Tablero',
@@ -317,8 +345,14 @@ export const translations = {
     'players.stable': 'Estable',
     'players.overallAverage': 'Promedio general',
     'players.confirmDelete': '¿Estás seguro de que quieres eliminar este jugador?',
-    'players.deleteWarning': 'Esto eliminará al jugador de las tablas de clasificación individuales y promedios, pero sus juegos se conservarán en el historial de juegos en equipo como "Jugador Eliminado".',
+    'players.deleteWarning': 'Esto marcará al jugador como inactivo. Será eliminado de las tablas de clasificación individuales y promedios de la temporada actual, pero sus juegos y estadísticas seguirán siendo visibles en temporadas anteriores con su nombre. Puedes reactivarlo más tarde.',
     'players.cannotDeleteHasDebts': 'No se puede eliminar el jugador. Este jugador tiene deudas pendientes en la sección de gastos. Por favor, liquida todas las deudas antes de eliminar al jugador.',
+    'players.errorReactivating': 'Error al reactivar jugador. Por favor intenta de nuevo.',
+    'players.reactivate': 'Reactivar',
+    'players.reactivatePlayer': 'Reactivar Jugador',
+    'players.inactivePlayers': 'Jugadores Inactivos',
+    'players.noInactivePlayers': 'No hay jugadores inactivos',
+    'players.inactive': 'Inactivo',
     
     // Add Game
     'addGame.title': 'Agregar Nuevo Juego',
@@ -350,6 +384,8 @@ export const translations = {
     'addGame.score': 'Puntuación',
     'addGame.date': 'Fecha',
     'addGame.examples': 'Ejemplos: X9/ (strike + spare), 9/8 (spare), 72 (abierto), X-X (dos strikes)',
+    'addGame.disabledPastSeason': 'Agregar juegos está deshabilitado al ver temporadas pasadas.',
+    'addGame.switchToCurrentSeason': 'Cambia a la temporada actual en Perfil para agregar juegos.',
     
     // Debts
     'debts.title': 'Rastreador de Deudas',

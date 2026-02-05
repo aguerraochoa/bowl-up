@@ -2,6 +2,7 @@ export interface Player {
   id: string;
   name: string;
   teamId: string;
+  deletedAt?: string | null; // ISO timestamp when player was deleted (null if active)
 }
 
 export interface Game {
@@ -13,6 +14,7 @@ export interface Game {
   sparesFrames1to9: number;
   tenthFrame: string; // e.g., "X9/", "9/8", "72"
   gameSessionId?: string; // Links games from the same team game session
+  season: string; // e.g., "Season 1", "Season 2"
 }
 
 export interface TeamSumGame {
@@ -51,6 +53,7 @@ export interface Team {
   name: string;
   league: string;
   leagueId?: string;
+  currentSeason: string; // e.g., "Season 1", "Season 2"
   players: Player[];
   debtTags: DebtTag[];
 }

@@ -1,21 +1,24 @@
 import { useState, useEffect } from 'react';
-import { getTeam, saveTeam } from '../utils/storage';
+import { getTeam, saveTeam, startNewSeason } from '../utils/storage';
 import { supabase } from '../lib/supabase';
 import { cache } from '../utils/cache';
 import { t, setLanguage, getLanguage } from '../i18n';
+import { useSeason } from '../contexts/SeasonContext';
 import type { Team } from '../types';
-import { User, LogOut, Edit2, Check, X, Loader2, Globe } from 'lucide-react';
+import { User, LogOut, Edit2, Check, X, Loader2, Globe, Calendar, Plus } from 'lucide-react';
 
 interface ProfileProps {
   onSignOut: () => void;
 }
 
 export default function Profile({ onSignOut }: ProfileProps) {
+  const { currentSeason, selectedSeason, availableSeasons, setSelectedSeason, isViewingAllSeasons, isViewingPastSeason, refreshSeasons } = useSeason();
   const [team, setTeam] = useState<Team | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isEditingName, setIsEditingName] = useState(false);
   const [editedTeamName, setEditedTeamName] = useState('');
   const [isSaving, setIsSaving] = useState(false);
+  const [isStartingSeason, setIsStartingSeason] = useState(false);
   const [error, setError] = useState<string>('');
   const [currentLang, setCurrentLang] = useState<'es' | 'en'>(() => getLanguage());
 
@@ -110,6 +113,36 @@ export default function Profile({ onSignOut }: ProfileProps) {
   const handleSignOut = async () => {
     await supabase.auth.signOut();
     onSignOut();
+  };
+
+  const handleSeasonChange = (season: string) => {
+    if (season === 'ALL') {
+      setSelectedSeason('ALL');
+    } else {
+      setSelectedSeason(season);
+    }
+  };
+
+  const handleStartNewSeason = async () => {
+    const confirmMessage = `${t('profile.confirmStartNewSeason')}\n\n${t('profile.startNewSeasonWarning')}`;
+    if (!confirm(confirmMessage)) {
+      return;
+    }
+
+    setIsStartingSeason(true);
+    setError('');
+
+    try {
+      await startNewSeason();
+      await refreshSeasons();
+      setSelectedSeason(null); // Reset to current season
+      alert(t('profile.seasonStarted'));
+    } catch (error) {
+      console.error('Error starting new season:', error);
+      setError(t('profile.errorStartingSeason'));
+    } finally {
+      setIsStartingSeason(false);
+    }
   };
 
   if (isLoading) {
@@ -247,6 +280,66 @@ export default function Profile({ onSignOut }: ProfileProps) {
               <option value="es">Español</option>
               <option value="en">English</option>
             </select>
+          </div>
+        </div>
+
+        {/* Season Section */}
+        <div className="bg-white rounded-none border-4 border-black p-4 sm:p-6 mb-4 sm:mb-6">
+          <div className="flex items-center gap-3 mb-4">
+            <Calendar className="w-6 h-6 sm:w-8 sm:h-8 text-black" />
+            <h2 className="text-lg sm:text-xl lg:text-2xl font-black text-black uppercase">{t('profile.season')}</h2>
+          </div>
+          
+          {error && (
+            <div className="mb-4 p-3 bg-red-600 border-4 border-black rounded-none text-black text-sm font-black">
+              {error}
+            </div>
+          )}
+
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-bold text-black mb-2">{t('profile.selectSeason')}</label>
+              <select
+                value={selectedSeason === null ? currentSeason : (selectedSeason === 'ALL' ? 'ALL' : selectedSeason)}
+                onChange={(e) => handleSeasonChange(e.target.value)}
+                className="w-full px-3 sm:px-4 py-2 sm:py-3 rounded-none border-4 border-black focus:outline-none font-bold bg-white text-base sm:text-lg"
+              >
+                <option value={currentSeason}>{t('profile.currentSeason')}: {currentSeason}</option>
+                {availableSeasons.filter((s: string) => s !== currentSeason).map((season: string) => (
+                  <option key={season} value={season}>{season}</option>
+                ))}
+                <option value="ALL">{t('profile.allSeasons')}</option>
+              </select>
+            </div>
+
+            {/* Start New Season button - only show when viewing current season */}
+            {!isViewingPastSeason && !isViewingAllSeasons && (
+              <button
+                onClick={handleStartNewSeason}
+                disabled={isStartingSeason}
+                className="w-full bg-amber-400 border-4 border-black text-black py-3 sm:py-4 rounded-none font-black flex items-center justify-center gap-2 hover:bg-amber-500 transition-all disabled:bg-gray-300 disabled:cursor-not-allowed disabled:opacity-70"
+              >
+                {isStartingSeason ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <span>{t('profile.saving')}</span>
+                  </>
+                ) : (
+                  <>
+                    <Plus className="w-4 h-4 sm:w-5 sm:h-5" />
+                    <span>{t('profile.startNewSeason')}</span>
+                  </>
+                )}
+              </button>
+            )}
+
+            {(isViewingPastSeason || isViewingAllSeasons) && (
+              <div className="p-3 bg-yellow-300 border-4 border-black rounded-none text-black text-sm font-bold">
+                {isViewingAllSeasons 
+                  ? `${t('profile.allSeasons')} - ${t('profile.readOnly')}` 
+                  : `${selectedSeason} - ${t('profile.readOnly')}`}
+              </div>
+            )}
           </div>
         </div>
 
