@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { Home, Plus, Users, DollarSign, Target, LogOut, MoreHorizontal, X } from 'lucide-react';
+import { Home, Plus, Users, DollarSign, Target, LogOut, MoreHorizontal, X, User } from 'lucide-react';
+import { t, getLanguage } from '../i18n';
 
 interface BottomNavProps {
   activeTab: string;
@@ -10,14 +11,31 @@ interface BottomNavProps {
 export default function BottomNav({ activeTab, onTabChange, onSignOut }: BottomNavProps) {
   const [showMoreMenu, setShowMoreMenu] = useState(false);
   const [isClosing, setIsClosing] = useState(false);
+  const [currentLang, setCurrentLang] = useState<'es' | 'en'>(() => getLanguage());
 
+  useEffect(() => {
+    // Listen for language changes
+    const handleLanguageChange = (e: CustomEvent) => {
+      setCurrentLang(e.detail);
+    };
+    
+    window.addEventListener('languagechange', handleLanguageChange as EventListener);
+    
+    return () => {
+      window.removeEventListener('languagechange', handleLanguageChange as EventListener);
+    };
+  }, []);
+
+  // Use currentLang to trigger re-renders when language changes
   const mainTabs = [
-    { id: 'dashboard', label: 'Dashboard', icon: Home },
-    { id: 'add-game', label: 'Add Game', icon: Plus },
-    { id: 'players', label: 'Players', icon: Users },
-    { id: 'debts', label: 'Debts', icon: DollarSign },
-    { id: 'bet-tracker', label: 'Bet Tracker', icon: Target },
+    { id: 'dashboard', label: t('nav.dashboard'), icon: Home },
+    { id: 'add-game', label: t('nav.addGame'), icon: Plus },
+    { id: 'players', label: t('nav.players'), icon: Users },
+    { id: 'debts', label: t('nav.debts'), icon: DollarSign },
   ];
+  
+  // Force re-render when language changes (currentLang is used implicitly via t() calls)
+  void currentLang;
 
   // Prevent body scroll when modal is open
   useEffect(() => {
@@ -53,8 +71,8 @@ export default function BottomNav({ activeTab, onTabChange, onSignOut }: BottomN
   };
 
   const menuOptions = [
-    { id: 'bet-tracker', label: 'Bet Tracker', icon: Target, action: () => onTabChange('bet-tracker') },
-    { id: 'sign-out', label: 'Sign Out', icon: LogOut, action: () => onSignOut && onSignOut() },
+    { id: 'bet-tracker', label: t('nav.betTracker'), icon: Target, action: () => onTabChange('bet-tracker') },
+    { id: 'profile', label: t('nav.profile'), icon: User, action: () => onTabChange('profile') },
   ];
 
   return (
@@ -63,7 +81,11 @@ export default function BottomNav({ activeTab, onTabChange, onSignOut }: BottomN
       <nav className="hidden lg:flex fixed left-0 top-0 bottom-0 w-64 bg-white border-r-4 border-black z-50">
         <div className="flex flex-col justify-between items-start w-full h-full pt-6">
           <div className="w-full">
-            {mainTabs.map(({ id, label, icon: Icon }) => (
+            {[
+              ...mainTabs,
+              { id: 'bet-tracker', label: t('nav.betTracker'), icon: Target },
+              { id: 'profile', label: t('nav.profile'), icon: User },
+            ].map(({ id, label, icon: Icon }) => (
               <button
                 key={id}
                 onClick={() => onTabChange(id)}
@@ -85,7 +107,7 @@ export default function BottomNav({ activeTab, onTabChange, onSignOut }: BottomN
               className="w-full flex flex-row items-center justify-start gap-3 px-6 py-4 transition-all text-black hover:bg-red-600 hover:text-white font-bold"
             >
               <LogOut className="w-6 h-6 flex-shrink-0" />
-              <span className="text-sm uppercase font-black">Sign Out</span>
+              <span className="text-sm uppercase font-black">{t('nav.signOut')}</span>
             </button>
           </div>
         </div>
@@ -113,7 +135,7 @@ export default function BottomNav({ activeTab, onTabChange, onSignOut }: BottomN
             className="flex flex-col items-center justify-center flex-1 h-full transition-all text-black hover:bg-amber-400 font-bold"
           >
             <MoreHorizontal className="w-6 h-6 transition-transform" />
-            <span className="text-xs mt-1 uppercase">More</span>
+            <span className="text-xs mt-1 uppercase">{t('nav.more')}</span>
           </button>
         </div>
       </nav>
@@ -141,7 +163,7 @@ export default function BottomNav({ activeTab, onTabChange, onSignOut }: BottomN
             {/* Header */}
             <div className="flex items-center justify-between px-4 sm:px-6 pt-4 sm:pt-6 pb-3 sm:pb-4 border-b-4 border-black bg-amber-400 flex-shrink-0">
               <h2 className="text-lg sm:text-xl md:text-2xl font-black text-black uppercase flex-1">
-                More
+                {t('nav.more')}
               </h2>
               <button
                 onClick={handleCloseMenu}
@@ -158,11 +180,9 @@ export default function BottomNav({ activeTab, onTabChange, onSignOut }: BottomN
                   key={id}
                   onClick={() => handleMenuOptionClick(action)}
                   className={`w-full flex flex-row items-center gap-4 px-6 py-4 border-b-2 border-black transition-all ${
-                    id === 'sign-out'
-                      ? 'text-black hover:bg-red-600 hover:text-white font-bold'
-                      : activeTab === id
-                        ? 'bg-orange-500 text-black font-black'
-                        : 'text-black hover:bg-amber-400 font-bold'
+                    activeTab === id
+                      ? 'bg-orange-500 text-black font-black'
+                      : 'text-black hover:bg-amber-400 font-bold'
                   }`}
                 >
                   <Icon className="w-6 h-6 flex-shrink-0" />

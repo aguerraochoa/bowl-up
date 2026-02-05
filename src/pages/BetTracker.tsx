@@ -2,12 +2,30 @@ import { useState, useEffect } from 'react';
 import { Plus, Minus, Loader2 } from 'lucide-react';
 import { getPlayers } from '../utils/storage';
 import { getBetTallies, incrementBetTally, decrementBetTally } from '../utils/storage';
+import { t, getLanguage } from '../i18n';
 import type { Player } from '../types';
 
 export default function BetTracker() {
   const [players, setPlayers] = useState<Player[]>([]);
   const [tallies, setTallies] = useState<Record<string, number>>({});
   const [isLoading, setIsLoading] = useState(true);
+  const [currentLang, setCurrentLang] = useState<'es' | 'en'>(() => getLanguage());
+
+  useEffect(() => {
+    // Listen for language changes
+    const handleLanguageChange = (e: CustomEvent) => {
+      setCurrentLang(e.detail);
+    };
+    
+    window.addEventListener('languagechange', handleLanguageChange as EventListener);
+    
+    return () => {
+      window.removeEventListener('languagechange', handleLanguageChange as EventListener);
+    };
+  }, []);
+
+  // Force re-render when language changes
+  void currentLang;
 
   useEffect(() => {
     // Refresh players and tallies when component mounts or updates
@@ -73,19 +91,19 @@ export default function BetTracker() {
     <div className="min-h-screen bg-orange-50 pb-20 lg:pb-6 safe-top relative">
       <div className="max-w-2xl mx-auto px-4 py-4 sm:py-6">
         <div className="mb-4 sm:mb-6">
-          <h1 className="text-3xl sm:text-4xl md:text-5xl font-black text-black mb-2 uppercase">Tracker</h1>
-          <p className="text-sm sm:text-base text-black font-bold">Track 5-pin misses and strike penalties</p>
+          <h1 className="text-3xl sm:text-4xl md:text-5xl font-black text-black mb-2 uppercase">{t('betTracker.title')}</h1>
+          <p className="text-sm sm:text-base text-black font-bold">{t('betTracker.subtitle')}</p>
         </div>
 
         {isLoading ? (
           <div className="bg-white rounded-none border-4 border-black p-12 text-center">
             <Loader2 className="w-8 h-8 animate-spin mx-auto mb-4 text-black" />
-            <p className="text-black font-bold text-base">Loading tracker...</p>
+            <p className="text-black font-bold text-base">{t('betTracker.loading')}</p>
           </div>
         ) : players.length === 0 ? (
           <div className="bg-white rounded-none border-4 border-black p-12 text-center">
-            <p className="text-black font-bold text-lg">No players added yet.</p>
-            <p className="text-sm text-black font-bold mt-2">Add players in the Players tab first.</p>
+            <p className="text-black font-bold text-lg">{t('betTracker.noPlayers')}</p>
+            <p className="text-sm text-black font-bold mt-2">{t('betTracker.addPlayersFirst')}</p>
           </div>
         ) : (
           <div className="space-y-3 sm:space-y-4">
@@ -100,7 +118,7 @@ export default function BetTracker() {
                     <div className="flex-1 min-w-0">
                       <h3 className="text-lg sm:text-xl font-black text-black truncate">{player.name}</h3>
                       <p className="text-xs sm:text-sm text-black font-bold mt-1">
-                        Current tally: <span className="font-black text-lg">{tally}</span>
+                        {t('betTracker.currentTally')}: <span className="font-black text-lg">{tally}</span>
                       </p>
                     </div>
                     <div className="flex items-center gap-2 sm:gap-3 ml-4 flex-shrink-0">

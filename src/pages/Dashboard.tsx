@@ -3,6 +3,7 @@ import KPICard from '../components/KPICard';
 import LeaderboardCard from '../components/LeaderboardCard';
 import { calculateTeamStatsFromData, getTopIndividualGamesFromData, getTopTeamSumGamesFromData, getTopIndividualAveragesFromData, getTopTenthFrameAveragesFromData } from '../utils/stats';
 import { getPlayers, getGames } from '../utils/storage';
+import { t, getLanguage } from '../i18n';
 import { Target, Zap, Gamepad2, TrendingUp, X, Loader2 } from 'lucide-react';
 import type { Game } from '../types';
 
@@ -23,6 +24,23 @@ export default function Dashboard() {
   const [isClosingModal, setIsClosingModal] = useState(false);
   const [showMoreGames, setShowMoreGames] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [currentLang, setCurrentLang] = useState<'es' | 'en'>(() => getLanguage());
+
+  useEffect(() => {
+    // Listen for language changes
+    const handleLanguageChange = (e: CustomEvent) => {
+      setCurrentLang(e.detail);
+    };
+    
+    window.addEventListener('languagechange', handleLanguageChange as EventListener);
+    
+    return () => {
+      window.removeEventListener('languagechange', handleLanguageChange as EventListener);
+    };
+  }, []);
+
+  // Force re-render when language changes
+  void currentLang;
 
   const refreshData = async (showLoading = false) => {
     if (showLoading) {
@@ -112,7 +130,7 @@ export default function Dashboard() {
       <div className="min-h-screen bg-orange-50 pb-20 lg:pb-6 safe-top relative flex items-center justify-center">
         <div className="text-center">
           <Loader2 className="w-8 h-8 animate-spin mx-auto mb-4 text-black" />
-          <p className="text-black font-bold text-base">Loading Dashboard...</p>
+          <p className="text-black font-bold text-base">{t('dashboard.loading')}</p>
         </div>
       </div>
     );
@@ -123,8 +141,8 @@ export default function Dashboard() {
       <div className="max-w-7xl mx-auto px-4 py-4 md:py-6">
         {/* Header */}
         <div className="mb-4 md:mb-6">
-          <h1 className="text-3xl sm:text-4xl md:text-5xl font-black text-black mb-2 uppercase">Dashboard</h1>
-          <p className="text-sm sm:text-base text-black font-bold">Team performance overview</p>
+          <h1 className="text-3xl sm:text-4xl md:text-5xl font-black text-black mb-2 uppercase">{t('dashboard.title')}</h1>
+          <p className="text-sm sm:text-base text-black font-bold">{t('dashboard.subtitle')}</p>
         </div>
 
         {/* Desktop One-Pager Layout */}
@@ -134,30 +152,30 @@ export default function Dashboard() {
             <div className="col-span-3">
               <div className="grid grid-cols-1 gap-4">
                 <KPICard
-                  title="Team Average"
+                  title={t('dashboard.teamAverage')}
                   value={teamStats.teamGameAverage.toFixed(1)}
-                  subtitle="Average score"
+                  subtitle={t('dashboard.teamAverageSubtitle')}
                   icon={<Target className="w-6 h-6 opacity-60" />}
                   color="primary"
                 />
                 <KPICard
-                  title="Total Games"
+                  title={t('dashboard.totalGames')}
                   value={teamStats.totalGames}
-                  subtitle="Games played"
+                  subtitle={t('dashboard.totalGamesSubtitle')}
                   icon={<Gamepad2 className="w-6 h-6 opacity-60" />}
                   color="accent"
                 />
                 <KPICard
-                  title="Strike %"
+                  title={t('dashboard.strikePercentage')}
                   value={`${teamStats.totalStrikePercentage.toFixed(1)}%`}
-                  subtitle="Team strike %"
+                  subtitle={t('dashboard.strikePercentageSubtitle')}
                   icon={<Zap className="w-6 h-6 opacity-60" />}
                   color="purple"
                 />
                 <KPICard
-                  title="Spare %"
+                  title={t('dashboard.sparePercentage')}
                   value={`${teamStats.totalSparePercentage.toFixed(1)}%`}
-                  subtitle="Team spare %"
+                  subtitle={t('dashboard.sparePercentageSubtitle')}
                   icon={<TrendingUp className="w-6 h-6 opacity-60" />}
                   color="orange"
                 />
@@ -168,28 +186,28 @@ export default function Dashboard() {
             <div className="col-span-5">
               <div className="space-y-4">
                 <LeaderboardCard
-                  title="🏆 Top Individual Games"
+                  title={`🏆 ${t('dashboard.topIndividualGames')}`}
                   items={(showMoreGames ? topGames : topGames.slice(0, 5)).map((game, index) => ({
                     rank: index + 1,
                     name: game.playerName,
                     value: game.totalScore,
                     subtitle: new Date(game.date).toLocaleDateString(),
                   }))}
-                  emptyMessage="No games recorded yet"
+                  emptyMessage={t('dashboard.noGames')}
                   showMoreButton={!showMoreGames && topGames.length > 5}
                   onShowMore={() => setShowMoreGames(true)}
-                  showMoreLabel="Show More"
+                  showMoreLabel={t('dashboard.showMore')}
                 />
                 <LeaderboardCard
-                  title="👥 Top Team Sum Games"
+                  title={`👥 ${t('dashboard.topTeamGames')}`}
                   items={topTeamSums.map((sum, index) => ({
                     rank: index + 1,
-                    name: `${sum.players.length} players`,
+                    name: `${sum.players.length} ${t('dashboard.players')}`,
                     value: sum.totalSum,
                     subtitle: new Date(sum.date).toLocaleDateString(),
                     onClick: () => handleTeamGameClick(sum),
                   }))}
-                  emptyMessage="No team games recorded yet"
+                  emptyMessage={t('dashboard.noTeamGames')}
                 />
               </div>
             </div>
@@ -198,24 +216,24 @@ export default function Dashboard() {
             <div className="col-span-4">
               <div className="space-y-4">
                 <LeaderboardCard
-                  title="⭐ Individual Averages"
+                  title={`⭐ ${t('dashboard.individualAverages')}`}
                   items={topAverages.map((avg, index) => ({
                     rank: index + 1,
                     name: avg.playerName,
                     value: avg.average.toFixed(1),
-                    subtitle: "Season average",
+                    subtitle: t('dashboard.seasonAverage'),
                   }))}
-                  emptyMessage="No averages calculated yet"
+                  emptyMessage={t('dashboard.noAverages')}
                 />
                 <LeaderboardCard
-                  title="🎯 Avg 10th Frame"
+                  title={`🎯 ${t('dashboard.avgTenthFrame')}`}
                   items={topTenthFrameAverages.map((avg, index) => ({
                     rank: index + 1,
                     name: avg.playerName,
                     value: avg.average.toFixed(1),
-                    subtitle: "Clutch performance",
+                    subtitle: t('dashboard.clutchPerformance'),
                   }))}
-                  emptyMessage="No 10th frame data yet"
+                  emptyMessage={t('dashboard.noTenthFrame')}
                 />
               </div>
             </div>
@@ -227,30 +245,30 @@ export default function Dashboard() {
           {/* KPI Cards */}
           <div className="grid grid-cols-2 gap-4 mb-6">
             <KPICard
-              title="Team Average"
+              title={t('dashboard.teamAverage')}
               value={teamStats.teamGameAverage.toFixed(1)}
-              subtitle="Average score across all games"
+              subtitle={t('dashboard.teamAverageSubtitleMobile')}
               icon={<Target className="w-8 h-8 opacity-60" />}
               color="primary"
             />
             <KPICard
-              title="Total Games"
+              title={t('dashboard.totalGames')}
               value={teamStats.totalGames}
-              subtitle="Individual games played"
+              subtitle={t('dashboard.totalGamesSubtitleMobile')}
               icon={<Gamepad2 className="w-8 h-8 opacity-60" />}
               color="accent"
             />
             <KPICard
-              title="Strike %"
+              title={t('dashboard.strikePercentage')}
               value={`${teamStats.totalStrikePercentage.toFixed(1)}%`}
-              subtitle="Team strike percentage"
+              subtitle={t('dashboard.strikePercentageSubtitleMobile')}
               icon={<Zap className="w-8 h-8 opacity-60" />}
               color="purple"
             />
             <KPICard
-              title="Spare %"
+              title={t('dashboard.sparePercentage')}
               value={`${teamStats.totalSparePercentage.toFixed(1)}%`}
-              subtitle="Team spare percentage"
+              subtitle={t('dashboard.sparePercentageSubtitleMobile')}
               icon={<TrendingUp className="w-8 h-8 opacity-60" />}
               color="orange"
             />
@@ -259,51 +277,51 @@ export default function Dashboard() {
           {/* Leaderboards */}
           <div className="space-y-6">
             <LeaderboardCard
-              title="🏆 Top Individual Games"
+              title={`🏆 ${t('dashboard.topIndividualGames')}`}
               items={(showMoreGames ? topGames : topGames.slice(0, 5)).map((game, index) => ({
                 rank: index + 1,
                 name: game.playerName,
                 value: game.totalScore,
                 subtitle: new Date(game.date).toLocaleDateString(),
               }))}
-              emptyMessage="No games recorded yet"
+              emptyMessage={t('dashboard.noGames')}
               showMoreButton={!showMoreGames && topGames.length > 5}
               onShowMore={() => setShowMoreGames(true)}
-              showMoreLabel="Show More"
+              showMoreLabel={t('dashboard.showMore')}
             />
 
             <LeaderboardCard
-              title="👥 Top Team Sum Games"
+              title={`👥 ${t('dashboard.topTeamGames')}`}
               items={topTeamSums.map((sum, index) => ({
                 rank: index + 1,
-                name: `${sum.players.length} players`,
+                name: `${sum.players.length} ${t('dashboard.players')}`,
                 value: sum.totalSum,
                 subtitle: new Date(sum.date).toLocaleDateString(),
                 onClick: () => handleTeamGameClick(sum),
               }))}
-              emptyMessage="No team games recorded yet"
+              emptyMessage={t('dashboard.noTeamGames')}
             />
 
             <LeaderboardCard
-              title="⭐ Individual Averages"
+              title={`⭐ ${t('dashboard.individualAverages')}`}
               items={topAverages.map((avg, index) => ({
                 rank: index + 1,
                 name: avg.playerName,
                 value: avg.average.toFixed(1),
-                subtitle: "Season average",
+                subtitle: t('dashboard.seasonAverage'),
               }))}
-              emptyMessage="No averages calculated yet"
+              emptyMessage={t('dashboard.noAverages')}
             />
 
             <LeaderboardCard
-              title="🎯 Avg 10th Frame"
+              title={`🎯 ${t('dashboard.avgTenthFrame')}`}
               items={topTenthFrameAverages.map((avg, index) => ({
                 rank: index + 1,
                 name: avg.playerName,
                 value: avg.average.toFixed(1),
-                subtitle: "Clutch performance",
+                subtitle: t('dashboard.clutchPerformance'),
               }))}
-              emptyMessage="No 10th frame data yet"
+              emptyMessage={t('dashboard.noTenthFrame')}
             />
           </div>
         </div>
@@ -331,7 +349,7 @@ export default function Dashboard() {
               {/* Header */}
               <div className="flex items-center justify-between px-4 sm:px-6 pt-4 sm:pt-6 pb-3 sm:pb-4 border-b-4 border-black bg-yellow-300 flex-shrink-0">
                 <h2 className="text-lg sm:text-xl md:text-2xl font-black text-black uppercase break-words flex-1">
-                  Team Game Details
+                  {t('dashboard.teamGameDetails')}
                 </h2>
                 <button
                   onClick={handleCloseModal}
@@ -345,10 +363,10 @@ export default function Dashboard() {
               <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-4 sm:py-6 bg-white min-h-0">
                 <div className="mb-4 sm:mb-6">
                   <p className="text-sm sm:text-base text-black font-bold">
-                    Date: {new Date(selectedTeamGame.date).toLocaleDateString()}
+                    {t('dashboard.date')}: {new Date(selectedTeamGame.date).toLocaleDateString()}
                   </p>
                   <p className="text-lg sm:text-xl text-black font-black mt-2">
-                    Total: {selectedTeamGame.totalSum}
+                    {t('dashboard.total')}: {selectedTeamGame.totalSum}
                   </p>
                 </div>
 

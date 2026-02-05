@@ -3,6 +3,7 @@ import { getPlayers, addPlayer, removePlayer, getGames } from '../utils/storage'
 import { cache } from '../utils/cache';
 import { calculatePlayerStatsFromData } from '../utils/stats';
 import { supabase } from '../lib/supabase';
+import { t, getLanguage } from '../i18n';
 import type { Player, Stats } from '../types';
 import { Plus, X, TrendingUp, TrendingDown, Target, Pencil, Check, Loader2 } from 'lucide-react';
 
@@ -22,6 +23,23 @@ export default function Players() {
   const [isAddingPlayer, setIsAddingPlayer] = useState(false);
   const [savingPlayerId, setSavingPlayerId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [currentLang, setCurrentLang] = useState<'es' | 'en'>(() => getLanguage());
+
+  useEffect(() => {
+    // Listen for language changes
+    const handleLanguageChange = (e: CustomEvent) => {
+      setCurrentLang(e.detail);
+    };
+    
+    window.addEventListener('languagechange', handleLanguageChange as EventListener);
+    
+    return () => {
+      window.removeEventListener('languagechange', handleLanguageChange as EventListener);
+    };
+  }, []);
+
+  // Force re-render when language changes
+  void currentLang;
 
   useEffect(() => {
     const loadPlayers = async () => {
@@ -180,7 +198,7 @@ export default function Players() {
         setEditingPlayerId(null);
         setEditingPlayerName('');
       } else {
-        alert('Error updating player. Please try again.');
+        alert(t('players.errorUpdating'));
       }
     } catch (error) {
       console.error('Error updating player:', error);
@@ -209,8 +227,8 @@ export default function Players() {
       <div className="max-w-2xl mx-auto px-4 py-4 sm:py-6">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-0 mb-4 sm:mb-6">
           <div>
-            <h1 className="text-3xl sm:text-4xl md:text-5xl font-black text-black uppercase">Players</h1>
-            <p className="text-sm sm:text-base text-black font-bold">Manage team members</p>
+            <h1 className="text-3xl sm:text-4xl md:text-5xl font-black text-black uppercase">{t('players.title')}</h1>
+            <p className="text-sm sm:text-base text-black font-bold">{t('players.subtitle')}</p>
           </div>
           <div className="flex gap-2">
             {!isEditMode && (
@@ -220,7 +238,7 @@ export default function Players() {
                 aria-label="Edit players"
               >
                 <Pencil className="w-4 h-4 sm:w-5 sm:h-5" />
-                <span className="hidden sm:inline">Edit</span>
+                <span className="hidden sm:inline">{t('players.edit')}</span>
               </button>
             )}
             {isEditMode && (
@@ -233,7 +251,7 @@ export default function Players() {
                 className="bg-white border-4 border-black text-black px-3 sm:px-4 py-2 sm:py-3 rounded-none hover:bg-gray-100  flex items-center justify-center gap-2 font-black text-sm sm:text-base"
                 aria-label="Cancel edit"
               >
-                Done
+                {t('players.done')}
               </button>
             )}
             <button
@@ -245,8 +263,8 @@ export default function Players() {
               aria-label="Add player"
             >
               <Plus className="w-4 h-4 sm:w-5 sm:h-5" />
-              <span className="hidden sm:inline">Add Player</span>
-              <span className="sm:hidden">Add</span>
+              <span className="hidden sm:inline">{t('players.addPlayer')}</span>
+              <span className="sm:hidden">{t('common.add')}</span>
             </button>
           </div>
         </div>
@@ -274,7 +292,7 @@ export default function Players() {
               {/* Header */}
               <div className="flex items-center justify-between px-4 sm:px-6 pt-4 sm:pt-6 pb-3 sm:pb-4 border-b-4 border-black bg-amber-400 flex-shrink-0">
                 <h2 className="text-lg sm:text-xl md:text-2xl font-black text-black uppercase break-words flex-1">
-                  Add New Player
+                  {t('players.addPlayer')}
                 </h2>
                 <button
                   onClick={handleCloseAddPlayer}
@@ -287,12 +305,12 @@ export default function Players() {
               {/* Content */}
               <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-4 sm:py-6 bg-white min-h-0">
                 <div>
-                  <label className="block text-xs sm:text-sm font-black text-black mb-2 uppercase">Player Name</label>
+                  <label className="block text-xs sm:text-sm font-black text-black mb-2 uppercase">{t('players.enterName')}</label>
                   <input
                     type="text"
                     value={newPlayerName}
                     onChange={(e) => setNewPlayerName(e.target.value)}
-                    placeholder="Player name"
+                    placeholder={t('players.enterName')}
                     className="w-full px-3 sm:px-4 py-2 sm:py-3 rounded-none border-4 border-black focus:outline-none font-bold bg-white text-sm sm:text-base"
                     onKeyPress={(e) => e.key === 'Enter' && handleAddPlayer()}
                     autoFocus
@@ -320,7 +338,7 @@ export default function Players() {
                         Adding...
                       </>
                     ) : (
-                      'Add Player'
+                      t('players.add')
                     )}
                   </button>
                 </div>
@@ -332,12 +350,12 @@ export default function Players() {
         {isLoading ? (
           <div className="bg-white rounded-none border-4 border-black p-12 text-center">
             <Loader2 className="w-8 h-8 animate-spin mx-auto mb-4 text-black" />
-            <p className="text-black font-bold text-base">Loading players...</p>
+            <p className="text-black font-bold text-base">{t('players.loading')}</p>
           </div>
         ) : players.length === 0 ? (
           <div className="bg-white rounded-none border-4 border-black p-12 text-center ">
-            <p className="text-black mb-2 font-bold">No players added yet.</p>
-            <p className="text-sm text-black font-bold">Click the + button to add your first player.</p>
+            <p className="text-black mb-2 font-bold">{t('players.noPlayers')}</p>
+            <p className="text-sm text-black font-bold">{t('players.addFirst')}</p>
           </div>
         ) : (
           <div className="space-y-3">
@@ -410,13 +428,13 @@ export default function Players() {
                           {!isEditMode && (
                             <div className="flex items-center gap-1.5">
                               <span className="bg-orange-500 border-2 border-black px-2 py-1 text-xs text-black font-black inline-block text-center flex-1">
-                                {stats.gamesPlayed} games
+                                {stats.gamesPlayed} {t('players.gamesPlayed')}
                               </span>
                               <span className="bg-amber-400 border-2 border-black px-2 py-1 text-xs text-black font-black inline-block text-center flex-1">
-                                Avg: {stats.averageScore.toFixed(1)}
+                                {t('players.averageShort')}: {stats.averageScore.toFixed(1)}
                               </span>
                               <span className="bg-lime-500 border-2 border-black px-2 py-1 text-xs text-black font-black inline-block text-center flex-1">
-                                Strike: {stats.strikePercentage.toFixed(1)}%
+                                {t('players.strike')}: {stats.strikePercentage.toFixed(1)}%
                               </span>
                             </div>
                           )}
@@ -490,43 +508,43 @@ export default function Players() {
               {/* Scrollable Content */}
               <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-4 sm:py-6 bg-white min-h-0">
                 <div className="mb-4 sm:mb-6">
-                  <p className="text-sm sm:text-base text-black font-bold">Personal Statistics</p>
+                  <p className="text-sm sm:text-base text-black font-bold">{t('players.personalStats')}</p>
                 </div>
 
                 {/* Stats Grid */}
                 <div className="grid grid-cols-2 gap-3 sm:gap-4 mb-4 sm:mb-6">
                   <div className="bg-orange-500 border-4 border-black rounded-none p-3 sm:p-5 ">
-                    <p className="text-xs font-black text-black mb-1 uppercase">Games Played</p>
+                    <p className="text-xs font-black text-black mb-1 uppercase">{t('players.totalGames')}</p>
                     <p className="text-2xl sm:text-3xl md:text-4xl font-black text-black">{playerStats.gamesPlayed}</p>
                   </div>
                   <div className="bg-amber-400 border-4 border-black rounded-none p-3 sm:p-5 ">
-                    <p className="text-xs font-black text-black mb-1 uppercase">Average Score</p>
+                    <p className="text-xs font-black text-black mb-1 uppercase">{t('players.averageScore')}</p>
                     <p className="text-2xl sm:text-3xl md:text-4xl font-black text-black">{playerStats.averageScore.toFixed(1)}</p>
                   </div>
                   <div className="bg-lime-500 border-4 border-black rounded-none p-3 sm:p-5 ">
-                    <p className="text-xs font-black text-black mb-1 uppercase">Strike %</p>
+                    <p className="text-xs font-black text-black mb-1 uppercase">{t('players.strikePercentage')}</p>
                     <p className="text-2xl sm:text-3xl md:text-4xl font-black text-black">{playerStats.strikePercentage.toFixed(1)}%</p>
                   </div>
                   <div className="bg-orange-600 border-4 border-black rounded-none p-3 sm:p-5 ">
-                    <p className="text-xs font-black text-black mb-1 uppercase">Spare %</p>
+                    <p className="text-xs font-black text-black mb-1 uppercase">{t('players.sparePercentage')}</p>
                     <p className="text-2xl sm:text-3xl md:text-4xl font-black text-black">{playerStats.sparePercentage.toFixed(1)}%</p>
                   </div>
                   <div className="bg-purple-500 border-4 border-black rounded-none p-3 sm:p-5 ">
-                    <p className="text-xs font-black text-black mb-1 uppercase">Avg 10th Frame</p>
+                    <p className="text-xs font-black text-black mb-1 uppercase">{t('dashboard.avgTenthFrame')}</p>
                     <p className="text-2xl sm:text-3xl md:text-4xl font-black text-black">{playerStats.averageTenthFrame.toFixed(1)}</p>
                   </div>
                 </div>
 
                 {/* Range Stats */}
                 <div className="bg-white rounded-none border-4 border-black p-4 sm:p-6 mb-4 sm:mb-6 ">
-                  <h2 className="text-lg sm:text-xl font-black text-black mb-4 uppercase">Score Range</h2>
+                  <h2 className="text-lg sm:text-xl font-black text-black mb-4 uppercase">{t('players.scoreRange')}</h2>
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <p className="text-xs sm:text-sm text-black mb-1 font-bold">Floor (Lowest)</p>
+                      <p className="text-xs sm:text-sm text-black mb-1 font-bold">{t('players.floor')}</p>
                       <p className="text-2xl sm:text-3xl font-black text-black">{playerStats.floor}</p>
                     </div>
                     <div>
-                      <p className="text-xs sm:text-sm text-black mb-1 font-bold">Ceiling (Highest)</p>
+                      <p className="text-xs sm:text-sm text-black mb-1 font-bold">{t('players.ceiling')}</p>
                       <p className="text-2xl sm:text-3xl font-black text-black">{playerStats.ceiling}</p>
                     </div>
                   </div>
@@ -534,31 +552,31 @@ export default function Players() {
 
                 {/* Recent Average */}
                 <div className="bg-white rounded-none border-4 border-black p-4 sm:p-6 ">
-                  <h2 className="text-lg sm:text-xl font-black text-black mb-4 uppercase">Recent Form</h2>
+                  <h2 className="text-lg sm:text-xl font-black text-black mb-4 uppercase">{t('players.recentForm')}</h2>
                   <div className="flex flex-col sm:flex-row sm:items-center gap-3">
                     <div className="flex-1">
-                      <p className="text-xs sm:text-sm text-black mb-1 font-bold">Last 10 Games Average</p>
+                      <p className="text-xs sm:text-sm text-black mb-1 font-bold">{t('players.last10Average')}</p>
                       <p className="text-3xl sm:text-4xl font-black text-black">{playerStats.recentAverage.toFixed(1)}</p>
                     </div>
                     {playerStats.recentAverage > playerStats.averageScore ? (
                       <div className="flex items-center gap-2 bg-lime-500 border-4 border-black px-3 sm:px-4 py-2">
                         <TrendingUp className="w-5 h-5 sm:w-6 sm:h-6 text-black" />
-                        <span className="font-black text-black text-sm sm:text-base">Improving</span>
+                        <span className="font-black text-black text-sm sm:text-base">{t('players.improving')}</span>
                       </div>
                     ) : playerStats.recentAverage < playerStats.averageScore ? (
                       <div className="flex items-center gap-2 bg-red-600 border-4 border-black px-3 sm:px-4 py-2">
                         <TrendingDown className="w-5 h-5 sm:w-6 sm:h-6 text-black" />
-                        <span className="font-black text-black text-sm sm:text-base">Declining</span>
+                        <span className="font-black text-black text-sm sm:text-base">{t('players.declining')}</span>
                       </div>
                     ) : (
                       <div className="flex items-center gap-2 bg-amber-400 border-4 border-black px-3 sm:px-4 py-2">
                         <Target className="w-5 h-5 sm:w-6 sm:h-6 text-black" />
-                        <span className="font-black text-black text-sm sm:text-base">Stable</span>
+                        <span className="font-black text-black text-sm sm:text-base">{t('players.stable')}</span>
                       </div>
                     )}
                   </div>
                   <p className="text-xs text-black mt-2 font-bold">
-                    Overall average: {playerStats.averageScore.toFixed(1)}
+                    {t('players.overallAverage')}: {playerStats.averageScore.toFixed(1)}
                   </p>
                 </div>
               </div>

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { getPlayers, addGame, getGames, removeGame, removeGamesBySession } from '../utils/storage';
 import { validateGame, validateTenthFrame } from '../utils/scoring';
+import { t, getLanguage } from '../i18n';
 import type { Player, Game } from '../types';
 import { Check, X, ArrowRight, ArrowLeft, Loader2, Trash2, Clock, Eraser, ChevronDown, ChevronUp } from 'lucide-react';
 
@@ -26,6 +27,23 @@ export default function AddGame() {
   const [isLoadingPlayers, setIsLoadingPlayers] = useState(true);
   const [isLoadingGames, setIsLoadingGames] = useState(true);
   const [expandedSessions, setExpandedSessions] = useState<Set<string>>(new Set());
+  const [currentLang, setCurrentLang] = useState<'es' | 'en'>(() => getLanguage());
+
+  useEffect(() => {
+    // Listen for language changes
+    const handleLanguageChange = (e: CustomEvent) => {
+      setCurrentLang(e.detail);
+    };
+    
+    window.addEventListener('languagechange', handleLanguageChange as EventListener);
+    
+    return () => {
+      window.removeEventListener('languagechange', handleLanguageChange as EventListener);
+    };
+  }, []);
+
+  // Force re-render when language changes
+  void currentLang;
 
   useEffect(() => {
     const loadData = async () => {
@@ -54,7 +72,7 @@ export default function AddGame() {
       return;
     }
     if (selectedPlayers.length >= 4) {
-      setError('Maximum 4 players allowed');
+      setError(t('addGame.maxPlayers'));
       return;
     }
     setSelectedPlayers(prev => [...prev, playerId]);
@@ -68,7 +86,7 @@ export default function AddGame() {
 
   const handleStartGame = () => {
     if (selectedPlayers.length === 0) {
-      setError('Please select at least one player');
+      setError(t('addGame.selectAtLeastOne'));
       return;
     }
     setGameData(selectedPlayers.map(() => ({})));
@@ -105,7 +123,7 @@ export default function AddGame() {
     } else {
       const validation = validateTenthFrame(upperValue);
       if (!validation.valid) {
-        setTenthFrameError(validation.error || 'Invalid 10th frame');
+        setTenthFrameError(validation.error || t('addGame.tenthFrameInvalid'));
       } else {
         setTenthFrameError('');
       }
@@ -121,7 +139,7 @@ export default function AddGame() {
       const tenthFrameValidation = validateTenthFrame(currentGame.tenthFrame);
       if (!tenthFrameValidation.valid) {
         setTenthFrameError(tenthFrameValidation.error || 'Invalid 10th frame');
-        setError(tenthFrameValidation.error || 'Invalid 10th frame');
+        setError(tenthFrameValidation.error || t('addGame.tenthFrameInvalid'));
         return;
       }
     }
@@ -234,7 +252,7 @@ export default function AddGame() {
       if (prevGame.tenthFrame) {
         const validation = validateTenthFrame(prevGame.tenthFrame);
         if (!validation.valid) {
-          setTenthFrameError(validation.error || 'Invalid 10th frame');
+          setTenthFrameError(validation.error || t('addGame.tenthFrameInvalid'));
         } else {
           setTenthFrameError('');
         }
@@ -259,7 +277,7 @@ export default function AddGame() {
       if (lastGame.tenthFrame) {
         const validation = validateTenthFrame(lastGame.tenthFrame);
         if (!validation.valid) {
-          setTenthFrameError(validation.error || 'Invalid 10th frame');
+          setTenthFrameError(validation.error || t('addGame.tenthFrameInvalid'));
         } else {
           setTenthFrameError('');
         }
@@ -310,7 +328,7 @@ export default function AddGame() {
         sparesFrames1to9: 0,
         tenthFrame: '',
       });
-      alert('Games saved successfully!');
+      alert(t('common.success'));
       // Reload games to show the new ones
       const loadedGames = await getGames();
       setGames(loadedGames);
@@ -378,7 +396,7 @@ export default function AddGame() {
       <div className="min-h-screen bg-orange-50 pb-20 safe-top flex items-center justify-center px-4 relative">
           <div className="text-center">
             <Loader2 className="w-8 h-8 animate-spin mx-auto mb-4 text-black" />
-            <p className="text-black font-bold text-base">Loading players...</p>
+            <p className="text-black font-bold text-base">{t('addGame.loadingPlayers')}</p>
           </div>
       </div>
     );
@@ -389,8 +407,8 @@ export default function AddGame() {
     return (
       <div className="min-h-screen bg-orange-50 pb-20 safe-top flex items-center justify-center px-4 relative">
         <div className="text-center">
-          <p className="text-black mb-4 font-bold">No players added yet.</p>
-          <p className="text-sm text-black font-bold">Add players in the Players tab first.</p>
+          <p className="text-black mb-4 font-bold">{t('addGame.noPlayers')}</p>
+          <p className="text-sm text-black font-bold">{t('addGame.addPlayersFirst')}</p>
         </div>
       </div>
     );
@@ -402,8 +420,8 @@ export default function AddGame() {
         <div className="max-w-2xl mx-auto px-4 py-4 sm:py-6">
           <div className="flex items-center justify-between mb-4 sm:mb-6">
             <div>
-              <h1 className="text-3xl sm:text-4xl md:text-5xl font-black text-black mb-2 uppercase">Add New Game</h1>
-              <p className="text-sm sm:text-base text-black font-bold">Click players to add them in order</p>
+              <h1 className="text-3xl sm:text-4xl md:text-5xl font-black text-black mb-2 uppercase">{t('addGame.title')}</h1>
+              <p className="text-sm sm:text-base text-black font-bold">{t('addGame.selectPlayers')}</p>
             </div>
             <div className="flex gap-2">
               <button
@@ -414,7 +432,7 @@ export default function AddGame() {
                 className="border-4 border-black text-black px-3 sm:px-4 py-2 sm:py-3 rounded-none font-black flex items-center gap-2 text-sm sm:text-base bg-amber-400 hover:bg-amber-500"
               >
                 <Clock className="w-4 h-4 sm:w-5 sm:h-5" />
-                <span className="hidden sm:inline">History</span>
+                <span className="hidden sm:inline">{t('addGame.history')}</span>
               </button>
               <button
                 onClick={handleClearSelection}
@@ -422,7 +440,7 @@ export default function AddGame() {
                 className="bg-amber-400 border-4 border-black text-black px-3 sm:px-4 py-2 sm:py-3 rounded-none font-black flex items-center gap-2 text-sm sm:text-base disabled:bg-gray-300 disabled:cursor-not-allowed disabled:opacity-70"
               >
                 <Eraser className="w-4 h-4 sm:w-5 sm:h-5" />
-                <span className="hidden sm:inline">Clear</span>
+                <span className="hidden sm:inline">{t('addGame.clear')}</span>
               </button>
             </div>
           </div>
@@ -435,7 +453,7 @@ export default function AddGame() {
 
           {/* Player Selection Grid */}
           <div className="bg-white rounded-none border-4 border-black p-4 sm:p-6 mb-4 sm:mb-6 ">
-            <h2 className="text-lg sm:text-xl font-black mb-4 uppercase">Select Players</h2>
+            <h2 className="text-lg sm:text-xl font-black mb-4 uppercase">{t('addGame.selectPlayers')}</h2>
             <div className="grid grid-cols-2 gap-3">
               {allPlayers.map(player => {
                 const isSelected = selectedPlayers.includes(player.id);
@@ -495,7 +513,7 @@ export default function AddGame() {
                 {/* Header */}
                 <div className="flex items-center justify-between px-4 sm:px-6 pt-4 sm:pt-6 pb-3 sm:pb-4 border-b-4 border-black bg-amber-400 flex-shrink-0">
                   <h2 className="text-lg sm:text-xl md:text-2xl font-black text-black uppercase flex-1">
-                    Game History
+                    {t('addGame.history')}
                   </h2>
                   <button
                     onClick={handleCloseHistory}
@@ -587,7 +605,7 @@ export default function AddGame() {
                                           {new Date(date).toLocaleDateString()}
                                         </p>
                                         <p className="text-xs sm:text-sm text-black font-bold">
-                                          Team Total: {totalSum} | {sessionGames.length} players
+                                          {t('dashboard.total')}: {totalSum} | {sessionGames.length} {t('dashboard.players')}
                                         </p>
                                       </div>
                                     </div>
@@ -600,12 +618,12 @@ export default function AddGame() {
                                       {deletingSessionId === sessionId ? (
                                         <>
                                           <Loader2 className="w-4 h-4 animate-spin" />
-                                          <span className="text-xs sm:text-sm">Deleting...</span>
+                                          <span className="text-xs sm:text-sm">{t('addGame.deleting')}</span>
                                         </>
                                       ) : (
                                         <>
                                           <Trash2 className="w-4 h-4" />
-                                          <span className="text-xs sm:text-sm">Delete</span>
+                                          <span className="text-xs sm:text-sm">{t('common.delete')}</span>
                                         </>
                                       )}
                                     </button>
@@ -618,7 +636,7 @@ export default function AddGame() {
                                           <div key={game.id} className="bg-white border-2 border-black p-2">
                                             <p className="font-black text-black text-sm sm:text-base">{player?.name || 'Unknown'}</p>
                                             <p className="text-xs text-black font-bold">
-                                              Score: {game.totalScore} | Strikes: {game.strikesFrames1to9} | Spares: {game.sparesFrames1to9}
+                                              {t('addGame.score')}: {game.totalScore} | {t('addGame.strikes')}: {game.strikesFrames1to9} | {t('addGame.spares')}: {game.sparesFrames1to9}
                                             </p>
                                           </div>
                                         );
@@ -639,7 +657,7 @@ export default function AddGame() {
                                       {player?.name || 'Unknown'} - {new Date(game.date).toLocaleDateString()}
                                     </p>
                                     <p className="text-xs sm:text-sm text-black font-bold">
-                                      Score: {game.totalScore} | Strikes: {game.strikesFrames1to9} | Spares: {game.sparesFrames1to9}
+                                      {t('addGame.score')}: {game.totalScore} | {t('addGame.strikes')}: {game.strikesFrames1to9} | {t('addGame.spares')}: {game.sparesFrames1to9}
                                     </p>
                                   </div>
                                   <button
@@ -672,7 +690,7 @@ export default function AddGame() {
             disabled={selectedPlayers.length === 0}
             className="w-full bg-orange-500 border-4 border-black text-black py-4 rounded-none font-black flex items-center justify-center gap-2  disabled:bg-gray-300 disabled:cursor-not-allowed "
           >
-            Start Game
+            {t('addGame.startGame')}
             <ArrowRight className="w-5 h-5" />
           </button>
         </div>
@@ -685,7 +703,7 @@ export default function AddGame() {
     return (
       <div className="min-h-screen bg-orange-50 pb-20 safe-top relative">
         <div className="max-w-2xl mx-auto px-4 py-4 sm:py-6">
-          <h1 className="text-3xl sm:text-4xl md:text-5xl font-black text-black mb-4 sm:mb-6 uppercase">Review Games</h1>
+          <h1 className="text-3xl sm:text-4xl md:text-5xl font-black text-black mb-4 sm:mb-6 uppercase">{t('addGame.review')}</h1>
           <div className="space-y-3 sm:space-y-4 mb-4 sm:mb-6">
             {gameData.map((game, index) => {
               const player = selectedPlayersList[index];
@@ -694,19 +712,19 @@ export default function AddGame() {
                   <h3 className="font-black text-base sm:text-lg mb-3 text-black truncate">{player.name}</h3>
                   <div className="grid grid-cols-2 gap-2 sm:gap-3 text-xs sm:text-sm">
                     <div>
-                      <span className="text-black font-bold">Score:</span>
+                      <span className="text-black font-bold">{t('addGame.score')}:</span>
                       <span className="ml-2 font-black text-base sm:text-lg">{game.totalScore}</span>
                     </div>
                     <div>
-                      <span className="text-black font-bold">Strikes:</span>
+                      <span className="text-black font-bold">{t('addGame.strikes')}:</span>
                       <span className="ml-2 font-black text-base sm:text-lg">{game.strikesFrames1to9}</span>
                     </div>
                     <div>
-                      <span className="text-black font-bold">Spares:</span>
+                      <span className="text-black font-bold">{t('addGame.spares')}:</span>
                       <span className="ml-2 font-black text-base sm:text-lg">{game.sparesFrames1to9}</span>
                     </div>
                     <div>
-                      <span className="text-black font-bold">10th Frame:</span>
+                      <span className="text-black font-bold">{t('addGame.tenthFrame')}:</span>
                       <span className="ml-2 font-black text-base sm:text-lg break-all">{game.tenthFrame}</span>
                     </div>
                   </div>
@@ -720,7 +738,7 @@ export default function AddGame() {
               className="flex-1 bg-amber-400 border-4 border-black text-black py-3 sm:py-4 rounded-none font-black flex items-center justify-center gap-2  text-sm sm:text-base"
             >
               <ArrowLeft className="w-4 h-4 sm:w-5 sm:h-5" />
-              Back
+              {t('addGame.previous')}
             </button>
             <button
               onClick={handleSave}
@@ -730,11 +748,11 @@ export default function AddGame() {
               {isSaving ? (
                 <>
                   <Loader2 className="w-4 h-4 sm:w-5 sm:h-5 animate-spin" />
-                  Saving...
+                  {t('addGame.saving')}
                 </>
               ) : (
                 <>
-                  Save Games
+                  {t('addGame.save')}
                   <Check className="w-4 h-4 sm:w-5 sm:h-5" />
                 </>
               )}
@@ -751,9 +769,9 @@ export default function AddGame() {
         {/* Progress */}
         <div className="mb-4 sm:mb-6">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-2">
-            <h1 className="text-3xl sm:text-4xl md:text-5xl font-black text-black uppercase">Add New Game</h1>
+            <h1 className="text-3xl sm:text-4xl md:text-5xl font-black text-black uppercase">{t('addGame.title')}</h1>
             <span className="text-xs sm:text-sm text-black font-black">
-              Player {currentPlayerIndex + 1} of {selectedPlayersList.length}
+              {t('addGame.player')} {currentPlayerIndex + 1} {t('common.of')} {selectedPlayersList.length}
             </span>
           </div>
           <div className="w-full bg-white border-4 border-black h-3 sm:h-4">
@@ -771,7 +789,7 @@ export default function AddGame() {
           {/* Total Score */}
           <div className="mb-6">
             <label className="block text-sm font-black text-black mb-3 uppercase">
-              Total Score (Frames 1-9)
+              {t('addGame.totalScore')}
             </label>
             
             {/* Score Display - Always visible */}
@@ -863,7 +881,7 @@ export default function AddGame() {
           {/* Strikes */}
           <div className="mb-6">
             <label className="block text-sm font-black text-black mb-3 uppercase">
-              Strikes (Frames 1-9)
+              {t('addGame.strikes')}
             </label>
             <div className="grid grid-cols-5 gap-2">
               {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9].map(num => (
@@ -885,7 +903,7 @@ export default function AddGame() {
           {/* Spares */}
           <div className="mb-6">
             <label className="block text-sm font-black text-black mb-3 uppercase">
-              Spares (Frames 1-9)
+              {t('addGame.spares')}
             </label>
             <div className="grid grid-cols-5 gap-2">
               {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9].map(num => (
@@ -907,7 +925,7 @@ export default function AddGame() {
           {/* 10th Frame */}
           <div className="mb-6">
             <label className="block text-sm font-black text-black mb-3 uppercase">
-              10th Frame Notation
+              {t('addGame.tenthFrame')}
             </label>
             
             {/* Current Notation Display */}
@@ -1017,7 +1035,7 @@ export default function AddGame() {
             </div>
             
             <p className="text-xs text-black mt-3 text-center font-bold">
-              Examples: X9/ (strike + spare), 9/8 (spare), 72 (open), X-X (two strikes)
+              {t('addGame.examples')}
             </p>
           </div>
 
@@ -1035,7 +1053,7 @@ export default function AddGame() {
                 className="flex-1 bg-amber-400 border-4 border-black text-black py-3 sm:py-4 rounded-none font-black flex items-center justify-center gap-2  text-sm sm:text-base"
               >
                 <ArrowLeft className="w-4 h-4 sm:w-5 sm:h-5" />
-                Previous
+                {t('addGame.previous')}
               </button>
             )}
             <button
@@ -1043,7 +1061,7 @@ export default function AddGame() {
               disabled={!isCurrentGameValid()}
               className="flex-1 bg-orange-500 border-4 border-black text-black py-3 sm:py-4 rounded-none font-black flex items-center justify-center gap-2 text-sm sm:text-base disabled:bg-gray-300 disabled:cursor-not-allowed disabled:opacity-70"
             >
-              {isLastPlayer ? 'Review' : 'Next'}
+              {isLastPlayer ? t('addGame.review') : t('addGame.next')}
               <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5" />
             </button>
           </div>

@@ -9,6 +9,7 @@ const AddGame = lazy(() => import('./pages/AddGame'));
 const Players = lazy(() => import('./pages/Players'));
 const Debts = lazy(() => import('./pages/Debts'));
 const BetTracker = lazy(() => import('./pages/BetTracker'));
+const Profile = lazy(() => import('./pages/Profile'));
 const Login = lazy(() => import('./pages/Login'));
 const Signup = lazy(() => import('./pages/Signup'));
 
@@ -164,6 +165,8 @@ function App() {
         return <Suspense fallback={<EmptyFallback />}><Debts /></Suspense>;
       case 'bet-tracker':
         return <Suspense fallback={<EmptyFallback />}><BetTracker /></Suspense>;
+      case 'profile':
+        return <Suspense fallback={<EmptyFallback />}><Profile onSignOut={handleSignOut} /></Suspense>;
       case 'designs':
         return <Suspense fallback={<LoadingSpinner />}><Designs /></Suspense>;
       case 'debts-designs':

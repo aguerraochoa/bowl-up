@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="es" id="html-root">
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/png" href="/favicon.png" />
@@ -7,6 +7,20 @@
     <link rel="manifest" href="/manifest.json">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <title>BowlUp</title>
+    <script>
+      // Set language IMMEDIATELY before React loads (prevents flash)
+      (function() {
+        const savedLang = localStorage.getItem('preferredLanguage');
+        // Default to Spanish for all new users
+        const defaultLang = savedLang || 'es';
+        
+        // Set HTML lang attribute immediately
+        document.documentElement.lang = defaultLang;
+        
+        // Store in window for React to use
+        window.__INITIAL_LANGUAGE__ = defaultLang;
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

@@ -83,7 +83,11 @@ export const saveTeam = async (team: Team): Promise<void> => {
 
   if (error) {
     console.error('Error saving team:', error);
+    throw error;
   }
+
+  // Invalidate team cache when team is updated
+  cache.invalidate('team_id');
 };
 
 // Players

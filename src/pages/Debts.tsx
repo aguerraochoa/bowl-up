@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { getDebts, getDebtTags, getPlayers, addDebt, updateDebt, removeDebt, addDebtTag, updateDebtTag, removeDebtTag } from '../utils/storage';
+import { t, getLanguage } from '../i18n';
 import type { Debt, DebtTag, Player } from '../types';
 import { Plus, Tag, X, Edit2, Trash2, Check, Loader2 } from 'lucide-react';
 
@@ -21,6 +22,23 @@ export default function Debts() {
   const [isSavingDebt, setIsSavingDebt] = useState(false);
   const [isSavingTag, setIsSavingTag] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [currentLang, setCurrentLang] = useState<'es' | 'en'>(() => getLanguage());
+
+  useEffect(() => {
+    // Listen for language changes
+    const handleLanguageChange = (e: CustomEvent) => {
+      setCurrentLang(e.detail);
+    };
+    
+    window.addEventListener('languagechange', handleLanguageChange as EventListener);
+    
+    return () => {
+      window.removeEventListener('languagechange', handleLanguageChange as EventListener);
+    };
+  }, []);
+
+  // Force re-render when language changes
+  void currentLang;
   const [newDebt, setNewDebt] = useState<Partial<Debt>>({
     tag: '',
     amount: 0,
@@ -142,7 +160,7 @@ export default function Debts() {
   const handleSettlePayment = (from: string, to: string, amount: number) => {
     // Pre-fill the expense modal with settlement details using custom name
     setExpenseType('custom');
-    setCustomExpenseName('Settlement Payment');
+    setCustomExpenseName(t('debts.settlementPayment'));
     setNewDebt({
       amount: amount,
       paidBy: from, // Payer pays
@@ -238,7 +256,7 @@ export default function Debts() {
       }, 300);
     } catch (error) {
       console.error('Error saving debt:', error);
-      alert('Error saving expense. Please try again.');
+      alert(t('common.error'));
     } finally {
       setIsSavingDebt(false);
     }
@@ -285,7 +303,7 @@ export default function Debts() {
     if (isSavingTag) return; // Prevent multiple submissions
     
     if (!newTagName.trim() || newTagAmount <= 0) {
-      alert('Please enter a tag name and a valid amount');
+      alert(t('common.error'));
       return;
     }
 
@@ -323,7 +341,7 @@ export default function Debts() {
       }, 300);
     } catch (error) {
       console.error('Error saving tag:', error);
-      alert('Error saving tag. Please try again.');
+      alert(t('common.error'));
     } finally {
       setIsSavingTag(false);
     }
@@ -341,7 +359,7 @@ export default function Debts() {
   };
 
   const handleDeleteTag = async (tagId: string) => {
-    if (confirm('Are you sure you want to delete this tag? This will not delete expenses using this tag.')) {
+    if (confirm(t('common.confirm'))) {
       await removeDebtTag(tagId);
       const loadedTags = await getDebtTags();
       setTags(loadedTags);
@@ -354,8 +372,8 @@ export default function Debts() {
       <div className="lg:hidden">
         <div className="max-w-2xl mx-auto px-4 py-6">
           <div className="mb-4">
-            <h1 className="text-3xl font-black text-black uppercase mb-2">Debts Tracker</h1>
-            <p className="text-sm text-black font-bold">Track payments and expenses</p>
+            <h1 className="text-3xl font-black text-black uppercase mb-2">{t('debts.title')}</h1>
+            <p className="text-sm text-black font-bold">{t('debts.subtitle')}</p>
           </div>
 
           {/* Add Expense Button - Full Width */}
@@ -380,7 +398,7 @@ export default function Debts() {
                   : 'bg-amber-400 text-black hover:bg-amber-500'
               }`}
             >
-              Expenses
+              {t('debts.expenses')}
             </button>
             <button
               onClick={() => setActiveTab('balances')}
@@ -390,7 +408,7 @@ export default function Debts() {
                   : 'bg-amber-400 text-black hover:bg-amber-500'
               }`}
             >
-              Balances
+              {t('debts.balances')}
             </button>
             <button
               onClick={() => setActiveTab('tags')}
@@ -400,7 +418,7 @@ export default function Debts() {
                   : 'bg-amber-400 text-black hover:bg-amber-500'
               }`}
             >
-              Tags
+              {t('debts.tags')}
             </button>
           </div>
 
@@ -412,11 +430,11 @@ export default function Debts() {
                 {isLoading ? (
                   <div className="bg-white rounded-none border-4 border-black p-12 text-center">
                     <Loader2 className="w-8 h-8 animate-spin mx-auto mb-4 text-black" />
-                    <p className="text-black font-bold text-base">Loading expenses...</p>
+                    <p className="text-black font-bold text-base">{t('debts.loading')}</p>
                   </div>
                 ) : debts.length === 0 ? (
                   <div className="bg-white rounded-none border-4 border-black p-12 text-center ">
-                    <p className="text-black font-bold">No expenses recorded yet.</p>
+                    <p className="text-black font-bold">{t('debts.noExpenses')}</p>
                   </div>
                 ) : (
                   debts
@@ -466,7 +484,7 @@ export default function Debts() {
             {activeTab === 'balances' && (
               <div className="space-y-4">
                 <div className="bg-white rounded-none border-4 border-black p-4 ">
-                  <h2 className="text-lg font-black text-black mb-4 uppercase">Current Balances</h2>
+                  <h2 className="text-lg font-black text-black mb-4 uppercase">{t('debts.balances')}</h2>
                   <div className="space-y-2">
                     {players.map(player => {
                       const balance = balances[player.id] || 0;
@@ -487,8 +505,8 @@ export default function Debts() {
                 {/* Settle Balances */}
                 {settlements.length > 0 && (
                   <div className="bg-white rounded-none border-4 border-black p-4 ">
-                    <h2 className="text-lg font-black text-black mb-4 uppercase">Settle Balances</h2>
-                    <p className="text-xs text-black font-bold mb-4">Suggested payments to balance everything:</p>
+                    <h2 className="text-lg font-black text-black mb-4 uppercase">{t('debts.settlements')}</h2>
+                    <p className="text-xs text-black font-bold mb-4">{t('debts.suggestedPayments')}</p>
                     <div className="space-y-3">
                       {settlements.map((settlement, index) => (
                         <div key={index} className="bg-amber-400 rounded-none border-4 border-black p-3">
@@ -509,7 +527,7 @@ export default function Debts() {
                               aria-label="Mark as paid"
                             >
                               <Check className="w-4 h-4" />
-                              <span className="text-xs">Settle</span>
+                              <span className="text-xs">{t('debts.settlements')}</span>
                             </button>
                           </div>
                         </div>
@@ -524,7 +542,7 @@ export default function Debts() {
             {activeTab === 'tags' && (
               <div className="bg-white rounded-none border-4 border-black p-4 ">
                 <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-lg font-black text-black uppercase">Expense Tags</h2>
+                  <h2 className="text-lg font-black text-black uppercase">{t('debts.tags')}</h2>
                   <button
                     onClick={() => {
                       setIsClosingTag(false);
@@ -533,16 +551,16 @@ export default function Debts() {
                     className="bg-amber-400 border-4 border-black text-black px-3 py-2 rounded-none hover:bg-amber-500  flex items-center gap-2 font-black text-sm"
                   >
                     <Tag className="w-4 h-4" />
-                    <span>New Tag</span>
+                    <span>{t('debts.addTag')}</span>
                   </button>
                 </div>
                 {isLoading ? (
                   <div className="text-center py-4">
                     <Loader2 className="w-8 h-8 animate-spin mx-auto mb-4 text-black" />
-                    <p className="text-black font-bold text-base">Loading tags...</p>
+                    <p className="text-black font-bold text-base">{t('common.loading')}</p>
                   </div>
                 ) : tags.length === 0 ? (
-                  <p className="text-black text-center py-4 font-bold">No tags created yet. Click "New Tag" to create one.</p>
+                  <p className="text-black text-center py-4 font-bold">{t('debts.tags')}</p>
                 ) : (
                   <div className="grid grid-cols-1 gap-3">
                     {tags.map(tag => (
@@ -581,8 +599,8 @@ export default function Debts() {
       <div className="hidden lg:block">
         <div className="max-w-4xl mx-auto px-6 py-6">
           <div className="mb-6">
-            <h1 className="text-4xl md:text-5xl font-black text-black uppercase mb-2">Debts Tracker</h1>
-            <p className="text-base text-black font-bold">Track payments and expenses</p>
+            <h1 className="text-4xl md:text-5xl font-black text-black uppercase mb-2">{t('debts.title')}</h1>
+            <p className="text-base text-black font-bold">{t('debts.subtitle')}</p>
           </div>
 
           {/* Add Expense Button - Full Width */}
@@ -594,7 +612,7 @@ export default function Debts() {
             className="w-full bg-orange-500 border-4 border-black text-black py-4 rounded-none hover:bg-orange-600  font-black flex items-center justify-center gap-2 mb-6"
           >
             <Plus className="w-6 h-6" />
-            <span className="text-lg uppercase">Add New Expense</span>
+            <span className="text-lg uppercase">{t('debts.addExpense')}</span>
           </button>
 
           {/* Tab Navigation - Desktop */}
@@ -607,7 +625,7 @@ export default function Debts() {
                   : 'bg-amber-400 text-black hover:bg-amber-500'
               }`}
             >
-              Expenses
+              {t('debts.expenses')}
             </button>
             <button
               onClick={() => setActiveTab('balances')}
@@ -617,7 +635,7 @@ export default function Debts() {
                   : 'bg-amber-400 text-black hover:bg-amber-500'
               }`}
             >
-              Balances
+              {t('debts.balances')}
             </button>
             <button
               onClick={() => setActiveTab('tags')}
@@ -627,7 +645,7 @@ export default function Debts() {
                   : 'bg-amber-400 text-black hover:bg-amber-500'
               }`}
             >
-              Tags
+              {t('debts.tags')}
             </button>
           </div>
 
@@ -639,11 +657,11 @@ export default function Debts() {
                 {isLoading ? (
                   <div className="bg-white rounded-none border-4 border-black p-12 text-center">
                     <Loader2 className="w-8 h-8 animate-spin mx-auto mb-4 text-black" />
-                    <p className="text-black font-bold text-base">Loading expenses...</p>
+                    <p className="text-black font-bold text-base">{t('debts.loading')}</p>
                   </div>
                 ) : debts.length === 0 ? (
                   <div className="bg-white rounded-none border-4 border-black p-12 text-center">
-                    <p className="text-black font-bold text-lg">No expenses recorded yet.</p>
+                    <p className="text-black font-bold text-lg">{t('debts.noExpenses')}</p>
                   </div>
                 ) : (
                   debts
@@ -694,7 +712,7 @@ export default function Debts() {
               <div className="space-y-6">
                 {/* Current Balances */}
                 <div className="bg-white rounded-none border-4 border-black p-6">
-                  <h2 className="text-xl font-black text-black mb-4 uppercase">Current Balances</h2>
+                    <h2 className="text-xl font-black text-black mb-4 uppercase">{t('debts.currentBalances')}</h2>
                   <div className="space-y-3">
                     {players.map(player => {
                       const balance = balances[player.id] || 0;
@@ -715,8 +733,8 @@ export default function Debts() {
                 {/* Settle Balances */}
                 {settlements.length > 0 && (
                   <div className="bg-white rounded-none border-4 border-black p-6">
-                    <h2 className="text-xl font-black text-black mb-4 uppercase">Settle Balances</h2>
-                    <p className="text-sm text-black font-bold mb-4">Suggested payments to balance everything:</p>
+                    <h2 className="text-xl font-black text-black mb-4 uppercase">{t('debts.settlements')}</h2>
+                    <p className="text-sm text-black font-bold mb-4">{t('debts.suggestedPayments')}</p>
                     <div className="space-y-3">
                       {settlements.map((settlement, index) => (
                         <div key={index} className="bg-amber-400 rounded-none border-4 border-black p-4">
@@ -737,7 +755,7 @@ export default function Debts() {
                               aria-label="Mark as paid"
                             >
                               <Check className="w-5 h-5" />
-                              <span>Settle</span>
+                              <span>{t('debts.settlements')}</span>
                             </button>
                           </div>
                         </div>
@@ -752,7 +770,7 @@ export default function Debts() {
             {activeTab === 'tags' && (
               <div className="bg-white rounded-none border-4 border-black p-6">
                 <div className="flex items-center justify-between mb-6">
-                  <h2 className="text-xl font-black text-black uppercase">Expense Tags</h2>
+                  <h2 className="text-xl font-black text-black uppercase">{t('debts.expenseTags')}</h2>
                   <button
                     onClick={() => {
                       setIsClosingTag(false);
@@ -761,16 +779,16 @@ export default function Debts() {
                     className="bg-amber-400 border-4 border-black text-black px-5 py-3 rounded-none hover:bg-amber-500  flex items-center gap-2 font-black text-base"
                   >
                     <Tag className="w-5 h-5" />
-                    <span>New Tag</span>
+                    <span>{t('debts.addTag')}</span>
                   </button>
                 </div>
                 {isLoading ? (
                   <div className="text-center py-8">
                     <Loader2 className="w-8 h-8 animate-spin mx-auto mb-4 text-black" />
-                    <p className="text-black font-bold text-base">Loading tags...</p>
+                    <p className="text-black font-bold text-base">{t('common.loading')}</p>
                   </div>
                 ) : tags.length === 0 ? (
-                  <p className="text-black text-center py-8 font-bold text-lg">No tags created yet. Click "New Tag" to create one.</p>
+                  <p className="text-black text-center py-8 font-bold text-lg">{t('debts.noTags')}</p>
                 ) : (
                   <div className="grid grid-cols-1 gap-4">
                     {tags.map(tag => (
@@ -828,7 +846,7 @@ export default function Debts() {
               {/* Header */}
               <div className="flex items-center justify-between px-4 sm:px-6 pt-4 sm:pt-6 pb-3 sm:pb-4 border-b-4 border-black bg-amber-400 flex-shrink-0">
                 <h2 className="text-lg sm:text-xl md:text-2xl font-black text-black uppercase break-words flex-1">
-                  {editingTagId ? 'Edit Tag' : 'Create New Tag'}
+                  {editingTagId ? t('debts.edit') + ' ' + t('debts.tag') : t('debts.addTag')}
                 </h2>
                 <button
                   onClick={handleCancelTag}
@@ -842,18 +860,18 @@ export default function Debts() {
               <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-4 sm:py-6 bg-white min-h-0">
                 <div className="space-y-4">
                   <div>
-                    <label className="block text-xs sm:text-sm font-black text-black mb-2 uppercase">Tag Name</label>
+                    <label className="block text-xs sm:text-sm font-black text-black mb-2 uppercase">{t('debts.tagName')}</label>
                     <input
                       type="text"
                       value={newTagName}
                       onChange={(e) => setNewTagName(e.target.value)}
-                      placeholder="e.g., Weekly Payment"
+                      placeholder={t('debts.enterTagName')}
                       className="w-full px-3 sm:px-4 py-2 sm:py-3 rounded-none border-4 border-black focus:outline-none font-bold bg-white text-sm sm:text-base"
                       onKeyPress={(e) => e.key === 'Enter' && handleSaveTag()}
                     />
                   </div>
                   <div>
-                    <label className="block text-xs sm:text-sm font-black text-black mb-2 uppercase">Default Amount</label>
+                    <label className="block text-xs sm:text-sm font-black text-black mb-2 uppercase">{t('debts.defaultAmount')}</label>
                     <input
                       type="number"
                       value={newTagAmount || ''}
@@ -873,7 +891,7 @@ export default function Debts() {
                     onClick={handleCancelTag}
                     className="flex-1 bg-white border-4 border-black text-black py-3 sm:py-4 rounded-none font-black  text-sm sm:text-base"
                   >
-                    Cancel
+                    {t('common.cancel')}
                   </button>
                   <button
                     onClick={handleSaveTag}
@@ -883,10 +901,10 @@ export default function Debts() {
                     {isSavingTag ? (
                       <>
                         <Loader2 className="w-4 h-4 animate-spin" />
-                        Saving...
+                        {t('common.save')}
                       </>
                     ) : (
-                      editingTagId ? 'Save Changes' : 'Create Tag'
+                      editingTagId ? t('common.save') : t('debts.addTag')
                     )}
                   </button>
                 </div>
@@ -918,7 +936,7 @@ export default function Debts() {
               {/* Header */}
               <div className="flex items-center justify-between px-4 sm:px-6 pt-4 sm:pt-6 pb-3 sm:pb-4 border-b-4 border-black bg-amber-400">
                 <h2 className="text-lg sm:text-xl md:text-2xl font-black text-black uppercase break-words flex-1">
-                  {editingDebtId ? 'Edit Expense' : 'Add New Expense'}
+                  {editingDebtId ? t('debts.edit') + ' ' + t('debts.expenses') : t('debts.addExpense')}
                 </h2>
                 <button
                   onClick={handleCancelDebt}
@@ -933,7 +951,7 @@ export default function Debts() {
             
             {/* Expense Type Toggle */}
             <div className="mb-6">
-              <label className="block text-sm font-black text-black mb-3 uppercase">Expense Type</label>
+              <label className="block text-sm font-black text-black mb-3 uppercase">{t('debts.expenses')}</label>
               <div className="flex border-4 border-black overflow-hidden">
                 <button
                   type="button"
@@ -949,7 +967,7 @@ export default function Debts() {
                   }`}
                 >
                   <Tag className="w-4 h-4 inline-block mr-2" />
-                  Use Tag
+                  {t('debts.tag')}
                 </button>
                 <button
                   type="button"
@@ -964,7 +982,7 @@ export default function Debts() {
                   }`}
                 >
                   <Plus className="w-4 h-4 inline-block mr-2" />
-                  Custom
+                  {t('debts.custom')}
                 </button>
               </div>
             </div>
@@ -972,7 +990,7 @@ export default function Debts() {
             {/* Tag Selection - Only show when tag type is selected */}
             {expenseType === 'tag' && (
               <div className="mb-4">
-                <label className="block text-sm font-black text-black mb-2 uppercase">Select Tag</label>
+                <label className="block text-sm font-black text-black mb-2 uppercase">{t('debts.selectTag')}</label>
                 <select
                   value={newDebt.tag || ''}
                   onChange={(e) => {
@@ -985,7 +1003,7 @@ export default function Debts() {
                   }}
                   className="w-full px-4 py-3 h-[56px] rounded-none border-4 border-black focus:outline-none font-bold bg-white"
                 >
-                  <option value="">Select a tag</option>
+                  <option value="">{t('debts.selectTag')}</option>
                   {tags.map(tag => (
                     <option key={tag.id} value={tag.id}>{tag.name} (${tag.defaultAmount})</option>
                   ))}
@@ -996,12 +1014,12 @@ export default function Debts() {
             {/* Custom Expense Name - Only show when custom type is selected */}
             {expenseType === 'custom' && (
               <div className="mb-4">
-                <label className="block text-sm font-black text-black mb-2 uppercase">Expense Name</label>
+                <label className="block text-sm font-black text-black mb-2 uppercase">{t('debts.expenseName')}</label>
                 <input
                   type="text"
                   value={customExpenseName}
                   onChange={(e) => setCustomExpenseName(e.target.value)}
-                  placeholder="e.g., Dinner at Restaurant, Gas Money, etc."
+                  placeholder={t('debts.expenseName')}
                   className="w-full px-4 py-3 h-[56px] rounded-none border-4 border-black focus:outline-none font-bold bg-white"
                 />
               </div>
@@ -1009,7 +1027,7 @@ export default function Debts() {
 
             {/* Amount */}
             <div className="mb-4">
-              <label className="block text-sm font-black text-black mb-2 uppercase">Amount</label>
+              <label className="block text-sm font-black text-black mb-2 uppercase">{t('debts.amount')}</label>
               <input
                 type="number"
                 value={newDebt.amount || ''}
@@ -1021,13 +1039,13 @@ export default function Debts() {
 
             {/* Paid By */}
             <div className="mb-4">
-              <label className="block text-sm font-black text-black mb-2 uppercase">Paid By</label>
+              <label className="block text-sm font-black text-black mb-2 uppercase">{t('debts.paidBy')}</label>
               <select
                 value={newDebt.paidBy}
                 onChange={(e) => setNewDebt({ ...newDebt, paidBy: e.target.value })}
                 className="w-full px-4 py-3 h-[56px] rounded-none border-4 border-black focus:outline-none font-bold bg-white"
               >
-                <option value="">Select player</option>
+                <option value="">{t('debts.selectPlayer')}</option>
                 {players.map(player => (
                   <option key={player.id} value={player.id}>{player.name}</option>
                 ))}
@@ -1036,21 +1054,21 @@ export default function Debts() {
 
             {/* Split Method */}
             <div className="mb-4">
-              <label className="block text-sm font-black text-black mb-2 uppercase">Split Method</label>
+              <label className="block text-sm font-black text-black mb-2 uppercase">{t('debts.method')}</label>
               <select
                 value={newDebt.splitMethod}
                 onChange={(e) => setNewDebt({ ...newDebt, splitMethod: e.target.value as 'equal' | 'games' | 'custom' })}
                 className="w-full px-4 py-3 h-[56px] rounded-none border-4 border-black focus:outline-none font-bold bg-white"
               >
-                <option value="equal">Equal</option>
-                <option value="games">By Games Played</option>
-                <option value="custom">Custom</option>
+                <option value="equal">{t('debts.equal')}</option>
+                <option value="games">{t('debts.byGamesPlayed')}</option>
+                <option value="custom">{t('debts.custom')}</option>
               </select>
             </div>
 
             {/* Split Between */}
             <div className="mb-4">
-              <label className="block text-sm font-black text-black mb-2 uppercase">Split Between</label>
+              <label className="block text-sm font-black text-black mb-2 uppercase">{t('debts.splitBetween')}</label>
               <div className="space-y-2">
                 {players.map(player => (
                   <label key={player.id} className={`flex items-center gap-3 p-3 rounded-none border-4 border-black cursor-pointer ${
@@ -1101,7 +1119,7 @@ export default function Debts() {
                           setNewDebt({ ...newDebt, gameCounts });
                         }}
                         className="ml-auto w-20 px-2 py-1 rounded-none border-4 border-black font-bold bg-white"
-                        placeholder="Games"
+                        placeholder={t('debts.games')}
                       />
                     )}
                     {newDebt.splitMethod === 'custom' && newDebt.splitBetween?.includes(player.id) && (
@@ -1138,7 +1156,7 @@ export default function Debts() {
                     onClick={handleCancelDebt}
                     className="flex-1 bg-white border-4 border-black text-black py-2 sm:py-3 rounded-none font-black  text-sm sm:text-base"
                   >
-                    Cancel
+                    {t('common.cancel')}
                   </button>
                   <button
                     onClick={handleSaveDebt}
@@ -1148,10 +1166,10 @@ export default function Debts() {
                     {isSavingDebt ? (
                       <>
                         <Loader2 className="w-4 h-4 animate-spin" />
-                        Saving...
+                        {t('common.save')}
                       </>
                     ) : (
-                      editingDebtId ? 'Save Changes' : 'Add Expense'
+                      editingDebtId ? t('common.save') : t('debts.addExpense')
                     )}
                   </button>
                 </div>
