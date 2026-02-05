@@ -523,11 +523,11 @@ export default function Debts() {
                             </span>
                             <button
                               onClick={() => handleSettlePayment(settlement.from, settlement.to, settlement.amount)}
-                              className="bg-lime-500 border-4 border-black text-black px-3 py-2 rounded-none hover:bg-lime-600 font-black flex-shrink-0 flex items-center gap-1 "
+                              className="bg-lime-500 border-4 border-black text-black px-3 sm:px-3 md:px-2 py-2 sm:py-2 md:py-1.5 rounded-none hover:bg-lime-600 font-black flex-shrink-0 flex items-center gap-1 text-sm sm:text-sm md:text-xs"
                               aria-label="Mark as paid"
                             >
-                              <Check className="w-4 h-4" />
-                              <span className="text-xs">{t('debts.settlements')}</span>
+                              <Check className="w-4 h-4 sm:w-4 md:w-3.5" />
+                              <span>{t('debts.settlements')}</span>
                             </button>
                           </div>
                         </div>
@@ -548,9 +548,9 @@ export default function Debts() {
                       setIsClosingTag(false);
                       setShowAddTag(true);
                     }}
-                    className="bg-amber-400 border-4 border-black text-black px-3 py-2 rounded-none hover:bg-amber-500  flex items-center gap-2 font-black text-sm"
+                    className="bg-amber-400 border-4 border-black text-black px-3 sm:px-3 md:px-2 py-2 sm:py-2 md:py-1.5 rounded-none hover:bg-amber-500  flex items-center gap-2 font-black text-sm sm:text-sm md:text-xs"
                   >
-                    <Tag className="w-4 h-4" />
+                    <Tag className="w-4 h-4 sm:w-4 md:w-3.5" />
                     <span>{t('debts.addTag')}</span>
                   </button>
                 </div>
@@ -751,10 +751,10 @@ export default function Debts() {
                             </span>
                             <button
                               onClick={() => handleSettlePayment(settlement.from, settlement.to, settlement.amount)}
-                              className="bg-lime-500 border-4 border-black text-black px-5 py-3 rounded-none hover:bg-lime-600 font-black flex-shrink-0 flex items-center gap-2"
+                              className="bg-lime-500 border-4 border-black text-black px-3 sm:px-3 md:px-2 py-2 sm:py-2 md:py-1.5 rounded-none hover:bg-lime-600 font-black flex-shrink-0 flex items-center gap-2 text-sm sm:text-sm md:text-xs"
                               aria-label="Mark as paid"
                             >
-                              <Check className="w-5 h-5" />
+                              <Check className="w-4 h-4 sm:w-4 md:w-3.5" />
                               <span>{t('debts.settlements')}</span>
                             </button>
                           </div>
@@ -776,9 +776,9 @@ export default function Debts() {
                       setIsClosingTag(false);
                       setShowAddTag(true);
                     }}
-                    className="bg-amber-400 border-4 border-black text-black px-5 py-3 rounded-none hover:bg-amber-500  flex items-center gap-2 font-black text-base"
+                    className="bg-amber-400 border-4 border-black text-black px-3 sm:px-3 md:px-2 py-2 sm:py-2 md:py-1.5 rounded-none hover:bg-amber-500  flex items-center gap-2 font-black text-sm sm:text-sm md:text-xs"
                   >
-                    <Tag className="w-5 h-5" />
+                    <Tag className="w-4 h-4 sm:w-4 md:w-3.5" />
                     <span>{t('debts.addTag')}</span>
                   </button>
                 </div>

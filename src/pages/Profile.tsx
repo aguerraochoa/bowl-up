@@ -179,9 +179,9 @@ export default function Profile({ onSignOut }: ProfileProps) {
           </div>
           <button
             onClick={handleSignOut}
-            className="bg-red-600 border-4 border-black text-white px-3 sm:px-4 py-2 sm:py-3 rounded-none font-black flex items-center gap-2 hover:bg-red-700 transition-all flex-shrink-0"
+            className="bg-red-600 border-4 border-black text-white px-3 sm:px-3 md:px-2 py-2 sm:py-2 md:py-1.5 rounded-none font-black flex items-center gap-2 hover:bg-red-700 transition-all flex-shrink-0 text-sm sm:text-sm md:text-xs"
           >
-            <LogOut className="w-4 h-4 sm:w-5 sm:h-5" />
+            <LogOut className="w-4 h-4 sm:w-4 md:w-3.5" />
             <span className="hidden sm:inline">{t('nav.signOut')}</span>
           </button>
         </div>
@@ -220,16 +220,16 @@ export default function Profile({ onSignOut }: ProfileProps) {
                 <button
                   onClick={handleSaveName}
                   disabled={isSaving || !editedTeamName.trim()}
-                  className="flex-1 bg-lime-500 border-4 border-black text-black py-2 sm:py-3 rounded-none font-black flex items-center justify-center gap-2 disabled:bg-gray-300 disabled:cursor-not-allowed disabled:opacity-70"
+                  className="flex-1 bg-lime-500 border-4 border-black text-black py-2 sm:py-2 md:py-1.5 rounded-none font-black flex items-center justify-center gap-2 disabled:bg-gray-300 disabled:cursor-not-allowed disabled:opacity-70 text-sm sm:text-sm md:text-xs"
                 >
                   {isSaving ? (
                     <>
-                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <Loader2 className="w-4 h-4 sm:w-4 md:w-3.5 animate-spin" />
                       <span>{t('profile.saving')}</span>
                     </>
                   ) : (
                     <>
-                      <Check className="w-4 h-4 sm:w-5 sm:h-5" />
+                      <Check className="w-4 h-4 sm:w-4 md:w-3.5" />
                       <span>{t('profile.save')}</span>
                     </>
                   )}
@@ -237,9 +237,9 @@ export default function Profile({ onSignOut }: ProfileProps) {
                 <button
                   onClick={handleCancelEdit}
                   disabled={isSaving}
-                  className="flex-1 bg-white border-4 border-black text-black py-2 sm:py-3 rounded-none font-black flex items-center justify-center gap-2 disabled:bg-gray-300 disabled:cursor-not-allowed disabled:opacity-70"
+                  className="flex-1 bg-white border-4 border-black text-black py-2 sm:py-2 md:py-1.5 rounded-none font-black flex items-center justify-center gap-2 disabled:bg-gray-300 disabled:cursor-not-allowed disabled:opacity-70 text-sm sm:text-sm md:text-xs"
                 >
-                  <X className="w-4 h-4 sm:w-5 sm:h-5" />
+                  <X className="w-4 h-4 sm:w-4 md:w-3.5" />
                   <span>{t('profile.cancel')}</span>
                 </button>
               </div>
@@ -254,10 +254,10 @@ export default function Profile({ onSignOut }: ProfileProps) {
               </div>
               <button
                 onClick={handleStartEdit}
-                className="bg-orange-500 border-4 border-black text-black px-3 sm:px-4 py-2 sm:py-3 rounded-none font-black flex items-center gap-2 hover:bg-orange-600 transition-all"
+                className="bg-orange-500 border-4 border-black text-black px-3 sm:px-3 md:px-2 py-2 sm:py-2 md:py-1.5 rounded-none font-black flex items-center gap-2 hover:bg-orange-600 transition-all text-sm sm:text-sm md:text-xs"
                 aria-label={t('profile.edit')}
               >
-                <Edit2 className="w-4 h-4 sm:w-5 sm:h-5" />
+                <Edit2 className="w-4 h-4 sm:w-4 md:w-3.5" />
                 <span className="hidden sm:inline">{t('profile.edit')}</span>
               </button>
             </div>
@@ -317,16 +317,16 @@ export default function Profile({ onSignOut }: ProfileProps) {
               <button
                 onClick={handleStartNewSeason}
                 disabled={isStartingSeason}
-                className="w-full bg-amber-400 border-4 border-black text-black py-3 sm:py-4 rounded-none font-black flex items-center justify-center gap-2 hover:bg-amber-500 transition-all disabled:bg-gray-300 disabled:cursor-not-allowed disabled:opacity-70"
+                className="w-full bg-amber-400 border-4 border-black text-black py-2 sm:py-2 md:py-1.5 rounded-none font-black flex items-center justify-center gap-2 hover:bg-amber-500 transition-all disabled:bg-gray-300 disabled:cursor-not-allowed disabled:opacity-70 text-sm sm:text-sm md:text-xs"
               >
                 {isStartingSeason ? (
                   <>
-                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <Loader2 className="w-4 h-4 sm:w-4 md:w-3.5 animate-spin" />
                     <span>{t('profile.saving')}</span>
                   </>
                 ) : (
                   <>
-                    <Plus className="w-4 h-4 sm:w-5 sm:h-5" />
+                    <Plus className="w-4 h-4 sm:w-4 md:w-3.5" />
                     <span>{t('profile.startNewSeason')}</span>
                   </>
                 )}

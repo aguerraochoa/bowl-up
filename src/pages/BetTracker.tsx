@@ -44,19 +44,19 @@ export default function BetTracker() {
 
   const handleIncrement = async (playerId: string) => {
     // Optimistically update UI
+    const optimisticValue = (tallies[playerId] || 0) + 1;
     setTallies(prev => ({
       ...prev,
-      [playerId]: (prev[playerId] || 0) + 1,
+      [playerId]: optimisticValue,
     }));
     
     try {
       await incrementBetTally(playerId);
-      // Reload to ensure consistency (in case of errors or concurrent updates)
-      const loadedTallies = await getBetTallies();
-      setTallies(loadedTallies);
+      // Don't reload on success - trust the optimistic update
+      // The cache is invalidated, so next time we load it will be fresh
     } catch (error) {
-      // On error, reload to get correct state
-      const loadedTallies = await getBetTallies();
+      // On error, revert to actual state from database
+      const loadedTallies = await getBetTallies(true);
       setTallies(loadedTallies);
     }
   };
@@ -66,19 +66,19 @@ export default function BetTracker() {
     if (currentTally === 0) return; // Already at 0, nothing to do
     
     // Optimistically update UI
+    const optimisticValue = currentTally - 1;
     setTallies(prev => ({
       ...prev,
-      [playerId]: (prev[playerId] || 0) - 1,
+      [playerId]: optimisticValue,
     }));
     
     try {
       await decrementBetTally(playerId);
-      // Reload to ensure consistency (in case of errors or concurrent updates)
-      const loadedTallies = await getBetTallies();
-      setTallies(loadedTallies);
+      // Don't reload on success - trust the optimistic update
+      // The cache is invalidated, so next time we load it will be fresh
     } catch (error) {
-      // On error, reload to get correct state
-      const loadedTallies = await getBetTallies();
+      // On error, revert to actual state from database
+      const loadedTallies = await getBetTallies(true);
       setTallies(loadedTallies);
     }
   };
@@ -117,9 +117,6 @@ export default function BetTracker() {
                   <div className="flex items-center justify-between">
                     <div className="flex-1 min-w-0">
                       <h3 className="text-lg sm:text-xl font-black text-black truncate">{player.name}</h3>
-                      <p className="text-xs sm:text-sm text-black font-bold mt-1">
-                        {t('betTracker.currentTally')}: <span className="font-black text-lg">{tally}</span>
-                      </p>
                     </div>
                     <div className="flex items-center gap-2 sm:gap-3 ml-4 flex-shrink-0">
                       <button

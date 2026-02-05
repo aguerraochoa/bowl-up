@@ -434,17 +434,17 @@ export default function AddGame() {
                   setIsClosingHistory(false);
                   setShowHistory(true);
                 }}
-                className="border-4 border-black text-black px-3 sm:px-4 py-2 sm:py-3 rounded-none font-black flex items-center gap-2 text-sm sm:text-base bg-amber-400 hover:bg-amber-500"
+                className="border-4 border-black text-black px-3 sm:px-3 md:px-2 py-2 sm:py-2 md:py-1.5 rounded-none font-black flex items-center gap-2 text-sm sm:text-sm md:text-xs bg-amber-400 hover:bg-amber-500"
               >
-                <Clock className="w-4 h-4 sm:w-5 sm:h-5" />
+                <Clock className="w-4 h-4 sm:w-4 md:w-3.5" />
                 <span className="hidden sm:inline">{t('addGame.history')}</span>
               </button>
               <button
                 onClick={handleClearSelection}
                 disabled={selectedPlayers.length === 0}
-                className="bg-amber-400 border-4 border-black text-black px-3 sm:px-4 py-2 sm:py-3 rounded-none font-black flex items-center gap-2 text-sm sm:text-base disabled:bg-gray-300 disabled:cursor-not-allowed disabled:opacity-70"
+                className="bg-amber-400 border-4 border-black text-black px-3 sm:px-3 md:px-2 py-2 sm:py-2 md:py-1.5 rounded-none font-black flex items-center gap-2 text-sm sm:text-sm md:text-xs disabled:bg-gray-300 disabled:cursor-not-allowed disabled:opacity-70"
               >
-                <Eraser className="w-4 h-4 sm:w-5 sm:h-5" />
+                <Eraser className="w-4 h-4 sm:w-4 md:w-3.5" />
                 <span className="hidden sm:inline">{t('addGame.clear')}</span>
               </button>
             </div>
@@ -617,7 +617,7 @@ export default function AddGame() {
                                     <button
                                       onClick={() => handleDeleteSession(sessionId)}
                                       disabled={deletingSessionId === sessionId}
-                                      className="bg-red-600 border-4 border-black text-white px-3 sm:px-4 py-2 hover:bg-red-700 font-black disabled:bg-gray-300 disabled:cursor-not-allowed disabled:opacity-70 flex items-center gap-2"
+                                      className="bg-red-600 border-4 border-black text-white px-3 sm:px-3 md:px-2 py-2 sm:py-2 md:py-1.5 hover:bg-red-700 font-black disabled:bg-gray-300 disabled:cursor-not-allowed disabled:opacity-70 flex items-center gap-2 text-sm sm:text-sm md:text-xs"
                                       aria-label="Delete team game"
                                     >
                                       {deletingSessionId === sessionId ? (
@@ -807,10 +807,10 @@ export default function AddGame() {
               {currentGame.totalScore !== undefined && currentGame.totalScore > 0 && (
                 <button
                   onClick={() => handleNumberInput('totalScore', 0)}
-                  className="absolute bg-red-600 border-4 border-black px-3 py-2 text-black font-black hover:bg-red-700"
+                  className="absolute bg-red-600 border-4 border-black px-2 sm:px-2 md:px-1.5 py-1.5 sm:py-1.5 md:py-1 text-black font-black hover:bg-red-700"
                   style={{ left: 'calc(50% + 110px)' }}
                 >
-                  <X className="w-5 h-5 sm:w-6 sm:h-6" />
+                  <X className="w-4 h-4 sm:w-4 md:w-3.5" />
                 </button>
               )}
             </div>
@@ -945,10 +945,10 @@ export default function AddGame() {
               {currentGame.tenthFrame && currentGame.tenthFrame.length > 0 && (
                 <button
                   onClick={() => handleTenthFrameChange('')}
-                  className="absolute bg-red-600 border-4 border-black px-3 py-2 text-black font-black hover:bg-red-700"
+                  className="absolute bg-red-600 border-4 border-black px-2 sm:px-2 md:px-1.5 py-1.5 sm:py-1.5 md:py-1 text-black font-black hover:bg-red-700"
                   style={{ left: 'calc(50% + 110px)' }}
                 >
-                  <X className="w-5 h-5 sm:w-6 sm:h-6" />
+                  <X className="w-4 h-4 sm:w-4 md:w-3.5" />
                 </button>
               )}
             </div>
@@ -1055,19 +1055,19 @@ export default function AddGame() {
             {currentPlayerIndex > 0 && (
               <button
                 onClick={handleBack}
-                className="flex-1 bg-amber-400 border-4 border-black text-black py-3 sm:py-4 rounded-none font-black flex items-center justify-center gap-2  text-sm sm:text-base"
+                className="flex-1 bg-amber-400 border-4 border-black text-black py-2 sm:py-2 md:py-1.5 rounded-none font-black flex items-center justify-center gap-2 text-sm sm:text-sm md:text-xs"
               >
-                <ArrowLeft className="w-4 h-4 sm:w-5 sm:h-5" />
+                <ArrowLeft className="w-4 h-4 sm:w-4 md:w-3.5" />
                 {t('addGame.previous')}
               </button>
             )}
             <button
               onClick={handleNext}
               disabled={!isCurrentGameValid()}
-              className="flex-1 bg-orange-500 border-4 border-black text-black py-3 sm:py-4 rounded-none font-black flex items-center justify-center gap-2 text-sm sm:text-base disabled:bg-gray-300 disabled:cursor-not-allowed disabled:opacity-70"
+              className="flex-1 bg-orange-500 border-4 border-black text-black py-2 sm:py-2 md:py-1.5 rounded-none font-black flex items-center justify-center gap-2 text-sm sm:text-sm md:text-xs disabled:bg-gray-300 disabled:cursor-not-allowed disabled:opacity-70"
             >
               {isLastPlayer ? t('addGame.review') : t('addGame.next')}
-              <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5" />
+              <ArrowRight className="w-4 h-4 sm:w-4 md:w-3.5" />
             </button>
           </div>
         </div>

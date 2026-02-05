@@ -298,11 +298,42 @@ export const playerHasDebts = async (playerId: string): Promise<boolean> => {
   return false;
 };
 
+export const playerHasBetTally = async (playerId: string): Promise<boolean> => {
+  const teamId = await getTeamId();
+  if (!teamId) return false;
+
+  // Check if player has a non-zero bet tally
+  const { data, error } = await supabase
+    .from('bet_tallies')
+    .select('tally')
+    .eq('team_id', teamId)
+    .eq('player_id', playerId)
+    .single();
+
+  if (error) {
+    // If no record exists, player has no tally (tally is 0)
+    if (error.code === 'PGRST116') {
+      return false;
+    }
+    console.error('Error checking bet tally:', error);
+    return false;
+  }
+
+  // Return true if tally exists and is greater than 0
+  return (data?.tally || 0) > 0;
+};
+
 export const removePlayer = async (playerId: string): Promise<void> => {
   // Check if player has outstanding debts
   const hasDebts = await playerHasDebts(playerId);
   if (hasDebts) {
     throw new Error('PLAYER_HAS_DEBTS');
+  }
+
+  // Check if player has non-zero bet tally
+  const hasBetTally = await playerHasBetTally(playerId);
+  if (hasBetTally) {
+    throw new Error('PLAYER_HAS_BET_TALLY');
   }
 
   // Soft delete: set deleted_at instead of actually deleting

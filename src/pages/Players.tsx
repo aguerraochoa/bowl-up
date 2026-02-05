@@ -200,6 +200,8 @@ export default function Players() {
       } catch (error: any) {
         if (error.message === 'PLAYER_HAS_DEBTS') {
           alert(t('players.cannotDeleteHasDebts'));
+        } else if (error.message === 'PLAYER_HAS_BET_TALLY') {
+          alert(t('players.cannotDeleteHasBetTally'));
         } else {
           alert(t('players.errorRemoving'));
         }
@@ -316,10 +318,10 @@ export default function Players() {
                 {!isEditMode && (
                   <button
                     onClick={() => setIsEditMode(true)}
-                    className="bg-amber-400 border-4 border-black text-black px-3 sm:px-4 py-2 sm:py-3 rounded-none hover:bg-amber-500  flex items-center justify-center gap-2 font-black text-sm sm:text-base"
+                    className="bg-amber-400 border-4 border-black text-black px-3 sm:px-3 md:px-2 py-2 sm:py-2 md:py-1.5 rounded-none hover:bg-amber-500  flex items-center justify-center gap-2 font-black text-sm sm:text-sm md:text-xs"
                     aria-label="Edit players"
                   >
-                    <Pencil className="w-4 h-4 sm:w-5 sm:h-5" />
+                    <Pencil className="w-4 h-4 sm:w-4 md:w-3.5" />
                     <span className="hidden sm:inline">{t('players.edit')}</span>
                   </button>
                 )}
@@ -330,7 +332,7 @@ export default function Players() {
                       setEditingPlayerId(null);
                       setEditingPlayerName('');
                     }}
-                    className="bg-white border-4 border-black text-black px-3 sm:px-4 py-2 sm:py-3 rounded-none hover:bg-gray-100  flex items-center justify-center gap-2 font-black text-sm sm:text-base"
+                    className="bg-white border-4 border-black text-black px-3 sm:px-3 md:px-2 py-2 sm:py-2 md:py-1.5 rounded-none hover:bg-gray-100  flex items-center justify-center gap-2 font-black text-sm sm:text-sm md:text-xs"
                     aria-label="Cancel edit"
                   >
                     {t('players.done')}
@@ -351,10 +353,10 @@ export default function Players() {
                       setIsLoadingInactive(false);
                     }
                   }}
-                  className="bg-lime-500 border-4 border-black text-black px-3 sm:px-4 py-2 sm:py-3 rounded-none hover:bg-lime-600 flex items-center justify-center gap-2 font-black text-sm sm:text-base"
+                  className="bg-lime-500 border-4 border-black text-black px-3 sm:px-3 md:px-2 py-2 sm:py-2 md:py-1.5 rounded-none hover:bg-lime-600 flex items-center justify-center gap-2 font-black text-sm sm:text-sm md:text-xs"
                   aria-label="Reactivate players"
                 >
-                  <RotateCcw className="w-4 h-4 sm:w-5 sm:h-5" />
+                  <RotateCcw className="w-4 h-4 sm:w-4 md:w-3.5" />
                   <span className="hidden sm:inline">{t('players.reactivate')}</span>
                 </button>
                 <button
@@ -362,10 +364,10 @@ export default function Players() {
                     setIsClosingAddPlayer(false);
                     setShowAddPlayer(true);
                   }}
-                  className="bg-orange-500 border-4 border-black text-black px-3 sm:px-4 py-2 sm:py-3 rounded-none hover:bg-orange-600  flex items-center justify-center gap-2 font-black text-sm sm:text-base"
+                  className="bg-orange-500 border-4 border-black text-black px-3 sm:px-3 md:px-2 py-2 sm:py-2 md:py-1.5 rounded-none hover:bg-orange-600  flex items-center justify-center gap-2 font-black text-sm sm:text-sm md:text-xs"
                   aria-label="Add player"
                 >
-                  <Plus className="w-4 h-4 sm:w-5 sm:h-5" />
+                  <Plus className="w-4 h-4 sm:w-4 md:w-3.5" />
                   <span className="hidden sm:inline">{t('players.addPlayer')}</span>
                   <span className="sm:hidden">{t('players.add')}</span>
                 </button>
