@@ -1,5 +1,5 @@
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { getCurrentSeason, getAvailableSeasons, getTeam } from '../utils/storage';
+import { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
+import { getCurrentSeason, getAvailableSeasons } from '../utils/storage';
 
 interface SeasonContextType {
   currentSeason: string;

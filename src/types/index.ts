@@ -15,6 +15,7 @@ export interface Game {
   tenthFrame: string; // e.g., "X9/", "9/8", "72"
   gameSessionId?: string; // Links games from the same team game session
   season: string; // e.g., "Season 1", "Season 2"
+  created_at?: string; // Timestamp for precise ordering of games on same date
 }
 
 export interface TeamSumGame {
@@ -71,4 +72,6 @@ export interface Stats {
   ceiling: number; // highest score
   recentAverage: number; // last 10 games
   averageTenthFrame: number; // average 10th frame score
+  gamesAbove200: number; // number of games with score > 200
+  gamesAbove200Percentage: number; // percentage of games above 200
 }

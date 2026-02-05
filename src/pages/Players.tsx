@@ -555,6 +555,9 @@ export default function Players() {
                 floor: 0,
                 ceiling: 0,
                 recentAverage: 0,
+                averageTenthFrame: 0,
+                gamesAbove200: 0,
+                gamesAbove200Percentage: 0,
               };
               const isEditing = editingPlayerId === player.id;
               
@@ -719,6 +722,11 @@ export default function Players() {
                   <div className="bg-purple-500 border-4 border-black rounded-none p-3 sm:p-5 ">
                     <p className="text-xs font-black text-black mb-1 uppercase">{t('dashboard.avgTenthFrame')}</p>
                     <p className="text-2xl sm:text-3xl md:text-4xl font-black text-black">{playerStats.averageTenthFrame.toFixed(1)}</p>
+                  </div>
+                  <div className="bg-blue-500 border-4 border-black rounded-none p-3 sm:p-5 ">
+                    <p className="text-xs font-black text-black mb-1 uppercase">{t('players.gamesAbove200')}</p>
+                    <p className="text-2xl sm:text-3xl md:text-4xl font-black text-black">{playerStats.gamesAbove200}</p>
+                    <p className="text-xs sm:text-sm font-black text-black mt-1">{playerStats.gamesAbove200Percentage.toFixed(1)}%</p>
                   </div>
                 </div>
 

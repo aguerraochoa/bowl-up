@@ -114,7 +114,7 @@ export default function BottomNav({ activeTab, onTabChange, onSignOut }: BottomN
       </nav>
 
       {/* Mobile Bottom Nav */}
-      <nav className="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t-4 border-black safe-bottom z-50">
+      <nav className="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t-4 border-black z-50" style={{ paddingBottom: 'max(env(safe-area-inset-bottom, 0px), 12px)' }}>
         <div className="flex justify-around items-center h-16">
           {mainTabs.map(({ id, label, icon: Icon }) => (
             <button

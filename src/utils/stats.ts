@@ -16,6 +16,8 @@ export const calculatePlayerStatsFromData = (playerId: string, games: Game[]): S
       ceiling: 0,
       recentAverage: 0,
       averageTenthFrame: 0,
+      gamesAbove200: 0,
+      gamesAbove200Percentage: 0,
     };
   }
   
@@ -50,6 +52,10 @@ export const calculatePlayerStatsFromData = (playerId: string, games: Game[]): S
   });
   const averageTenthFrame = playerGames.length > 0 ? totalTenthFramePins / playerGames.length : 0;
   
+  // Calculate games above 200
+  const gamesAbove200 = scores.filter(score => score > 200).length;
+  const gamesAbove200Percentage = playerGames.length > 0 ? (gamesAbove200 / playerGames.length) * 100 : 0;
+  
   return {
     gamesPlayed: playerGames.length,
     averageScore: Math.round(averageScore * 10) / 10,
@@ -59,6 +65,8 @@ export const calculatePlayerStatsFromData = (playerId: string, games: Game[]): S
     ceiling,
     recentAverage: Math.round(recentAverage * 10) / 10,
     averageTenthFrame: Math.round(averageTenthFrame * 10) / 10,
+    gamesAbove200,
+    gamesAbove200Percentage: Math.round(gamesAbove200Percentage * 10) / 10,
   };
 };
 
