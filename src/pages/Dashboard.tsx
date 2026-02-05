@@ -200,13 +200,43 @@ export default function Dashboard() {
                 />
                 <LeaderboardCard
                   title={`👥 ${t('dashboard.topTeamGames')}`}
-                  items={topTeamSums.map((sum, index) => ({
-                    rank: index + 1,
-                    name: `${sum.players.length} ${t('dashboard.players')}`,
-                    value: sum.totalSum,
-                    subtitle: new Date(sum.date).toLocaleDateString(),
-                    onClick: () => handleTeamGameClick(sum),
-                  }))}
+                  items={topTeamSums.map((sum, index) => {
+                    // Get players with their scores, sorted by score (highest to lowest)
+                    const playersWithScores = sum.players
+                      .map(playerId => {
+                        const player = players.find((p: any) => p.id === playerId);
+                        const game = sum.games.find(g => g.playerId === playerId);
+                        if (!player || !game) return null;
+                        return {
+                          name: player.name,
+                          score: game.totalScore,
+                        };
+                      })
+                      .filter((p): p is { name: string; score: number } => p !== null)
+                      .sort((a, b) => b.score - a.score); // Sort by score descending
+                    
+                    // Convert names to initials (e.g., "John Doe" -> "JD", "Maria" -> "MA")
+                    const initials = playersWithScores
+                      .map(({ name }) => {
+                        const parts = name.trim().split(/\s+/);
+                        if (parts.length > 1) {
+                          // First letter of first name + first letter of last name
+                          return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+                        } else {
+                          // Single name: first two letters
+                          return name.substring(0, 2).toUpperCase();
+                        }
+                      })
+                      .join(', ');
+                    
+                    return {
+                      rank: index + 1,
+                      name: initials || t('dashboard.removedPlayer'),
+                      value: sum.totalSum,
+                      subtitle: new Date(sum.date).toLocaleDateString(),
+                      onClick: () => handleTeamGameClick(sum),
+                    };
+                  })}
                   emptyMessage={t('dashboard.noTeamGames')}
                 />
               </div>
@@ -292,13 +322,43 @@ export default function Dashboard() {
 
             <LeaderboardCard
               title={`👥 ${t('dashboard.topTeamGames')}`}
-              items={topTeamSums.map((sum, index) => ({
-                rank: index + 1,
-                name: `${sum.players.length} ${t('dashboard.players')}`,
-                value: sum.totalSum,
-                subtitle: new Date(sum.date).toLocaleDateString(),
-                onClick: () => handleTeamGameClick(sum),
-              }))}
+              items={topTeamSums.map((sum, index) => {
+                // Get players with their scores, sorted by score (highest to lowest)
+                const playersWithScores = sum.players
+                  .map(playerId => {
+                    const player = players.find((p: any) => p.id === playerId);
+                    const game = sum.games.find(g => g.playerId === playerId);
+                    if (!player || !game) return null;
+                    return {
+                      name: player.name,
+                      score: game.totalScore,
+                    };
+                  })
+                  .filter((p): p is { name: string; score: number } => p !== null)
+                  .sort((a, b) => b.score - a.score); // Sort by score descending
+                
+                // Convert names to initials (e.g., "John Doe" -> "JD", "Maria" -> "MA")
+                const initials = playersWithScores
+                  .map(({ name }) => {
+                    const parts = name.trim().split(/\s+/);
+                    if (parts.length > 1) {
+                      // First letter of first name + first letter of last name
+                      return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+                    } else {
+                      // Single name: first two letters
+                      return name.substring(0, 2).toUpperCase();
+                    }
+                  })
+                  .join(', ');
+                
+                return {
+                  rank: index + 1,
+                  name: initials || t('dashboard.removedPlayer'),
+                  value: sum.totalSum,
+                  subtitle: new Date(sum.date).toLocaleDateString(),
+                  onClick: () => handleTeamGameClick(sum),
+                };
+              })}
               emptyMessage={t('dashboard.noTeamGames')}
             />
 

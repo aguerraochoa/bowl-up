@@ -139,9 +139,18 @@ export default function Profile({ onSignOut }: ProfileProps) {
   return (
     <div className="min-h-screen bg-orange-50 pb-20 lg:pb-6 safe-top relative">
       <div className="max-w-2xl mx-auto px-4 py-4 sm:py-6">
-        <div className="mb-4 sm:mb-6">
-          <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black text-black mb-2 uppercase">{t('profile.title')}</h1>
-          <p className="text-sm sm:text-base text-black font-bold">{t('profile.subtitle')}</p>
+        <div className="mb-4 sm:mb-6 flex items-start justify-between gap-4">
+          <div className="flex-1">
+            <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black text-black mb-2 uppercase">{t('profile.title')}</h1>
+            <p className="text-sm sm:text-base text-black font-bold">{t('profile.subtitle')}</p>
+          </div>
+          <button
+            onClick={handleSignOut}
+            className="bg-red-600 border-4 border-black text-white px-3 sm:px-4 py-2 sm:py-3 rounded-none font-black flex items-center gap-2 hover:bg-red-700 transition-all flex-shrink-0"
+          >
+            <LogOut className="w-4 h-4 sm:w-5 sm:h-5" />
+            <span className="hidden sm:inline">{t('nav.signOut')}</span>
+          </button>
         </div>
 
         {/* Team Name Section */}
@@ -241,17 +250,6 @@ export default function Profile({ onSignOut }: ProfileProps) {
           </div>
         </div>
 
-        {/* Sign Out Section */}
-        <div className="bg-white rounded-none border-4 border-black p-4 sm:p-6">
-          <h2 className="text-lg sm:text-xl lg:text-2xl font-black text-black mb-4 uppercase">{t('profile.account')}</h2>
-          <button
-            onClick={handleSignOut}
-            className="w-full bg-red-600 border-4 border-black text-white py-3 sm:py-4 rounded-none font-black flex items-center justify-center gap-2 hover:bg-red-700 transition-all"
-          >
-            <LogOut className="w-5 h-5 sm:w-6 sm:h-6" />
-            <span>{t('nav.signOut')}</span>
-          </button>
-        </div>
       </div>
     </div>
   );
