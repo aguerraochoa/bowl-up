@@ -322,12 +322,12 @@ export default function Profile({ onSignOut }: ProfileProps) {
                 {isStartingSeason ? (
                   <>
                     <Loader2 className="w-4 h-4 sm:w-4 md:w-3.5 animate-spin" />
-                    <span>{t('profile.saving')}</span>
+                    <span className="hidden sm:inline">{t('profile.saving')}</span>
                   </>
                 ) : (
                   <>
                     <Plus className="w-4 h-4 sm:w-4 md:w-3.5" />
-                    <span>{t('profile.startNewSeason')}</span>
+                    <span className="hidden sm:inline">{t('profile.startNewSeason')}</span>
                   </>
                 )}
               </button>

@@ -384,8 +384,8 @@ export default function Debts() {
             }}
             className="w-full bg-orange-500 border-4 border-black text-black py-4 rounded-none hover:bg-orange-600  font-black flex items-center justify-center gap-2 mb-6"
           >
-            <Plus className="w-6 h-6" />
-            <span className="text-lg uppercase">Add New Expense</span>
+            <Plus className="w-5 h-5 sm:w-5 md:w-5" />
+            <span className="hidden sm:inline text-lg uppercase">{t('debts.addExpense')}</span>
           </button>
 
           {/* Tab Navigation - Mobile */}
@@ -611,8 +611,8 @@ export default function Debts() {
             }}
             className="w-full bg-orange-500 border-4 border-black text-black py-4 rounded-none hover:bg-orange-600  font-black flex items-center justify-center gap-2 mb-6"
           >
-            <Plus className="w-6 h-6" />
-            <span className="text-lg uppercase">{t('debts.addExpense')}</span>
+            <Plus className="w-5 h-5 sm:w-5 md:w-5" />
+            <span className="hidden sm:inline text-lg uppercase">{t('debts.addExpense')}</span>
           </button>
 
           {/* Tab Navigation - Desktop */}

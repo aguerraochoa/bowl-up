@@ -139,6 +139,13 @@ export default function AddGame() {
     
     // Validate 10th frame first
     if (currentGame.tenthFrame) {
+      // Special validation: If 10th frame starts with X (strike), require 3 characters total
+      const normalized = currentGame.tenthFrame.toUpperCase().trim();
+      if (normalized[0] === 'X' && normalized.length < 3) {
+        setTenthFrameError('Strike in 10th frame requires 2 more shots');
+        setError('Strike in 10th frame requires 2 more shots');
+        return;
+      }
       const tenthFrameValidation = validateTenthFrame(currentGame.tenthFrame);
       if (!tenthFrameValidation.valid) {
         setTenthFrameError(tenthFrameValidation.error || 'Invalid 10th frame');
@@ -200,6 +207,11 @@ export default function AddGame() {
     if (!currentGame.tenthFrame || currentGame.tenthFrame.trim() === '') {
       return false;
     }
+    // Special validation: If 10th frame starts with X (strike), require 3 characters total
+    const normalized = currentGame.tenthFrame.toUpperCase().trim();
+    if (normalized[0] === 'X' && normalized.length < 3) {
+      return false; // Strike requires 2 more shots (3 total characters)
+    }
     const tenthFrameValidation = validateTenthFrame(currentGame.tenthFrame);
     if (!tenthFrameValidation.valid) {
       return false;
@@ -222,6 +234,11 @@ export default function AddGame() {
       }
       if (!game.tenthFrame || game.tenthFrame.trim() === '') {
         return false;
+      }
+      // Special validation: If 10th frame starts with X (strike), require 3 characters total
+      const normalized = game.tenthFrame.toUpperCase().trim();
+      if (normalized[0] === 'X' && normalized.length < 3) {
+        return false; // Strike requires 2 more shots (3 total characters)
       }
       const tenthFrameValidation = validateTenthFrame(game.tenthFrame);
       if (!tenthFrameValidation.valid) {
@@ -1058,7 +1075,7 @@ export default function AddGame() {
                 className="flex-1 bg-amber-400 border-4 border-black text-black py-2 sm:py-2 md:py-1.5 rounded-none font-black flex items-center justify-center gap-2 text-sm sm:text-sm md:text-xs"
               >
                 <ArrowLeft className="w-4 h-4 sm:w-4 md:w-3.5" />
-                {t('addGame.previous')}
+                <span className="hidden sm:inline">{t('addGame.previous')}</span>
               </button>
             )}
             <button
@@ -1066,7 +1083,7 @@ export default function AddGame() {
               disabled={!isCurrentGameValid()}
               className="flex-1 bg-orange-500 border-4 border-black text-black py-2 sm:py-2 md:py-1.5 rounded-none font-black flex items-center justify-center gap-2 text-sm sm:text-sm md:text-xs disabled:bg-gray-300 disabled:cursor-not-allowed disabled:opacity-70"
             >
-              {isLastPlayer ? t('addGame.review') : t('addGame.next')}
+              <span className="hidden sm:inline">{isLastPlayer ? t('addGame.review') : t('addGame.next')}</span>
               <ArrowRight className="w-4 h-4 sm:w-4 md:w-3.5" />
             </button>
           </div>
