@@ -10,7 +10,7 @@ export const translations = {
     'nav.profile': 'Profile',
     'nav.signOut': 'Sign Out',
     'nav.more': 'More',
-    
+
     // Profile
     'profile.title': 'Profile',
     'profile.subtitle': 'Manage your account settings',
@@ -37,7 +37,7 @@ export const translations = {
     'profile.seasonStarted': 'New season started successfully',
     'profile.errorStartingSeason': 'Error starting new season. Please try again.',
     'profile.readOnly': 'Read Only',
-    
+
     // Dashboard
     'dashboard.title': 'Dashboard',
     'dashboard.subtitle': 'Team performance overview',
@@ -70,7 +70,7 @@ export const translations = {
     'dashboard.total': 'Total',
     'dashboard.players': 'players',
     'dashboard.removedPlayer': 'Removed Player',
-    
+
     // Players
     'players.title': 'Players',
     'players.subtitle': 'Manage team members',
@@ -122,7 +122,7 @@ export const translations = {
     'players.inactivePlayers': 'Inactive Players',
     'players.noInactivePlayers': 'No inactive players',
     'players.inactive': 'Inactive',
-    
+
     // Add Game
     'addGame.title': 'Add New Game',
     'addGame.selectPlayers': 'Select Players',
@@ -136,7 +136,7 @@ export const translations = {
     'addGame.totalScore': 'Total Score',
     'addGame.strikes': 'Strikes (Frames 1-9)',
     'addGame.spares': 'Spares (Frames 1-9)',
-    'addGame.tenthFrame': '10th Frame Notation',
+    'addGame.tenthFrame': '10th Frame',
     'addGame.tenthFrameInvalid': 'Invalid 10th frame',
     'addGame.next': 'Next',
     'addGame.previous': 'Previous',
@@ -155,7 +155,7 @@ export const translations = {
     'addGame.examples': 'Examples: X9/ (strike + spare), 9/8 (spare), 72 (open), X-X (two strikes)',
     'addGame.disabledPastSeason': 'Adding games is disabled when viewing past seasons.',
     'addGame.switchToCurrentSeason': 'Switch to the current season in Profile to add games.',
-    
+
     // Debts
     'debts.title': 'Debts Tracker',
     'debts.subtitle': 'Manage shared expenses and balances',
@@ -198,7 +198,7 @@ export const translations = {
     'debts.expenseName': 'Expense Name',
     'debts.unknown': 'Unknown',
     'debts.unnamedExpense': 'Unnamed Expense',
-    
+
     // Bet Tracker
     'betTracker.title': 'Tracker',
     'betTracker.subtitle': 'Track 5-pin misses and strike penalties',
@@ -206,7 +206,7 @@ export const translations = {
     'betTracker.noPlayers': 'No players added yet.',
     'betTracker.addPlayersFirst': 'Add players in the Players tab first.',
     'betTracker.currentTally': 'Current tally',
-    
+
     // Login
     'login.emailOrTeam': 'Email or Team Name',
     'login.password': 'Password',
@@ -215,7 +215,7 @@ export const translations = {
     'login.signIn': 'Sign In',
     'login.signUp': 'Sign Up',
     'login.noAccount': "Don't have an account?",
-    
+
     // Signup
     'signup.email': 'Email',
     'signup.teamName': 'Team Name',
@@ -227,11 +227,11 @@ export const translations = {
     'signup.creatingAccount': 'Creating account...',
     'signup.haveAccount': 'Already have an account?',
     'signup.errorCreatingTeam': 'Error creating team. Please try again.',
-    
+
     // Disabled Team
     'disabled.title': 'Account Disabled',
     'disabled.message': 'Non-payment. Contact the administrator to reactivate your account.',
-    
+
     // Admin
     'admin.login': 'Admin Login',
     'admin.dashboard': 'Admin Dashboard',
@@ -277,7 +277,7 @@ export const translations = {
     'admin.deleting': 'Deleting...',
     'admin.starting': 'Starting...',
     'admin.loadingTeams': 'Loading teams...',
-    
+
     // Common
     'common.loading': 'Loading...',
     'common.save': 'Save',
@@ -291,7 +291,7 @@ export const translations = {
     'common.success': 'Success',
     'common.of': 'of',
   },
-  
+
   // Spanish (default)
   es: {
     // Navigation
@@ -303,7 +303,7 @@ export const translations = {
     'nav.profile': 'Perfil',
     'nav.signOut': 'Cerrar Sesión',
     'nav.more': 'Más',
-    
+
     // Profile
     'profile.title': 'Perfil',
     'profile.subtitle': 'Gestionar configuración de cuenta',
@@ -330,7 +330,7 @@ export const translations = {
     'profile.seasonStarted': 'Nueva temporada iniciada exitosamente',
     'profile.errorStartingSeason': 'Error al iniciar nueva temporada. Por favor intenta de nuevo.',
     'profile.readOnly': 'Solo Lectura',
-    
+
     // Dashboard
     'dashboard.title': 'Tablero',
     'dashboard.subtitle': 'Resumen del rendimiento del equipo',
@@ -350,11 +350,11 @@ export const translations = {
     'dashboard.topIndividualGames': 'Mejores Juegos Individuales',
     'dashboard.topTeamGames': 'Mejores Juegos en Equipo',
     'dashboard.individualAverages': 'Promedios Individuales',
-    'dashboard.avgTenthFrame': 'Promedio 10mo Frame',
+    'dashboard.avgTenthFrame': 'Promedio del 10mo Cuadro',
     'dashboard.noGames': 'Aún no hay juegos registrados',
     'dashboard.noTeamGames': 'Aún no hay juegos en equipo registrados',
     'dashboard.noAverages': 'Aún no se han calculado promedios',
-    'dashboard.noTenthFrame': 'Aún no hay datos del 10mo frame',
+    'dashboard.noTenthFrame': 'Aún no hay datos del 10mo cuadro',
     'dashboard.showMore': 'Mostrar Más',
     'dashboard.seasonAverage': 'Promedio de temporada',
     'dashboard.clutchPerformance': 'Rendimiento en momentos clave',
@@ -363,7 +363,7 @@ export const translations = {
     'dashboard.total': 'Total',
     'dashboard.players': 'jugadores',
     'dashboard.removedPlayer': 'Jugador Eliminado',
-    
+
     // Players
     'players.title': 'Jugadores',
     'players.subtitle': 'Gestionar miembros del equipo',
@@ -392,7 +392,7 @@ export const translations = {
     'players.spares': 'Spares',
     'players.strikePercentage': '% de Strikes',
     'players.sparePercentage': '% de Spares',
-    'players.averageTenthFrame': 'Prom. 10mo Frame',
+    'players.averageTenthFrame': 'Prom. 10mo Cuadro',
     'players.gamesAbove200': 'Juegos Sobre 200',
     'players.gameTendencies': 'Tendencias de Juegos',
     'players.personalStats': 'Estadísticas Personales',
@@ -415,7 +415,7 @@ export const translations = {
     'players.inactivePlayers': 'Jugadores Inactivos',
     'players.noInactivePlayers': 'No hay jugadores inactivos',
     'players.inactive': 'Inactivo',
-    
+
     // Add Game
     'addGame.title': 'Agregar Nuevo Juego',
     'addGame.selectPlayers': 'Seleccionar Jugadores',
@@ -427,10 +427,10 @@ export const translations = {
     'addGame.noPlayers': 'Aún no hay jugadores agregados.',
     'addGame.addPlayersFirst': 'Agrega jugadores en la pestaña Jugadores primero.',
     'addGame.totalScore': 'Puntuación Total',
-    'addGame.strikes': 'Strikes (Frames 1-9)',
-    'addGame.spares': 'Spares (Frames 1-9)',
-    'addGame.tenthFrame': 'Notación del 10mo Frame',
-    'addGame.tenthFrameInvalid': 'Notación del 10mo frame inválida',
+    'addGame.strikes': 'Strikes (Cuadros 1-9)',
+    'addGame.spares': 'Spares (Cuadros 1-9)',
+    'addGame.tenthFrame': '10mo Cuadro',
+    'addGame.tenthFrameInvalid': 'Notación del 10mo cuadro inválida',
     'addGame.next': 'Siguiente',
     'addGame.previous': 'Anterior',
     'addGame.review': 'Revisar',
@@ -448,7 +448,7 @@ export const translations = {
     'addGame.examples': 'Ejemplos: X9/ (strike + spare), 9/8 (spare), 72 (abierto), X-X (dos strikes)',
     'addGame.disabledPastSeason': 'Agregar juegos está deshabilitado al ver temporadas pasadas.',
     'addGame.switchToCurrentSeason': 'Cambia a la temporada actual en Perfil para agregar juegos.',
-    
+
     // Debts
     'debts.title': 'Rastreador de Deudas',
     'debts.subtitle': 'Gestionar gastos compartidos y balances',
@@ -491,7 +491,7 @@ export const translations = {
     'debts.expenseName': 'Nombre del Gasto',
     'debts.unknown': 'Desconocido',
     'debts.unnamedExpense': 'Gasto Sin Nombre',
-    
+
     // Bet Tracker
     'betTracker.title': 'Rastreador',
     'betTracker.subtitle': 'Rastrear fallos de 5 pines y penalizaciones de strikes',
@@ -499,7 +499,7 @@ export const translations = {
     'betTracker.noPlayers': 'Aún no hay jugadores agregados.',
     'betTracker.addPlayersFirst': 'Agrega jugadores en la pestaña Jugadores primero.',
     'betTracker.currentTally': 'Conteo actual',
-    
+
     // Login
     'login.emailOrTeam': 'Email o Nombre del Equipo',
     'login.password': 'Contraseña',
@@ -508,7 +508,7 @@ export const translations = {
     'login.signIn': 'Iniciar Sesión',
     'login.signUp': 'Registrarse',
     'login.noAccount': '¿No tienes una cuenta?',
-    
+
     // Signup
     'signup.email': 'Email',
     'signup.teamName': 'Nombre del Equipo',
@@ -520,11 +520,11 @@ export const translations = {
     'signup.creatingAccount': 'Creando cuenta...',
     'signup.haveAccount': '¿Ya tienes una cuenta?',
     'signup.errorCreatingTeam': 'Error al crear el equipo. Por favor intenta de nuevo.',
-    
+
     // Disabled Team
     'disabled.title': 'Cuenta Deshabilitada',
     'disabled.message': 'Falta de pago. Contacta al administrador para reactivar tu cuenta.',
-    
+
     // Admin
     'admin.login': 'Inicio de Sesión Admin',
     'admin.dashboard': 'Panel de Administración',
@@ -570,7 +570,7 @@ export const translations = {
     'admin.deleting': 'Eliminando...',
     'admin.starting': 'Iniciando...',
     'admin.loadingTeams': 'Cargando equipos...',
-    
+
     // Common
     'common.loading': 'Cargando...',
     'common.save': 'Guardar',

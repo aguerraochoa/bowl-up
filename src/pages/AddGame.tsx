@@ -36,9 +36,9 @@ export default function AddGame() {
     const handleLanguageChange = (e: CustomEvent) => {
       setCurrentLang(e.detail);
     };
-    
+
     window.addEventListener('languagechange', handleLanguageChange as EventListener);
-    
+
     return () => {
       window.removeEventListener('languagechange', handleLanguageChange as EventListener);
     };
@@ -47,17 +47,58 @@ export default function AddGame() {
   // Force re-render when language changes
   void currentLang;
 
+  const STORAGE_KEY = 'bowlup_add_game_state';
+
+  // Load saved state on mount
+  useEffect(() => {
+    const savedState = localStorage.getItem(STORAGE_KEY);
+    if (savedState) {
+      try {
+        const parsed = JSON.parse(savedState);
+        if (parsed.selectedPlayers && Array.isArray(parsed.selectedPlayers) && parsed.selectedPlayers.length > 0) {
+          setSelectedPlayers(parsed.selectedPlayers);
+          if (parsed.currentStep !== undefined) setCurrentStep(parsed.currentStep);
+          if (parsed.currentPlayerIndex !== undefined) setCurrentPlayerIndex(parsed.currentPlayerIndex);
+          if (parsed.gameData) setGameData(parsed.gameData);
+          if (parsed.currentGame) setCurrentGame(parsed.currentGame);
+        }
+      } catch (e) {
+        console.error('Failed to load saved state', e);
+      }
+    }
+  }, []);
+
+  // Save state to localStorage changes
+  useEffect(() => {
+    if (selectedPlayers.length === 0 && currentStep === 0) {
+      // Don't save empty state if we are at the beginning
+      // But if we just cleared, we might want to clear storage? 
+      // Actually handleClearSelection handles the explicit clear.
+      // If we differ from empty, save.
+      return;
+    }
+
+    const stateToSave = {
+      selectedPlayers,
+      currentStep,
+      currentPlayerIndex,
+      gameData,
+      currentGame
+    };
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(stateToSave));
+  }, [selectedPlayers, currentStep, currentPlayerIndex, gameData, currentGame]);
+
   useEffect(() => {
     const loadData = async () => {
       setIsLoadingPlayers(true);
       setIsLoadingGames(true);
-      
+
       // Load players and games in parallel
       const [players, loadedGames] = await Promise.all([
         getPlayers(),
         getGames(),
       ]);
-      
+
       // Filter out deleted players (only show active players for adding games)
       setAllPlayers(players.filter(p => !p.deletedAt));
       setGames(loadedGames);
@@ -85,6 +126,7 @@ export default function AddGame() {
   const handleClearSelection = () => {
     setSelectedPlayers([]);
     setError('');
+    localStorage.removeItem(STORAGE_KEY);
   };
 
   const handleStartGame = () => {
@@ -118,7 +160,7 @@ export default function AddGame() {
       ...prev,
       tenthFrame: upperValue,
     }));
-    
+
     // Real-time validation of 10th frame
     if (upperValue.trim() === '') {
       setTenthFrameError('');
@@ -136,7 +178,7 @@ export default function AddGame() {
 
   const handleNext = () => {
     const playersList = getSelectedPlayersList();
-    
+
     // Validate 10th frame first
     if (currentGame.tenthFrame) {
       // Special validation: If 10th frame starts with X (strike), require 3 characters total
@@ -153,7 +195,7 @@ export default function AddGame() {
         return;
       }
     }
-    
+
     // Validate current game
     const validation = validateGame({
       ...currentGame,
@@ -198,7 +240,7 @@ export default function AddGame() {
       }, 0);
     }
   };
-  
+
   // Check if current game is valid and complete
   const isCurrentGameValid = (): boolean => {
     if (!currentGame.totalScore || currentGame.totalScore <= 0) {
@@ -223,7 +265,7 @@ export default function AddGame() {
     });
     return fullValidation.valid;
   };
-  
+
   // Check if all games are valid and complete for review
   const areAllGamesValid = (): boolean => {
     const playersList = getSelectedPlayersList();
@@ -307,19 +349,22 @@ export default function AddGame() {
       setTimeout(() => {
         window.scrollTo({ top: 0, behavior: 'smooth' });
       }, 0);
+    } else if (currentStep === 1 && currentPlayerIndex === 0) {
+      setCurrentStep(0);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     }
   };
 
   const handleSave = async () => {
     if (isSaving) return; // Prevent multiple submissions
-    
+
     setIsSaving(true);
     try {
       const playersList = getSelectedPlayersList();
       // Generate ONE session ID for this team game
       const gameSessionId = crypto.randomUUID();
       const date = new Date().toISOString().split('T')[0];
-      
+
       for (let index = 0; index < gameData.length; index++) {
         const game = gameData[index];
         if (game.totalScore !== undefined && game.tenthFrame) {
@@ -353,6 +398,7 @@ export default function AddGame() {
       // Reload games to show the new ones
       const loadedGames = await getGames();
       setGames(loadedGames);
+      localStorage.removeItem(STORAGE_KEY);
     } catch (error) {
       console.error('Error saving games:', error);
       alert('Error saving games. Please try again.');
@@ -416,10 +462,10 @@ export default function AddGame() {
   if (isLoadingPlayers) {
     return (
       <div className="min-h-screen bg-orange-50 pb-20 safe-top flex items-center justify-center px-4 relative">
-          <div className="text-center">
-            <Loader2 className="w-8 h-8 animate-spin mx-auto mb-4 text-black" />
-            <p className="text-black font-bold text-base">{t('addGame.loadingPlayers')}</p>
-          </div>
+        <div className="text-center">
+          <Loader2 className="w-8 h-8 animate-spin mx-auto mb-4 text-black" />
+          <p className="text-black font-bold text-base">{t('addGame.loadingPlayers')}</p>
+        </div>
       </div>
     );
   }
@@ -492,13 +538,12 @@ export default function AddGame() {
                     key={player.id}
                     onClick={() => handleAddPlayer(player.id)}
                     disabled={!isSelected && selectedPlayers.length >= 4}
-                    className={`p-4 rounded-none border-4 border-black font-black text-base sm:text-lg transition-all  min-h-[80px] sm:min-h-[90px] ${
-                      isSelected
-                        ? `${selectedColor} text-black cursor-pointer`
-                        : selectedPlayers.length >= 4
+                    className={`p-4 rounded-none border-4 border-black font-black text-base sm:text-lg transition-all  min-h-[80px] sm:min-h-[90px] ${isSelected
+                      ? `${selectedColor} text-black cursor-pointer`
+                      : selectedPlayers.length >= 4
                         ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
                         : 'bg-amber-400 text-black hover:bg-amber-500'
-                    }`}
+                      }`}
                   >
                     <div className="flex items-center justify-between h-full">
                       <span className="flex-1 text-left">{player.name}</span>
@@ -514,7 +559,7 @@ export default function AddGame() {
 
           {/* Game History Modal */}
           {showHistory && (
-            <div 
+            <div
               className="fixed inset-0 z-[100] flex items-end justify-center safe-top"
               onClick={(e) => {
                 if (e.target === e.currentTarget) {
@@ -524,12 +569,11 @@ export default function AddGame() {
             >
               {/* Backdrop */}
               <div className="absolute inset-0 bg-orange-50/90" />
-              
+
               {/* Modal Content */}
-              <div 
-                className={`relative bg-white rounded-none border-4 border-black border-b-0 w-full sm:max-w-2xl sm:mx-4 sm:rounded-none sm:border-b-4 max-h-[100vh] sm:max-h-[90vh] flex flex-col ${
-                  isClosingHistory ? 'animate-slide-down' : 'animate-slide-up'
-                }`}
+              <div
+                className={`relative bg-white rounded-none border-4 border-black border-b-0 w-full sm:max-w-2xl sm:mx-4 sm:rounded-none sm:border-b-4 max-h-[100vh] sm:max-h-[90vh] flex flex-col ${isClosingHistory ? 'animate-slide-down' : 'animate-slide-up'
+                  }`}
                 onClick={(e) => e.stopPropagation()}
               >
                 {/* Header */}
@@ -544,7 +588,7 @@ export default function AddGame() {
                     <X className="w-4 h-4 sm:w-5 sm:h-5" />
                   </button>
                 </div>
-                
+
                 {/* Content */}
                 <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-4 sm:py-6 bg-white min-h-0">
                   {isLoadingGames ? (
@@ -584,14 +628,14 @@ export default function AddGame() {
                           }, '');
                           return new Date(createdB).getTime() - new Date(createdA).getTime();
                         });
-                        
+
                         // Sort individual games without session by created_at (newest first)
                         const sortedGamesWithoutSession = gamesWithoutSession.sort((a, b) => {
                           const createdA = (a as any).created_at || a.date;
                           const createdB = (b as any).created_at || b.date;
                           return new Date(createdB).getTime() - new Date(createdA).getTime();
                         });
-                        
+
                         return (
                           <>
                             {/* Team games (with session) */}
@@ -668,7 +712,7 @@ export default function AddGame() {
                                 </div>
                               );
                             })}
-                            
+
                             {/* Individual games (without session) */}
                             {sortedGamesWithoutSession.map(game => {
                               const player = allPlayers.find(p => p.id === game.playerId);
@@ -730,24 +774,28 @@ export default function AddGame() {
             {gameData.map((game, index) => {
               const player = selectedPlayersList[index];
               return (
-                <div key={index} className="bg-white rounded-none border-4 border-black p-4 sm:p-5 ">
-                  <h3 className="font-black text-base sm:text-lg mb-3 text-black truncate">{player.name}</h3>
-                  <div className="grid grid-cols-2 gap-2 sm:gap-3 text-xs sm:text-sm">
-                    <div>
-                      <span className="text-black font-bold">{t('addGame.score')}:</span>
-                      <span className="ml-2 font-black text-base sm:text-lg">{game.totalScore}</span>
-                    </div>
-                    <div>
-                      <span className="text-black font-bold">{t('addGame.strikes')}:</span>
-                      <span className="ml-2 font-black text-base sm:text-lg">{game.strikesFrames1to9}</span>
-                    </div>
-                    <div>
-                      <span className="text-black font-bold">{t('addGame.spares')}:</span>
-                      <span className="ml-2 font-black text-base sm:text-lg">{game.sparesFrames1to9}</span>
-                    </div>
-                    <div>
-                      <span className="text-black font-bold">{t('addGame.tenthFrame')}:</span>
-                      <span className="ml-2 font-black text-base sm:text-lg break-all">{game.tenthFrame}</span>
+                <div key={index} className="bg-white border-4 border-black p-0 transition-transform hover:-translate-y-1">
+                  <div className="bg-amber-400 p-3 sm:p-4 border-b-4 border-black flex justify-between items-center text-black">
+                    <h3 className="font-black text-lg sm:text-xl uppercase truncate flex-1">{player.name}</h3>
+                  </div>
+                  <div className="p-4 sm:p-5">
+                    <div className="grid grid-cols-2 gap-4 sm:gap-6">
+                      <div className="flex flex-col">
+                        <span className="text-xs font-bold uppercase tracking-wider text-gray-500 mb-1">{t('addGame.score')}</span>
+                        <span className="font-black text-3xl sm:text-4xl text-black">{game.totalScore}</span>
+                      </div>
+                      <div className="flex flex-col">
+                        <span className="text-xs font-bold uppercase tracking-wider text-gray-500 mb-1">{t('addGame.tenthFrame')}</span>
+                        <span className="font-black text-md sm:text-lg text-black bg-yellow-100 p-2 border-2 border-black inline-block text-center">{game.tenthFrame}</span>
+                      </div>
+                      <div className="flex flex-col">
+                        <span className="text-xs font-bold uppercase tracking-wider text-gray-500 mb-1">{t('addGame.strikes')}</span>
+                        <span className="font-black text-2xl text-black">{game.strikesFrames1to9}</span>
+                      </div>
+                      <div className="flex flex-col">
+                        <span className="text-xs font-bold uppercase tracking-wider text-gray-500 mb-1">{t('addGame.spares')}</span>
+                        <span className="font-black text-2xl text-black">{game.sparesFrames1to9}</span>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -790,7 +838,7 @@ export default function AddGame() {
       <div className="max-w-2xl mx-auto px-4 py-6">
         {/* Progress */}
         <div className="mb-4 sm:mb-6">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-2">
+          <div className="flex flex-col gap-2 mb-2">
             <h1 className="text-3xl sm:text-4xl md:text-5xl font-black text-black uppercase">{t('addGame.title')}</h1>
             <span className="text-xs sm:text-sm text-black font-black">
               {t('addGame.player')} {currentPlayerIndex + 1} {t('common.of')} {selectedPlayersList.length}
@@ -813,7 +861,7 @@ export default function AddGame() {
             <label className="block text-sm font-black text-black mb-3 uppercase">
               {t('addGame.totalScore')}
             </label>
-            
+
             {/* Score Display - Always visible */}
             <div className="mb-4 flex items-center justify-center relative">
               <div className="inline-block px-4 py-3 border-4 border-black bg-white min-w-[200px] text-center">
@@ -910,11 +958,10 @@ export default function AddGame() {
                 <button
                   key={num}
                   onClick={() => handleNumberInput('strikesFrames1to9', num)}
-                  className={`py-2 sm:py-3 rounded-none border-4 border-black font-black transition-all  text-sm sm:text-base ${
-                    currentGame.strikesFrames1to9 === num
-                      ? 'bg-orange-500 text-black'
-                      : 'bg-amber-400 hover:bg-amber-500 text-black'
-                  }`}
+                  className={`py-2 sm:py-3 rounded-none border-4 border-black font-black transition-all  text-sm sm:text-base ${currentGame.strikesFrames1to9 === num
+                    ? 'bg-orange-500 text-black'
+                    : 'bg-amber-400 hover:bg-amber-500 text-black'
+                    }`}
                 >
                   {num}
                 </button>
@@ -932,11 +979,10 @@ export default function AddGame() {
                 <button
                   key={num}
                   onClick={() => handleNumberInput('sparesFrames1to9', num)}
-                  className={`py-2 sm:py-3 rounded-none border-4 border-black font-black transition-all  text-sm sm:text-base ${
-                    currentGame.sparesFrames1to9 === num
-                      ? 'bg-orange-500 text-black'
-                      : 'bg-amber-400 hover:bg-amber-500 text-black'
-                  }`}
+                  className={`py-2 sm:py-3 rounded-none border-4 border-black font-black transition-all  text-sm sm:text-base ${currentGame.sparesFrames1to9 === num
+                    ? 'bg-orange-500 text-black'
+                    : 'bg-amber-400 hover:bg-amber-500 text-black'
+                    }`}
                 >
                   {num}
                 </button>
@@ -949,12 +995,11 @@ export default function AddGame() {
             <label className="block text-sm font-black text-black mb-3 uppercase">
               {t('addGame.tenthFrame')}
             </label>
-            
+
             {/* Current Notation Display */}
             <div className="mb-4 flex items-center justify-center relative">
-              <div className={`inline-block px-4 py-3 border-4 min-w-[200px] text-center ${
-                tenthFrameError ? 'border-red-600 bg-red-100' : 'border-black bg-white'
-              }`}>
+              <div className={`inline-block px-4 py-3 border-4 min-w-[200px] text-center ${tenthFrameError ? 'border-red-600 bg-red-100' : 'border-black bg-white'
+                }`}>
                 <span className="text-2xl sm:text-3xl font-mono font-black text-black">
                   {currentGame.tenthFrame || '---'}
                 </span>
@@ -969,7 +1014,7 @@ export default function AddGame() {
                 </button>
               )}
             </div>
-            
+
             {/* Error message for 10th frame */}
             {tenthFrameError && (
               <div className="mb-4 p-3 bg-red-600 border-4 border-black rounded-none text-black text-sm font-black">
@@ -1055,7 +1100,7 @@ export default function AddGame() {
                 </button>
               </div>
             </div>
-            
+
             <p className="text-xs text-black mt-3 text-center font-bold">
               {t('addGame.examples')}
             </p>
@@ -1069,15 +1114,13 @@ export default function AddGame() {
 
           {/* Navigation */}
           <div className="flex gap-2 sm:gap-3">
-            {currentPlayerIndex > 0 && (
-              <button
-                onClick={handleBack}
-                className="flex-1 bg-amber-400 border-4 border-black text-black py-2 sm:py-2 md:py-1.5 rounded-none font-black flex items-center justify-center gap-2 text-sm sm:text-sm md:text-xs"
-              >
-                <ArrowLeft className="w-4 h-4 sm:w-4 md:w-3.5" />
-                <span className="hidden sm:inline">{t('addGame.previous')}</span>
-              </button>
-            )}
+            <button
+              onClick={handleBack}
+              className="flex-1 bg-amber-400 border-4 border-black text-black py-2 sm:py-2 md:py-1.5 rounded-none font-black flex items-center justify-center gap-2 text-sm sm:text-sm md:text-xs"
+            >
+              <ArrowLeft className="w-4 h-4 sm:w-4 md:w-3.5" />
+              <span className="hidden sm:inline">{t('addGame.previous')}</span>
+            </button>
             <button
               onClick={handleNext}
               disabled={!isCurrentGameValid()}

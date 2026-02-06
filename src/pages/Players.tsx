@@ -36,9 +36,9 @@ export default function Players() {
     const handleLanguageChange = (e: CustomEvent) => {
       setCurrentLang(e.detail);
     };
-    
+
     window.addEventListener('languagechange', handleLanguageChange as EventListener);
-    
+
     return () => {
       window.removeEventListener('languagechange', handleLanguageChange as EventListener);
     };
@@ -50,13 +50,13 @@ export default function Players() {
   useEffect(() => {
     const loadPlayers = async () => {
       setIsLoading(true);
-      
+
       // Fetch all data in parallel - filter games by season
       const [loadedPlayers, loadedGames] = await Promise.all([
         getPlayers(),
         getGames(false, querySeason),
       ]);
-      
+
       // Filter players based on season view:
       // - Current season: Show ALL active players (even if they haven't played yet)
       // - Past season: Show only players who played in that season
@@ -75,16 +75,16 @@ export default function Players() {
         // Inactive players are shown in the reactivate modal
         filteredPlayers = loadedPlayers.filter(p => !p.deletedAt);
       }
-      
+
       setPlayers(filteredPlayers);
       setAllGames(loadedGames); // Store games for later use
-      
+
       // Calculate stats for filtered players in parallel using the fetched games data
       const statsMap: Record<string, Stats> = {};
       filteredPlayers.forEach(player => {
         statsMap[player.id] = calculatePlayerStatsFromData(player.id, loadedGames);
       });
-      
+
       setPlayersStats(statsMap);
       setIsLoading(false);
     };
@@ -114,7 +114,7 @@ export default function Players() {
 
   const handleAddPlayer = async () => {
     if (isAddingPlayer || !newPlayerName.trim()) return; // Prevent multiple submissions
-    
+
     setIsAddingPlayer(true);
     try {
       const newPlayer: Player = {
@@ -123,23 +123,23 @@ export default function Players() {
         teamId: '', // Will be set by Supabase
       };
       await addPlayer(newPlayer);
-      
+
       // Reload players and games in parallel, then recalculate stats
       const [loadedPlayers, loadedGames] = await Promise.all([
         getPlayers(),
         getGames(false, querySeason),
       ]);
-      
+
       setPlayers(loadedPlayers);
       setAllGames(loadedGames); // Update stored games
-      
+
       // Recalculate stats for all players (new player will have default stats)
       const statsMap: Record<string, Stats> = {};
       loadedPlayers.forEach(player => {
         statsMap[player.id] = calculatePlayerStatsFromData(player.id, loadedGames);
       });
       setPlayersStats(statsMap);
-      
+
       setNewPlayerName('');
       setIsClosingAddPlayer(true);
       setTimeout(() => {
@@ -176,23 +176,23 @@ export default function Players() {
     if (confirm(confirmMessage)) {
       try {
         await removePlayer(playerId);
-        
+
         // Reload players and games in parallel, then recalculate stats
         const [loadedPlayers, loadedGames] = await Promise.all([
           getPlayers(),
           getGames(),
         ]);
-        
+
         setPlayers(loadedPlayers);
         setAllGames(loadedGames); // Update stored games
-        
+
         // Recalculate stats for all players
         const statsMap: Record<string, Stats> = {};
         loadedPlayers.forEach(player => {
           statsMap[player.id] = calculatePlayerStatsFromData(player.id, loadedGames);
         });
         setPlayersStats(statsMap);
-        
+
         if (selectedPlayer?.id === playerId) {
           setSelectedPlayer(null);
           setPlayerStats(null);
@@ -212,13 +212,13 @@ export default function Players() {
   const handleReactivatePlayer = async (playerId: string) => {
     try {
       await reactivatePlayer(playerId);
-      
+
       // Reload players and games
       const [loadedPlayers, loadedGames] = await Promise.all([
         getPlayers(),
         getGames(false, querySeason),
       ]);
-      
+
       // Filter players based on season view (same logic as loadPlayers)
       let filteredPlayers: Player[];
       if (isViewingAllSeasons) {
@@ -231,10 +231,10 @@ export default function Players() {
         // Current season: show ALL active players (even if they haven't played yet)
         filteredPlayers = loadedPlayers.filter(p => !p.deletedAt);
       }
-      
+
       setPlayers(filteredPlayers);
       setAllGames(loadedGames);
-      
+
       // Recalculate stats
       const statsMap: Record<string, Stats> = {};
       filteredPlayers.forEach(player => {
@@ -254,7 +254,7 @@ export default function Players() {
 
   const handleSaveEdit = async (playerId: string) => {
     if (savingPlayerId || !editingPlayerName.trim()) return; // Prevent multiple submissions
-    
+
     setSavingPlayerId(playerId);
     try {
       // Update player in Supabase
@@ -266,17 +266,17 @@ export default function Players() {
       if (!error) {
         // Invalidate cache
         cache.invalidate('players');
-        
+
         // Optimistically update the player name in the list (no need to reload stats)
-        setPlayers(prev => prev.map(p => 
+        setPlayers(prev => prev.map(p =>
           p.id === playerId ? { ...p, name: editingPlayerName.trim() } : p
         ));
-        
+
         // Update selected player if it's the one being edited
         if (selectedPlayer?.id === playerId) {
           setSelectedPlayer({ ...selectedPlayer, name: editingPlayerName.trim() });
         }
-        
+
         setEditingPlayerId(null);
         setEditingPlayerName('');
       } else {
@@ -307,7 +307,7 @@ export default function Players() {
   return (
     <div className="min-h-screen bg-orange-50 pb-20 safe-top relative">
       <div className="max-w-2xl mx-auto px-4 py-4 sm:py-6">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-0 mb-4 sm:mb-6">
+        <div className="flex flex-col gap-4 mb-4 sm:mb-6">
           <div className="flex-1">
             <h1 className="text-3xl sm:text-4xl md:text-5xl font-black text-black uppercase">{t('players.title')}</h1>
             <p className="text-sm sm:text-base text-black font-bold">{t('players.subtitle')}</p>
@@ -383,7 +383,7 @@ export default function Players() {
 
         {/* Add Player Modal */}
         {showAddPlayer && (
-          <div 
+          <div
             className="fixed inset-0 z-[100] flex items-end justify-center safe-top"
             onClick={(e) => {
               if (e.target === e.currentTarget) {
@@ -393,12 +393,11 @@ export default function Players() {
           >
             {/* Neobrutal backdrop */}
             <div className="absolute inset-0 bg-orange-50/90" />
-            
+
             {/* Modal Content */}
-            <div 
-              className={`relative bg-white rounded-none border-4 border-black border-b-0 w-full sm:max-w-md sm:mx-4 sm:rounded-none sm:border-b-4 max-h-[100vh] sm:max-h-[90vh] flex flex-col ${
-                isClosingAddPlayer ? 'animate-slide-down' : 'animate-slide-up'
-              }`}
+            <div
+              className={`relative bg-white rounded-none border-4 border-black border-b-0 w-full sm:max-w-md sm:mx-4 sm:rounded-none sm:border-b-4 max-h-[100vh] sm:max-h-[90vh] flex flex-col ${isClosingAddPlayer ? 'animate-slide-down' : 'animate-slide-up'
+                }`}
               onClick={(e) => e.stopPropagation()}
             >
               {/* Header */}
@@ -413,7 +412,7 @@ export default function Players() {
                   <X className="w-4 h-4 sm:w-5 sm:h-5" />
                 </button>
               </div>
-              
+
               {/* Content */}
               <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-4 sm:py-6 bg-white min-h-0">
                 <div>
@@ -429,7 +428,7 @@ export default function Players() {
                   />
                 </div>
               </div>
-              
+
               {/* Footer with buttons */}
               <div className="border-t-4 border-black px-4 sm:px-6 py-3 sm:py-4 bg-amber-400 flex-shrink-0">
                 <div className="flex gap-2 sm:gap-3">
@@ -461,7 +460,7 @@ export default function Players() {
 
         {/* Reactivate Player Modal */}
         {showReactivateModal && (
-          <div 
+          <div
             className="fixed inset-0 z-[100] flex items-end justify-center safe-top"
             onClick={(e) => {
               if (e.target === e.currentTarget) {
@@ -471,12 +470,11 @@ export default function Players() {
           >
             {/* Neobrutal backdrop */}
             <div className="absolute inset-0 bg-orange-50/90" />
-            
+
             {/* Modal Content */}
-            <div 
-              className={`relative bg-white rounded-none border-4 border-black border-b-0 w-full sm:max-w-md sm:mx-4 sm:rounded-none sm:border-b-4 max-h-[100vh] sm:max-h-[90vh] flex flex-col ${
-                isClosingReactivateModal ? 'animate-slide-down' : 'animate-slide-up'
-              }`}
+            <div
+              className={`relative bg-white rounded-none border-4 border-black border-b-0 w-full sm:max-w-md sm:mx-4 sm:rounded-none sm:border-b-4 max-h-[100vh] sm:max-h-[90vh] flex flex-col ${isClosingReactivateModal ? 'animate-slide-down' : 'animate-slide-up'
+                }`}
               onClick={(e) => e.stopPropagation()}
             >
               {/* Header */}
@@ -491,7 +489,7 @@ export default function Players() {
                   <X className="w-4 h-4 sm:w-5 sm:h-5" />
                 </button>
               </div>
-              
+
               {/* Content */}
               <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-4 sm:py-6 bg-white min-h-0">
                 {isLoadingInactive ? (
@@ -560,13 +558,12 @@ export default function Players() {
                 gamesAbove200Percentage: 0,
               };
               const isEditing = editingPlayerId === player.id;
-              
+
               return (
                 <div
                   key={player.id}
-                  className={`bg-white rounded-none border-4 border-black p-4 sm:p-5  ${
-                    !isEditMode && !isViewingPastSeason && !isViewingAllSeasons ? 'hover:bg-amber-400 transition-all cursor-pointer' : ''
-                  }`}
+                  className={`bg-white rounded-none border-4 border-black p-4 sm:p-5  ${!isEditMode && !isViewingPastSeason && !isViewingAllSeasons ? 'hover:bg-amber-400 transition-all cursor-pointer' : ''
+                    }`}
                   onClick={() => !isEditMode && !isViewingPastSeason && !isViewingAllSeasons && setSelectedPlayer(player)}
                 >
                   <div className="flex items-center justify-between gap-2">
@@ -664,7 +661,7 @@ export default function Players() {
 
         {/* Player Stats Modal */}
         {selectedPlayer && playerStats && (
-          <div 
+          <div
             className="fixed inset-0 z-[100] flex items-end justify-center safe-top"
             onClick={(e) => {
               if (e.target === e.currentTarget) {
@@ -674,12 +671,11 @@ export default function Players() {
           >
             {/* Neobrutal backdrop */}
             <div className="absolute inset-0 bg-orange-50/90" />
-            
+
             {/* Modal Content */}
-            <div 
-              className={`relative bg-white rounded-none border-4 border-black border-b-0 w-full sm:max-w-2xl sm:mx-4 sm:rounded-none sm:border-b-4 max-h-[100vh] sm:max-h-[90vh] flex flex-col ${
-                isClosingStats ? 'animate-slide-down' : 'animate-slide-up'
-              }`}
+            <div
+              className={`relative bg-white rounded-none border-4 border-black border-b-0 w-full sm:max-w-2xl sm:mx-4 sm:rounded-none sm:border-b-4 max-h-[100vh] sm:max-h-[90vh] flex flex-col ${isClosingStats ? 'animate-slide-down' : 'animate-slide-up'
+                }`}
               onClick={(e) => e.stopPropagation()}
             >
               {/* Header */}
@@ -694,7 +690,7 @@ export default function Players() {
                   <X className="w-4 h-4 sm:w-5 sm:h-5" />
                 </button>
               </div>
-              
+
               {/* Scrollable Content */}
               <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-4 sm:py-6 bg-white min-h-0">
                 <div className="mb-4 sm:mb-6">
