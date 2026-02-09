@@ -6,10 +6,45 @@ CREATE TABLE IF NOT EXISTS teams (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE UNIQUE NOT NULL,
   name TEXT NOT NULL,
+  username TEXT,
   league TEXT DEFAULT '',
   created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc', NOW()) NOT NULL,
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc', NOW()) NOT NULL
 );
+
+ALTER TABLE teams
+ADD COLUMN IF NOT EXISTS username TEXT;
+
+-- Backfill usernames for older records when rerunning this script.
+UPDATE teams t
+SET username = LOWER(REGEXP_REPLACE(COALESCE(t.name, 'team'), '[^a-zA-Z0-9._]+', '', 'g'))
+WHERE t.username IS NULL;
+
+UPDATE teams t
+SET username = CONCAT('team', SUBSTRING(REPLACE(t.id::text, '-', ''), 1, 8))
+WHERE t.username IS NULL OR t.username = '';
+
+WITH duplicates AS (
+  SELECT
+    id,
+    username,
+    ROW_NUMBER() OVER (PARTITION BY LOWER(username) ORDER BY created_at, id) AS rn
+  FROM teams
+)
+UPDATE teams t
+SET username = CONCAT(
+  LEFT(d.username, GREATEST(1, 20 - LENGTH(d.rn::text) - 1)),
+  '_',
+  d.rn::text
+)
+FROM duplicates d
+WHERE t.id = d.id
+  AND d.rn > 1;
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_teams_username_unique_ci ON teams (LOWER(username));
+
+ALTER TABLE teams
+ALTER COLUMN username SET NOT NULL;
 
 -- Players table
 CREATE TABLE IF NOT EXISTS players (
@@ -199,9 +234,33 @@ CREATE POLICY "Users can delete their team's bet tallies"
 -- Function to automatically create team when user signs up
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS TRIGGER AS $$
+DECLARE
+  v_team_name TEXT;
+  v_username_base TEXT;
+  v_username TEXT;
+  v_suffix INT := 0;
 BEGIN
-  INSERT INTO public.teams (user_id, name, league)
-  VALUES (NEW.id, COALESCE(NEW.raw_user_meta_data->>'team_name', 'My Team'), '');
+  v_team_name := trim(COALESCE(NEW.raw_user_meta_data->>'team_name', 'My Team'));
+  IF v_team_name = '' THEN
+    v_team_name := 'My Team';
+  END IF;
+
+  v_username_base := LOWER(trim(COALESCE(NEW.raw_user_meta_data->>'username', '')));
+  IF v_username_base = '' THEN
+    v_username_base := LOWER(REGEXP_REPLACE(v_team_name, '[^a-zA-Z0-9._]+', '', 'g'));
+  END IF;
+  IF v_username_base = '' THEN
+    v_username_base := CONCAT('team', SUBSTRING(REPLACE(NEW.id::text, '-', ''), 1, 8));
+  END IF;
+
+  v_username := v_username_base;
+  WHILE EXISTS (SELECT 1 FROM public.teams WHERE LOWER(username) = LOWER(v_username)) LOOP
+    v_suffix := v_suffix + 1;
+    v_username := CONCAT(LEFT(v_username_base, GREATEST(1, 20 - LENGTH(v_suffix::text))), v_suffix::text);
+  END LOOP;
+
+  INSERT INTO public.teams (user_id, name, username, league)
+  VALUES (NEW.id, v_team_name, v_username, '');
   RETURN NEW;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
@@ -227,18 +286,4 @@ CREATE TRIGGER update_teams_updated_at
   FOR EACH ROW
   EXECUTE FUNCTION update_updated_at_column();
 
--- Function to get user email by team name (for login)
-CREATE OR REPLACE FUNCTION get_user_email_by_team_name(team_name TEXT)
-RETURNS TEXT AS $$
-DECLARE
-  user_email TEXT;
-BEGIN
-  SELECT au.email INTO user_email
-  FROM teams t
-  JOIN auth.users au ON t.user_id = au.id
-  WHERE t.name = team_name
-  LIMIT 1;
-  
-  RETURN user_email;
-END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+-- Team-name email lookup has been deprecated for security reasons.

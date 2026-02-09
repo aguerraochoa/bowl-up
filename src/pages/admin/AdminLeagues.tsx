@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { getAllLeaguesWithDetails, createLeague, updateLeague, deleteLeague, startNewLeagueSeason, getTeamsByLeague } from '../../utils/adminStorage';
-import type { LeagueDetails } from '../../utils/adminStorage';
+import type { LeagueDetails, AdminTeam } from '../../utils/adminStorage';
 import { Plus, Edit2, Trash2, Calendar, Users, X } from 'lucide-react';
 
 interface AdminLeaguesProps {
@@ -9,6 +9,7 @@ interface AdminLeaguesProps {
 }
 
 export default function AdminLeagues({ onNavigate: _onNavigate }: AdminLeaguesProps) {
+  void _onNavigate;
   const [leagues, setLeagues] = useState<LeagueDetails[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -19,7 +20,7 @@ export default function AdminLeagues({ onNavigate: _onNavigate }: AdminLeaguesPr
   const [selectedLeague, setSelectedLeague] = useState<LeagueDetails | null>(null);
   const [leagueName, setLeagueName] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
-  const [teamsInLeague, setTeamsInLeague] = useState<any[]>([]);
+  const [teamsInLeague, setTeamsInLeague] = useState<AdminTeam[]>([]);
   const [loadingTeams, setLoadingTeams] = useState(false);
   const [isClosingCreate, setIsClosingCreate] = useState(false);
   const [isClosingEdit, setIsClosingEdit] = useState(false);

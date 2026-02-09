@@ -1,9 +1,10 @@
 import { useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { Eye, EyeOff } from 'lucide-react';
+import { t } from '../i18n';
 
 export default function Login() {
-  const [identifier, setIdentifier] = useState(''); // email or team name
+  const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
@@ -15,37 +16,36 @@ export default function Login() {
     setLoading(true);
 
     try {
-      let email = identifier;
+      let emailForLogin = identifier.trim().toLowerCase();
 
-      // Check if identifier is a team name (not an email)
-      if (!identifier.includes('@')) {
-        // Use database function to get user email by team name
-        const { data: userEmail, error: emailError } = await supabase.rpc('get_user_email_by_team_name', {
-          team_name: identifier
+      if (!emailForLogin.includes('@')) {
+        const { data: resolvedEmail, error: resolverError } = await supabase.rpc('get_user_email_by_username', {
+          p_username: emailForLogin,
         });
 
-        if (emailError || !userEmail) {
-          setError('Team name not found');
+        if (resolverError) {
+          setError(t('login.invalidCredentials'));
           setLoading(false);
           return;
         }
 
-        email = userEmail;
+        emailForLogin = resolvedEmail || `unknown+${emailForLogin}@invalid.local`;
       }
 
       // Sign in with email and password
       const { error: signInError } = await supabase.auth.signInWithPassword({
-        email,
+        email: emailForLogin,
         password,
       });
 
       if (signInError) {
-        setError(signInError.message);
+        setError(t('login.invalidCredentials'));
       } else {
-        window.location.href = '/';
+        window.history.pushState({}, '', '/');
+        window.dispatchEvent(new PopStateEvent('popstate'));
       }
-    } catch (err) {
-      setError('An error occurred. Please try again.');
+    } catch {
+      setError(t('login.invalidCredentials'));
     } finally {
       setLoading(false);
     }
@@ -62,21 +62,21 @@ export default function Login() {
           <form onSubmit={handleLogin} className="space-y-4">
             <div>
               <label className="block text-sm font-black text-black mb-2 uppercase">
-                Email or Team Name
+                {t('login.emailOrUsername')}
               </label>
               <input
                 type="text"
                 value={identifier}
                 onChange={(e) => setIdentifier(e.target.value)}
                 className="w-full px-4 py-3 h-[56px] rounded-none border-4 border-black focus:outline-none font-bold bg-white"
-                placeholder="Enter email or team name"
+                placeholder={t('login.enterEmailOrUsername')}
                 required
               />
             </div>
 
             <div>
               <label className="block text-sm font-black text-black mb-2 uppercase">
-                Password
+                {t('login.password')}
               </label>
               <div className="relative">
                 <input
@@ -84,7 +84,7 @@ export default function Login() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   className="w-full px-4 py-3 pr-12 h-[56px] rounded-none border-4 border-black focus:outline-none font-bold bg-white"
-                  placeholder="Enter password"
+                  placeholder={t('login.enterPassword')}
                   required
                 />
                 <button
@@ -109,18 +109,18 @@ export default function Login() {
               disabled={loading}
               className="w-full bg-orange-500 border-4 border-black text-black py-4 rounded-none font-black hover:bg-orange-600 disabled:bg-gray-300 disabled:cursor-not-allowed transition-all"
             >
-              {loading ? 'Signing in...' : 'Sign In'}
+              {loading ? t('login.signingIn') : t('login.signIn')}
             </button>
           </form>
 
           <div className="mt-6 space-y-2 text-center">
             <p className="text-sm text-black font-bold">
-              Don't have an account?{' '}
+              {t('login.noAccount')}{' '}
               <a
                 href="/signup"
                 className="text-orange-500 font-black hover:underline"
               >
-                Sign up
+                {t('login.signUp')}
               </a>
             </p>
             <p className="text-sm text-black font-bold">

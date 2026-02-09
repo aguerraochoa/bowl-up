@@ -2,9 +2,16 @@ import { useState, useEffect } from 'react';
 import { getPlayers, addGame, getGames, removeGame, removeGamesBySession } from '../utils/storage';
 import { validateGame, validateTenthFrame } from '../utils/scoring';
 import { t, getLanguage } from '../i18n';
-import { useSeason } from '../contexts/SeasonContext';
+import { useSeason } from '../contexts/useSeason';
 import type { Player, Game } from '../types';
 import { Check, X, ArrowRight, ArrowLeft, Loader2, Trash2, Clock, Eraser, ChevronDown, ChevronUp } from 'lucide-react';
+
+const EMPTY_GAME: Partial<Game> = {
+  totalScore: undefined,
+  strikesFrames1to9: 0,
+  sparesFrames1to9: 0,
+  tenthFrame: '',
+};
 
 export default function AddGame() {
   const { currentSeason } = useSeason();
@@ -13,12 +20,7 @@ export default function AddGame() {
   const [currentStep, setCurrentStep] = useState(0); // 0 = select players, 1 = enter scores, 2 = review
   const [currentPlayerIndex, setCurrentPlayerIndex] = useState(0);
   const [gameData, setGameData] = useState<Partial<Game>[]>([]);
-  const [currentGame, setCurrentGame] = useState<Partial<Game>>({
-    totalScore: undefined,
-    strikesFrames1to9: 0,
-    sparesFrames1to9: 0,
-    tenthFrame: '',
-  });
+  const [currentGame, setCurrentGame] = useState<Partial<Game>>(EMPTY_GAME);
   const [error, setError] = useState<string>('');
   const [tenthFrameError, setTenthFrameError] = useState<string>('');
   const [isSaving, setIsSaving] = useState(false);
@@ -47,46 +49,15 @@ export default function AddGame() {
   // Force re-render when language changes
   void currentLang;
 
-  const STORAGE_KEY = 'bowlup_add_game_state';
-
-  // Load saved state on mount
-  useEffect(() => {
-    const savedState = localStorage.getItem(STORAGE_KEY);
-    if (savedState) {
-      try {
-        const parsed = JSON.parse(savedState);
-        if (parsed.selectedPlayers && Array.isArray(parsed.selectedPlayers) && parsed.selectedPlayers.length > 0) {
-          setSelectedPlayers(parsed.selectedPlayers);
-          if (parsed.currentStep !== undefined) setCurrentStep(parsed.currentStep);
-          if (parsed.currentPlayerIndex !== undefined) setCurrentPlayerIndex(parsed.currentPlayerIndex);
-          if (parsed.gameData) setGameData(parsed.gameData);
-          if (parsed.currentGame) setCurrentGame(parsed.currentGame);
-        }
-      } catch (e) {
-        console.error('Failed to load saved state', e);
-      }
-    }
-  }, []);
-
-  // Save state to localStorage changes
-  useEffect(() => {
-    if (selectedPlayers.length === 0 && currentStep === 0) {
-      // Don't save empty state if we are at the beginning
-      // But if we just cleared, we might want to clear storage? 
-      // Actually handleClearSelection handles the explicit clear.
-      // If we differ from empty, save.
-      return;
-    }
-
-    const stateToSave = {
-      selectedPlayers,
-      currentStep,
-      currentPlayerIndex,
-      gameData,
-      currentGame
-    };
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(stateToSave));
-  }, [selectedPlayers, currentStep, currentPlayerIndex, gameData, currentGame]);
+  const resetDraftState = () => {
+    setCurrentStep(0);
+    setSelectedPlayers([]);
+    setCurrentPlayerIndex(0);
+    setGameData([]);
+    setCurrentGame(EMPTY_GAME);
+    setError('');
+    setTenthFrameError('');
+  };
 
   useEffect(() => {
     const loadData = async () => {
@@ -124,9 +95,7 @@ export default function AddGame() {
   };
 
   const handleClearSelection = () => {
-    setSelectedPlayers([]);
-    setError('');
-    localStorage.removeItem(STORAGE_KEY);
+    resetDraftState();
   };
 
   const handleStartGame = () => {
@@ -219,12 +188,7 @@ export default function AddGame() {
     // Move to next player or finish
     if (currentPlayerIndex < playersList.length - 1) {
       setCurrentPlayerIndex(prev => prev + 1);
-      setCurrentGame({
-        totalScore: undefined,
-        strikesFrames1to9: 0,
-        sparesFrames1to9: 0,
-        tenthFrame: '',
-      });
+      setCurrentGame(EMPTY_GAME);
       setError('');
       setTenthFrameError('');
       // Scroll to top when moving to next player (after state update)
@@ -301,12 +265,7 @@ export default function AddGame() {
   const handleBack = () => {
     if (currentPlayerIndex > 0) {
       const prevIndex = currentPlayerIndex - 1;
-      const prevGame = gameData[prevIndex] || {
-        totalScore: undefined,
-        strikesFrames1to9: 0,
-        sparesFrames1to9: 0,
-        tenthFrame: '',
-      };
+      const prevGame = gameData[prevIndex] || EMPTY_GAME;
       setCurrentPlayerIndex(prevIndex);
       setCurrentGame(prevGame);
       setError('');
@@ -326,12 +285,7 @@ export default function AddGame() {
     } else if (currentStep === 2) {
       setCurrentStep(1); // Go back from review to last player's score entry
       const lastIndex = getSelectedPlayersList().length - 1;
-      const lastGame = gameData[lastIndex] || {
-        totalScore: undefined,
-        strikesFrames1to9: 0,
-        sparesFrames1to9: 0,
-        tenthFrame: '',
-      };
+      const lastGame = gameData[lastIndex] || EMPTY_GAME;
       setCurrentPlayerIndex(lastIndex);
       setCurrentGame(lastGame);
       setError('');
@@ -351,6 +305,8 @@ export default function AddGame() {
       }, 0);
     } else if (currentStep === 1 && currentPlayerIndex === 0) {
       setCurrentStep(0);
+      setError('');
+      setTenthFrameError('');
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
   };
@@ -384,21 +340,11 @@ export default function AddGame() {
       }
 
       // Reset
-      setCurrentStep(0);
-      setSelectedPlayers([]);
-      setCurrentPlayerIndex(0);
-      setGameData([]);
-      setCurrentGame({
-        totalScore: undefined,
-        strikesFrames1to9: 0,
-        sparesFrames1to9: 0,
-        tenthFrame: '',
-      });
+      resetDraftState();
       alert(t('common.success'));
       // Reload games to show the new ones
       const loadedGames = await getGames();
       setGames(loadedGames);
-      localStorage.removeItem(STORAGE_KEY);
     } catch (error) {
       console.error('Error saving games:', error);
       alert('Error saving games. Please try again.');
@@ -455,7 +401,27 @@ export default function AddGame() {
 
   const selectedPlayersList = getSelectedPlayersList();
   const currentPlayer = selectedPlayersList[currentPlayerIndex];
+  const isFirstPlayer = currentPlayerIndex === 0;
   const isLastPlayer = currentPlayerIndex === selectedPlayersList.length - 1;
+  const renderScoreNavigation = () => (
+    <div className="flex gap-2 sm:gap-3">
+      <button
+        onClick={handleBack}
+        className="flex-1 bg-amber-400 border-4 border-black text-black py-2 sm:py-2 md:py-1.5 rounded-none font-black flex items-center justify-center gap-2 text-sm sm:text-sm md:text-xs"
+      >
+        <ArrowLeft className="w-4 h-4 sm:w-4 md:w-3.5" />
+        <span>{isFirstPlayer ? t('addGame.backToPlayerSelection') : t('addGame.previous')}</span>
+      </button>
+      <button
+        onClick={handleNext}
+        disabled={!isCurrentGameValid()}
+        className="flex-1 bg-orange-500 border-4 border-black text-black py-2 sm:py-2 md:py-1.5 rounded-none font-black flex items-center justify-center gap-2 text-sm sm:text-sm md:text-xs disabled:bg-gray-300 disabled:cursor-not-allowed disabled:opacity-70"
+      >
+        <span className="hidden sm:inline">{isLastPlayer ? t('addGame.review') : t('addGame.next')}</span>
+        <ArrowRight className="w-4 h-4 sm:w-4 md:w-3.5" />
+      </button>
+    </div>
+  );
 
 
   // Show loading state first
@@ -616,14 +582,14 @@ export default function AddGame() {
                         });
 
                         // Sort sessions by created_at (newest first) - use the most recent game's created_at in the session
-                        const sessions = Array.from(gamesBySession.entries()).sort(([_, gamesA], [__, gamesB]) => {
+                        const sessions = Array.from(gamesBySession.entries()).sort(([, gamesA], [, gamesB]) => {
                           // Get the most recent created_at from each session
                           const createdA = gamesA.reduce((latest, game) => {
-                            const gameCreated = (game as any).created_at || '';
+                            const gameCreated = game.created_at || '';
                             return gameCreated > latest ? gameCreated : latest;
                           }, '');
                           const createdB = gamesB.reduce((latest, game) => {
-                            const gameCreated = (game as any).created_at || '';
+                            const gameCreated = game.created_at || '';
                             return gameCreated > latest ? gameCreated : latest;
                           }, '');
                           return new Date(createdB).getTime() - new Date(createdA).getTime();
@@ -631,8 +597,8 @@ export default function AddGame() {
 
                         // Sort individual games without session by created_at (newest first)
                         const sortedGamesWithoutSession = gamesWithoutSession.sort((a, b) => {
-                          const createdA = (a as any).created_at || a.date;
-                          const createdB = (b as any).created_at || b.date;
+                          const createdA = a.created_at || a.date;
+                          const createdB = b.created_at || b.date;
                           return new Date(createdB).getTime() - new Date(createdA).getTime();
                         });
 
@@ -850,6 +816,10 @@ export default function AddGame() {
               style={{ width: `${((currentPlayerIndex + 1) / selectedPlayersList.length) * 100}%` }}
             />
           </div>
+        </div>
+
+        <div className="mb-4 sm:mb-6">
+          {renderScoreNavigation()}
         </div>
 
         {/* Current Player */}
@@ -1113,23 +1083,7 @@ export default function AddGame() {
           )}
 
           {/* Navigation */}
-          <div className="flex gap-2 sm:gap-3">
-            <button
-              onClick={handleBack}
-              className="flex-1 bg-amber-400 border-4 border-black text-black py-2 sm:py-2 md:py-1.5 rounded-none font-black flex items-center justify-center gap-2 text-sm sm:text-sm md:text-xs"
-            >
-              <ArrowLeft className="w-4 h-4 sm:w-4 md:w-3.5" />
-              <span className="hidden sm:inline">{t('addGame.previous')}</span>
-            </button>
-            <button
-              onClick={handleNext}
-              disabled={!isCurrentGameValid()}
-              className="flex-1 bg-orange-500 border-4 border-black text-black py-2 sm:py-2 md:py-1.5 rounded-none font-black flex items-center justify-center gap-2 text-sm sm:text-sm md:text-xs disabled:bg-gray-300 disabled:cursor-not-allowed disabled:opacity-70"
-            >
-              <span className="hidden sm:inline">{isLastPlayer ? t('addGame.review') : t('addGame.next')}</span>
-              <ArrowRight className="w-4 h-4 sm:w-4 md:w-3.5" />
-            </button>
-          </div>
+          {renderScoreNavigation()}
         </div>
       </div>
     </div>

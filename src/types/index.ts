@@ -36,6 +36,7 @@ export interface Debt {
   gameCounts?: Record<string, number>; // playerId -> game count (for games split)
   customAmounts?: Record<string, number>; // playerId -> amount (for custom split)
   date: string;
+  created_at?: string; // Timestamp for precise ordering when date is the same
 }
 
 export interface DebtTag {
@@ -53,6 +54,7 @@ export interface League {
 export interface Team {
   id: string;
   name: string;
+  username: string;
   league: string;
   leagueId?: string;
   currentSeason: string; // e.g., "Season 1", "Season 2"

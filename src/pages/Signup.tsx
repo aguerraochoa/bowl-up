@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-import { createTeam, getAllLeagues } from '../utils/storage';
+import { getAllLeagues } from '../utils/storage';
 import { t } from '../i18n';
 import type { League } from '../types';
 import { Eye, EyeOff } from 'lucide-react';
@@ -8,6 +8,7 @@ import { Eye, EyeOff } from 'lucide-react';
 export default function Signup() {
   const [email, setEmail] = useState('');
   const [teamName, setTeamName] = useState('');
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -17,6 +18,20 @@ export default function Signup() {
   const [loadingLeagues, setLoadingLeagues] = useState(true);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [usernameTouched, setUsernameTouched] = useState(false);
+  const isValidUsername = (value: string): boolean => /^[a-z0-9._]{3,20}$/.test(value);
+
+  useEffect(() => {
+    if (usernameTouched) return;
+
+    const suggestion = teamName
+      .toLowerCase()
+      .trim()
+      .replace(/[^a-z0-9._]+/g, '')
+      .slice(0, 20);
+
+    setUsername(suggestion);
+  }, [teamName, usernameTouched]);
 
   useEffect(() => {
     const loadLeagues = async () => {
@@ -46,6 +61,12 @@ export default function Signup() {
       return;
     }
 
+    const normalizedUsername = username.trim().toLowerCase();
+    if (!isValidUsername(normalizedUsername)) {
+      setError(t('signup.usernameInvalid'));
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -55,6 +76,11 @@ export default function Signup() {
         password,
         options: {
           emailRedirectTo: `${window.location.origin}/`,
+          data: {
+            team_name: teamName.trim(),
+            league_id: selectedLeagueId ?? null,
+            username: normalizedUsername,
+          },
         },
       });
 
@@ -70,49 +96,13 @@ export default function Signup() {
         return;
       }
 
-      // Wait for session to be established (important for RLS policies)
-      // Try to get session, with a small delay if needed
-      let sessionEstablished = false;
-      for (let i = 0; i < 5; i++) {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (session) {
-          sessionEstablished = true;
-          break;
-        }
-        // Wait 100ms before retrying
-        await new Promise(resolve => setTimeout(resolve, 100));
-      }
-
-      if (!sessionEstablished) {
-        // If session not established, try using userId directly
-        // This might work if RLS allows it
-        try {
-          await createTeam(teamName, selectedLeagueId || null, data.user.id);
-        } catch (teamError) {
-          console.error('Error creating team:', teamError);
-          setError(t('signup.errorCreatingTeam'));
-          setLoading(false);
-          return;
-        }
-      } else {
-        // Session is established, use normal flow
-        try {
-          await createTeam(teamName, selectedLeagueId || null);
-        } catch (teamError) {
-          console.error('Error creating team:', teamError);
-          setError(t('signup.errorCreatingTeam'));
-          setLoading(false);
-          return;
-        }
-      }
-
       // Check if email confirmation is required
-      if (data.user.email_confirmed_at) {
+      if (data.user.email_confirmed_at || data.session) {
         window.location.href = '/';
       } else {
         setError('Please check your email to confirm your account');
       }
-    } catch (err) {
+    } catch {
       setError('An error occurred. Please try again.');
     } finally {
       setLoading(false);
@@ -154,6 +144,24 @@ export default function Signup() {
                 placeholder={t('signup.enterTeamName')}
                 required
               />
+            </div>
+
+            <div>
+              <label className="block text-sm font-black text-black mb-2 uppercase">
+                {t('signup.username')}
+              </label>
+              <input
+                type="text"
+                value={username}
+                onChange={(e) => {
+                  setUsernameTouched(true);
+                  setUsername(e.target.value.toLowerCase());
+                }}
+                className="w-full px-4 py-3 h-[56px] rounded-none border-4 border-black focus:outline-none font-bold bg-white"
+                placeholder={t('signup.enterUsername')}
+                required
+              />
+              <p className="text-xs text-black font-bold mt-2">{t('signup.usernameHelp')}</p>
             </div>
 
             <div>
@@ -233,7 +241,7 @@ export default function Signup() {
 
             <button
               type="submit"
-              disabled={loading || loadingLeagues}
+              disabled={loading || loadingLeagues || !isValidUsername(username.trim().toLowerCase())}
               className="w-full bg-orange-500 border-4 border-black text-black py-4 rounded-none font-black hover:bg-orange-600 disabled:bg-gray-300 disabled:cursor-not-allowed transition-all"
             >
               {loading ? t('signup.creatingAccount') : t('signup.createAccount')}

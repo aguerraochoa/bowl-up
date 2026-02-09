@@ -60,6 +60,27 @@ export interface AdminTeam {
   userId: string;
 }
 
+interface TeamsWithEmailRow {
+  id: string;
+  name: string;
+  email: string | null;
+  league_id: string | null;
+  league_name: string | null;
+  is_enabled: boolean | null;
+  created_at: string;
+  user_id: string;
+}
+
+interface TeamWithLeagueFallbackRow {
+  id: string;
+  name: string;
+  is_enabled: boolean | null;
+  created_at: string;
+  user_id: string;
+  league_id: string | null;
+  leagues: { name: string } | { name: string }[] | null;
+}
+
 export const getAllTeams = async (): Promise<AdminTeam[]> => {
   // First try the RPC function
   const { data: rpcData, error: rpcError } = await supabase
@@ -67,8 +88,13 @@ export const getAllTeams = async (): Promise<AdminTeam[]> => {
 
   if (rpcError) {
     console.error('Error fetching teams via RPC:', rpcError);
-    // Fallback to direct query if RPC function doesn't exist
-    console.log('Falling back to direct query...');
+    const missingFunction = rpcError.code === 'PGRST202' || rpcError.message?.includes('Could not find the function');
+    if (!missingFunction) {
+      throw rpcError;
+    }
+
+    // Fallback to direct query only if RPC function doesn't exist
+    console.log('get_teams_with_emails RPC not found; falling back to direct query.');
     const { data, error } = await supabase
       .from('teams')
       .select(`
@@ -90,19 +116,23 @@ export const getAllTeams = async (): Promise<AdminTeam[]> => {
     }
 
     // Map teams with email as 'N/A' (can't access auth.users without RPC)
-    return (data || []).map((team: any) => ({
+    const fallbackRows = (data || []) as TeamWithLeagueFallbackRow[];
+
+    return fallbackRows.map((team) => ({
       id: team.id,
       name: team.name,
       email: 'N/A', // Can't get email without RPC function
       leagueId: team.league_id,
-      leagueName: (team.leagues as any)?.name || null,
+      leagueName: Array.isArray(team.leagues) ? (team.leagues[0]?.name || null) : (team.leagues?.name || null),
       isEnabled: team.is_enabled ?? true,
       createdAt: team.created_at,
       userId: team.user_id,
     }));
   }
 
-  return (rpcData || []).map((team: any) => ({
+  const rpcRows = (rpcData || []) as TeamsWithEmailRow[];
+
+  return rpcRows.map((team) => ({
     id: team.id,
     name: team.name,
     email: team.email || 'No email',
@@ -337,7 +367,9 @@ export const getTeamsByLeague = async (leagueId: string): Promise<AdminTeam[]> =
     return [];
   }
 
-  return (data || []).map((team: any) => ({
+  const rows = (data || []) as TeamsWithEmailRow[];
+
+  return rows.map((team) => ({
     id: team.id,
     name: team.name,
     email: team.email || 'No email',

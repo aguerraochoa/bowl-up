@@ -54,7 +54,7 @@ export default function BetTracker() {
       await incrementBetTally(playerId);
       // Don't reload on success - trust the optimistic update
       // The cache is invalidated, so next time we load it will be fresh
-    } catch (error) {
+    } catch {
       // On error, revert to actual state from database
       const loadedTallies = await getBetTallies(true);
       setTallies(loadedTallies);
@@ -76,7 +76,7 @@ export default function BetTracker() {
       await decrementBetTally(playerId);
       // Don't reload on success - trust the optimistic update
       // The cache is invalidated, so next time we load it will be fresh
-    } catch (error) {
+    } catch {
       // On error, revert to actual state from database
       const loadedTallies = await getBetTallies(true);
       setTallies(loadedTallies);

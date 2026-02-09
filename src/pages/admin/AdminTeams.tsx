@@ -10,6 +10,7 @@ interface AdminTeamsProps {
 }
 
 export default function AdminTeams({ onNavigate: _onNavigate }: AdminTeamsProps) {
+  void _onNavigate;
   const [teams, setTeams] = useState<AdminTeam[]>([]);
   const [leagues, setLeagues] = useState<League[]>([]);
   const [loading, setLoading] = useState(true);

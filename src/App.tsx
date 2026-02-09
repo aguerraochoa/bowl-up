@@ -1,21 +1,20 @@
-import { useState, useEffect, lazy, Suspense } from 'react';
+import { useState, useEffect, useRef, lazy, Suspense } from 'react';
+import type { User } from '@supabase/supabase-js';
 import BottomNav from './components/BottomNav';
 import AdminBottomNav from './components/AdminBottomNav';
 import DisabledTeam from './components/DisabledTeam';
+import Dashboard from './pages/Dashboard';
+import AddGame from './pages/AddGame';
+import Players from './pages/Players';
+import Debts from './pages/Debts';
+import BetTracker from './pages/BetTracker';
+import Profile from './pages/Profile';
+import Login from './pages/Login';
+import Signup from './pages/Signup';
 import { supabase } from './lib/supabase';
 import { initializeDefaultData, clearCache, checkTeamEnabled } from './utils/storage';
 import { isUserAdmin } from './utils/adminStorage';
 import { SeasonProvider } from './contexts/SeasonContext';
-
-// Lazy load main pages
-const Dashboard = lazy(() => import('./pages/Dashboard'));
-const AddGame = lazy(() => import('./pages/AddGame'));
-const Players = lazy(() => import('./pages/Players'));
-const Debts = lazy(() => import('./pages/Debts'));
-const BetTracker = lazy(() => import('./pages/BetTracker'));
-const Profile = lazy(() => import('./pages/Profile'));
-const Login = lazy(() => import('./pages/Login'));
-const Signup = lazy(() => import('./pages/Signup'));
 
 // Lazy load admin pages
 const AdminLogin = lazy(() => import('./pages/admin/AdminLogin'));
@@ -29,6 +28,14 @@ const Designs = lazy(() => import('./pages/Designs'));
 const DebtsDesigns = lazy(() => import('./pages/DebtsDesigns'));
 const ColorPalettes = lazy(() => import('./pages/ColorPalettes'));
 
+function LoadingSpinner() {
+  return (
+    <div className="min-h-screen bg-orange-50 flex items-center justify-center">
+      <div className="text-black font-black text-xl">Loading...</div>
+    </div>
+  );
+}
+
 function App() {
   // Initialize activeTab from sessionStorage or default to 'dashboard'
   const [activeTab, setActiveTab] = useState(() => {
@@ -40,12 +47,12 @@ function App() {
     }
     return 'dashboard';
   });
-  const [user, setUser] = useState<any>(null);
+  const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
-  const [hasInitialized, setHasInitialized] = useState(false);
   const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
   const [teamEnabled, setTeamEnabled] = useState<boolean | null>(null);
   const [adminPage, setAdminPage] = useState<string>('dashboard');
+  const hasInitializedRef = useRef(false);
 
   // Save activeTab to sessionStorage whenever it changes
   useEffect(() => {
@@ -88,6 +95,7 @@ function App() {
         // No user - reset states
         setIsAdmin(null);
         setTeamEnabled(null);
+        hasInitializedRef.current = false;
       }
     }).catch((error) => {
       console.error('Error getting session:', error);
@@ -95,6 +103,7 @@ function App() {
       setUser(null);
       setIsAdmin(null);
       setTeamEnabled(null);
+      hasInitializedRef.current = false;
       setLoading(false);
     });
   }, []);
@@ -131,6 +140,7 @@ function App() {
         // User signed out - reset everything and stop checking
         setIsAdmin(null);
         setTeamEnabled(null);
+        hasInitializedRef.current = false;
         setLoading(false);
       }
     });
@@ -139,48 +149,47 @@ function App() {
   }, []);
 
   useEffect(() => {
-    if (!user) {
+    if (!user || hasInitializedRef.current) {
       return;
     }
 
-    // Only initialize once
-    if (!hasInitialized) {
-      // Initialize default data on first load
-      initializeDefaultData();
-      
-      // Handle routing only on initial mount
-      const handleRoute = () => {
-        const path = window.location.pathname;
-        if (path.startsWith('/admin')) {
-          const adminPath = path.replace('/admin', '').replace('/', '') || 'dashboard';
-          setAdminPage(adminPath === 'login' ? 'login' : adminPath || 'dashboard');
-        } else if (path === '/login') {
-          setActiveTab('login');
-        } else if (path === '/signup') {
-          setActiveTab('signup');
-        } else if (path === '/designs') {
-          setActiveTab('designs');
-        } else if (path === '/debts-designs') {
-          setActiveTab('debts-designs');
-        } else if (path === '/color') {
-          setActiveTab('color');
-        } else if (path === '/' || path === '') {
-          // Only set to dashboard if no saved tab exists
-          const savedTab = sessionStorage.getItem('activeTab');
-          if (savedTab && savedTab !== 'login' && savedTab !== 'signup') {
-            setActiveTab(savedTab);
-          } else {
-            setActiveTab('dashboard');
-          }
-        }
-      };
+    // Initialize default data on first load
+    initializeDefaultData();
 
-      handleRoute();
-      setHasInitialized(true);
-      window.addEventListener('popstate', handleRoute);
-      return () => window.removeEventListener('popstate', handleRoute);
-    }
-  }, [user, hasInitialized]);
+    // Handle routing only on initial mount
+    const handleRoute = () => {
+      const path = window.location.pathname;
+      if (path.startsWith('/admin')) {
+        const adminPath = path.replace('/admin', '').replace('/', '') || 'dashboard';
+        setAdminPage(adminPath === 'login' ? 'login' : adminPath || 'dashboard');
+      } else if (path === '/login' || path === '/signup') {
+        setActiveTab('dashboard');
+        window.history.replaceState({}, '', '/');
+      } else if (path === '/designs') {
+        setActiveTab('designs');
+      } else if (path === '/debts-designs') {
+        setActiveTab('debts-designs');
+      } else if (path === '/color') {
+        setActiveTab('color');
+      } else if (path === '/' || path === '') {
+        // Only set to dashboard if no saved tab exists
+        const savedTab = sessionStorage.getItem('activeTab');
+        if (savedTab && savedTab !== 'login' && savedTab !== 'signup') {
+          setActiveTab(savedTab);
+        } else {
+          setActiveTab('dashboard');
+        }
+      }
+    };
+
+    handleRoute();
+    hasInitializedRef.current = true;
+    window.addEventListener('popstate', handleRoute);
+    return () => {
+      window.removeEventListener('popstate', handleRoute);
+      hasInitializedRef.current = false;
+    };
+  }, [user]);
 
   const handleSignOut = async () => {
     await supabase.auth.signOut();
@@ -212,13 +221,6 @@ function App() {
     window.history.pushState({}, '', `/admin/${page}`);
   };
 
-  // Define LoadingSpinner component at the top level
-  const LoadingSpinner = () => (
-    <div className="min-h-screen bg-orange-50 flex items-center justify-center">
-      <div className="text-black font-black text-xl">Loading...</div>
-    </div>
-  );
-
   // Show login/signup if not authenticated
   // Only show loading if we're actually loading the session, not checking access
   if (loading) {
@@ -232,9 +234,9 @@ function App() {
       return <Suspense fallback={<LoadingSpinner />}><AdminLogin /></Suspense>;
     }
     if (activeTab === 'signup' || currentPath === '/signup') {
-      return <Suspense fallback={<LoadingSpinner />}><Signup /></Suspense>;
+      return <Signup />;
     }
-    return <Suspense fallback={<LoadingSpinner />}><Login /></Suspense>;
+    return <Login />;
   }
 
   // Check if we're on an admin path - if so, don't render normal user layout
@@ -293,23 +295,20 @@ function App() {
     return <LoadingSpinner />;
   }
 
-  // Empty fallback for main pages - they have their own loading states
-  const EmptyFallback = () => null;
-
   const renderContent = () => {
     switch (activeTab) {
       case 'dashboard':
-        return <Suspense fallback={<EmptyFallback />}><Dashboard /></Suspense>;
+        return <Dashboard />;
       case 'add-game':
-        return <Suspense fallback={<EmptyFallback />}><AddGame /></Suspense>;
+        return <AddGame />;
       case 'players':
-        return <Suspense fallback={<EmptyFallback />}><Players /></Suspense>;
+        return <Players />;
       case 'debts':
-        return <Suspense fallback={<EmptyFallback />}><Debts /></Suspense>;
+        return <Debts />;
       case 'bet-tracker':
-        return <Suspense fallback={<EmptyFallback />}><BetTracker /></Suspense>;
+        return <BetTracker />;
       case 'profile':
-        return <Suspense fallback={<EmptyFallback />}><Profile onSignOut={handleSignOut} /></Suspense>;
+        return <Profile onSignOut={handleSignOut} />;
       case 'designs':
         return <Suspense fallback={<LoadingSpinner />}><Designs /></Suspense>;
       case 'debts-designs':
@@ -317,7 +316,7 @@ function App() {
       case 'color':
         return <Suspense fallback={<LoadingSpinner />}><ColorPalettes /></Suspense>;
       default:
-        return <Suspense fallback={<EmptyFallback />}><Dashboard /></Suspense>;
+        return <Dashboard />;
     }
   };
 

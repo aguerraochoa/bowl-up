@@ -1,22 +1,15 @@
-import { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
+import { useState, useEffect, type ReactNode } from 'react';
 import { getCurrentSeason, getAvailableSeasons } from '../utils/storage';
-
-interface SeasonContextType {
-  currentSeason: string;
-  selectedSeason: string | 'ALL' | null; // null = current, string = specific season, 'ALL' = all seasons
-  availableSeasons: string[];
-  setSelectedSeason: (season: string | 'ALL' | null) => void;
-  isViewingAllSeasons: boolean;
-  isViewingPastSeason: boolean;
-  querySeason: string | null | undefined; // null = all seasons, undefined = current, string = specific
-  refreshSeasons: () => Promise<void>;
-}
-
-const SeasonContext = createContext<SeasonContextType | undefined>(undefined);
+import { SeasonContext } from './seasonContextValue';
 
 export function SeasonProvider({ children }: { children: ReactNode }) {
   const [currentSeason, setCurrentSeason] = useState<string>('Season 1');
-  const [selectedSeason, setSelectedSeasonState] = useState<string | 'ALL' | null>(null); // null = current season, string = specific season, 'ALL' = all seasons
+  const [selectedSeason, setSelectedSeasonState] = useState<string | 'ALL' | null>(() => {
+    const saved = localStorage.getItem('selectedSeason');
+    if (saved === 'ALL') return 'ALL';
+    if (saved) return saved;
+    return null;
+  }); // null = current season, string = specific season, 'ALL' = all seasons
   const [availableSeasons, setAvailableSeasons] = useState<string[]>(['Season 1']);
 
   const refreshSeasons = async () => {
@@ -33,7 +26,28 @@ export function SeasonProvider({ children }: { children: ReactNode }) {
   };
 
   useEffect(() => {
-    refreshSeasons();
+    let isMounted = true;
+
+    const initSeasons = async () => {
+      try {
+        const [season, seasons] = await Promise.all([
+          getCurrentSeason(),
+          getAvailableSeasons(),
+        ]);
+
+        if (!isMounted) return;
+        setCurrentSeason(season);
+        setAvailableSeasons(seasons);
+      } catch (error) {
+        console.error('Error refreshing seasons:', error);
+      }
+    };
+
+    void initSeasons();
+
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   const setSelectedSeason = (season: string | 'ALL' | null) => {
@@ -47,18 +61,6 @@ export function SeasonProvider({ children }: { children: ReactNode }) {
     }
     setSelectedSeasonState(season);
   };
-
-  // Load selected season from localStorage on mount
-  useEffect(() => {
-    const saved = localStorage.getItem('selectedSeason');
-    if (saved === 'ALL') {
-      setSelectedSeasonState('ALL');
-    } else if (saved) {
-      setSelectedSeasonState(saved);
-    } else {
-      setSelectedSeasonState(null); // Default to current season
-    }
-  }, []);
 
   // Determine which season to use for queries
   // If selectedSeason is 'ALL', it means "All Seasons"
@@ -86,12 +88,4 @@ export function SeasonProvider({ children }: { children: ReactNode }) {
       {children}
     </SeasonContext.Provider>
   );
-}
-
-export function useSeason() {
-  const context = useContext(SeasonContext);
-  if (context === undefined) {
-    throw new Error('useSeason must be used within a SeasonProvider');
-  }
-  return context;
 }

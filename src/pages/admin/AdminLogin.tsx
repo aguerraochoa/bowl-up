@@ -38,7 +38,7 @@ export default function AdminLogin() {
 
       // Redirect to admin dashboard
       window.location.href = '/admin/dashboard';
-    } catch (err) {
+    } catch {
       setError('An error occurred. Please try again.');
     } finally {
       setLoading(false);

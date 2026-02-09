@@ -291,6 +291,8 @@ export default function Debts() {
     return debt.customName || 'Unnamed Expense';
   };
 
+  const getDebtSortDate = (debt: Debt): string => debt.created_at || debt.date;
+
   const handleEditTag = (tag: DebtTag) => {
     setEditingTagId(tag.id);
     setNewTagName(tag.name);
@@ -440,8 +442,8 @@ export default function Debts() {
                   debts
                     .sort((a, b) => {
                       // Sort by created_at if available (newest first), otherwise by date
-                      const createdA = (a as any).created_at || a.date;
-                      const createdB = (b as any).created_at || b.date;
+                      const createdA = getDebtSortDate(a);
+                      const createdB = getDebtSortDate(b);
                       return new Date(createdB).getTime() - new Date(createdA).getTime();
                     })
                     .map(debt => (
@@ -667,8 +669,8 @@ export default function Debts() {
                   debts
                     .sort((a, b) => {
                       // Sort by created_at if available (newest first), otherwise by date
-                      const createdA = (a as any).created_at || a.date;
-                      const createdB = (b as any).created_at || b.date;
+                      const createdA = getDebtSortDate(a);
+                      const createdB = getDebtSortDate(b);
                       return new Date(createdB).getTime() - new Date(createdA).getTime();
                     })
                     .map(debt => (

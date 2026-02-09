@@ -136,7 +136,7 @@ export const validateTenthFrame = (notation: string): { valid: boolean; error?: 
   const normalized = notation.toUpperCase().trim();
   
   // Validate characters
-  const validChars = /^[X0-9\/\-]+$/i;
+  const validChars = /^[X0-9/-]+$/i;
   if (!validChars.test(normalized)) {
     return { valid: false, error: 'Invalid characters. Use X, 0-9, /, or -' };
   }

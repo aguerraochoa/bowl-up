@@ -3,11 +3,17 @@ import { translations } from './translations';
 type Language = 'es' | 'en';
 type TranslationKey = keyof typeof translations.es;
 
+declare global {
+  interface Window {
+    __INITIAL_LANGUAGE__?: Language;
+  }
+}
+
 // Initialize language IMMEDIATELY (synchronously, before React)
 let currentLanguage: Language = (() => {
   // Check window variable set by HTML script (if exists)
-  if (typeof window !== 'undefined' && (window as any).__INITIAL_LANGUAGE__) {
-    return (window as any).__INITIAL_LANGUAGE__ as Language;
+  if (typeof window !== 'undefined' && window.__INITIAL_LANGUAGE__) {
+    return window.__INITIAL_LANGUAGE__;
   }
   
   // Check localStorage for saved preference

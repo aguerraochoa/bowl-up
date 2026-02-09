@@ -4,15 +4,15 @@ import { cache } from '../utils/cache';
 import { calculatePlayerStatsFromData } from '../utils/stats';
 import { supabase } from '../lib/supabase';
 import { t, getLanguage } from '../i18n';
-import { useSeason } from '../contexts/SeasonContext';
-import type { Player, Stats } from '../types';
+import { useSeason } from '../contexts/useSeason';
+import type { Player, Stats, Game } from '../types';
 import { Plus, X, TrendingUp, TrendingDown, Target, Pencil, Check, Loader2, RotateCcw } from 'lucide-react';
 
 export default function Players() {
   const { querySeason, isViewingAllSeasons, isViewingPastSeason } = useSeason();
   const [players, setPlayers] = useState<Player[]>([]);
   const [playersStats, setPlayersStats] = useState<Record<string, Stats>>({});
-  const [allGames, setAllGames] = useState<any[]>([]); // Store games to avoid refetching
+  const [allGames, setAllGames] = useState<Game[]>([]); // Store games to avoid refetching
   const [selectedPlayer, setSelectedPlayer] = useState<Player | null>(null);
   const [playerStats, setPlayerStats] = useState<Stats | null>(null);
   const [isClosingStats, setIsClosingStats] = useState(false);
@@ -46,6 +46,14 @@ export default function Players() {
 
   // Force re-render when language changes
   void currentLang;
+
+  const getErrorMessage = (error: unknown): string | null => {
+    if (!error || typeof error !== 'object' || !('message' in error)) {
+      return null;
+    }
+    const { message } = error as { message?: unknown };
+    return typeof message === 'string' ? message : null;
+  };
 
   useEffect(() => {
     const loadPlayers = async () => {
@@ -89,7 +97,7 @@ export default function Players() {
       setIsLoading(false);
     };
     loadPlayers();
-  }, [querySeason, isViewingAllSeasons]); // Reload when season changes
+  }, [querySeason, isViewingAllSeasons, isViewingPastSeason]); // Reload when season changes
 
   useEffect(() => {
     if (selectedPlayer && allGames.length >= 0) {
@@ -197,10 +205,11 @@ export default function Players() {
           setSelectedPlayer(null);
           setPlayerStats(null);
         }
-      } catch (error: any) {
-        if (error.message === 'PLAYER_HAS_DEBTS') {
+      } catch (error: unknown) {
+        const message = getErrorMessage(error);
+        if (message === 'PLAYER_HAS_DEBTS') {
           alert(t('players.cannotDeleteHasDebts'));
-        } else if (error.message === 'PLAYER_HAS_BET_TALLY') {
+        } else if (message === 'PLAYER_HAS_BET_TALLY') {
           alert(t('players.cannotDeleteHasBetTally'));
         } else {
           alert(t('players.errorRemoving'));

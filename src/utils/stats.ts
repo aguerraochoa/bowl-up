@@ -168,7 +168,7 @@ export const getTopTeamSumGamesFromData = (games: Game[], limit: number = 5): Ar
     }
   });
   
-  const teamSumGames = Array.from(gamesBySession.entries()).map(([_sessionId, sessionGames]) => {
+  const teamSumGames = Array.from(gamesBySession.entries()).map(([, sessionGames]) => {
     // All games in this session are from the same team game
     // Include ALL games (even with null playerId) to preserve historical accuracy
     const totalSum = sessionGames.reduce((sum, g) => sum + g.totalScore, 0);

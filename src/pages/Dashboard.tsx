@@ -4,13 +4,13 @@ import LeaderboardCard from '../components/LeaderboardCard';
 import { calculateTeamStatsFromData, getTopIndividualGamesFromData, getTopTeamSumGamesFromData, getTopIndividualAveragesFromData, getTopTenthFrameAveragesFromData } from '../utils/stats';
 import { getPlayers, getGames } from '../utils/storage';
 import { t, getLanguage } from '../i18n';
-import { useSeason } from '../contexts/SeasonContext';
+import { useSeason } from '../contexts/useSeason';
 import { Target, Zap, Gamepad2, TrendingUp, X, Loader2 } from 'lucide-react';
-import type { Game } from '../types';
+import type { Game, Player } from '../types';
 
 export default function Dashboard() {
   const { querySeason, isViewingAllSeasons, selectedSeason, currentSeason } = useSeason();
-  const [players, setPlayers] = useState<any[]>([]);
+  const [players, setPlayers] = useState<Player[]>([]);
   const [teamStats, setTeamStats] = useState({
     teamGameAverage: 0,
     totalGames: 0,
@@ -44,62 +44,70 @@ export default function Dashboard() {
   // Force re-render when language changes
   void currentLang;
 
-  const refreshData = async (showLoading = false) => {
-    if (showLoading) {
-      setIsLoading(true);
-    }
-    
-    // Fetch data once - use querySeason from context
-    const [allGames, loadedPlayers] = await Promise.all([
-      getGames(false, querySeason),
-      getPlayers(),
-    ]);
-    
-    setPlayers(loadedPlayers);
-    
-    // Calculate all stats in parallel using the fetched data
-    const [
-      stats,
-      topGamesData,
-      teamSumsData,
-      averagesData,
-      tenthFrameAveragesData,
-    ] = await Promise.all([
-      calculateTeamStatsFromData(allGames),
-      getTopIndividualGamesFromData(allGames, loadedPlayers, 10),
-      getTopTeamSumGamesFromData(allGames, 5),
-      getTopIndividualAveragesFromData(allGames, loadedPlayers, 10),
-      getTopTenthFrameAveragesFromData(allGames, loadedPlayers, 10),
-    ]);
-    
-    setTeamStats(stats);
-    setTopGames(topGamesData.map(g => ({
-      playerName: g.playerName,
-      totalScore: g.totalScore,
-      date: g.date,
-    })));
-    setTopTeamSums(teamSumsData);
-    setTopAverages(averagesData.map(a => ({
-      playerName: a.playerName,
-      average: a.average,
-    })));
-    setTopTenthFrameAverages(tenthFrameAveragesData.map(a => ({
-      playerName: a.playerName,
-      average: a.average,
-    })));
-    
-    if (showLoading) {
-      setIsLoading(false);
-    }
-  };
-
   useEffect(() => {
-    // Initial load with loading state
-    refreshData(true);
+    let isMounted = true;
+
+    const loadData = async (showLoading: boolean) => {
+      if (showLoading && isMounted) {
+        setIsLoading(true);
+      }
+
+      // Fetch data once - use querySeason from context
+      const [allGames, loadedPlayers] = await Promise.all([
+        getGames(false, querySeason),
+        getPlayers(),
+      ]);
+
+      if (!isMounted) return;
+      setPlayers(loadedPlayers);
+
+      // Calculate all stats in parallel using the fetched data
+      const [
+        stats,
+        topGamesData,
+        teamSumsData,
+        averagesData,
+        tenthFrameAveragesData,
+      ] = await Promise.all([
+        calculateTeamStatsFromData(allGames),
+        getTopIndividualGamesFromData(allGames, loadedPlayers, 10),
+        getTopTeamSumGamesFromData(allGames, 5),
+        getTopIndividualAveragesFromData(allGames, loadedPlayers, 10),
+        getTopTenthFrameAveragesFromData(allGames, loadedPlayers, 10),
+      ]);
+
+      if (!isMounted) return;
+      setTeamStats(stats);
+      setTopGames(topGamesData.map(g => ({
+        playerName: g.playerName,
+        totalScore: g.totalScore,
+        date: g.date,
+      })));
+      setTopTeamSums(teamSumsData);
+      setTopAverages(averagesData.map(a => ({
+        playerName: a.playerName,
+        average: a.average,
+      })));
+      setTopTenthFrameAverages(tenthFrameAveragesData.map(a => ({
+        playerName: a.playerName,
+        average: a.average,
+      })));
+
+      if (showLoading && isMounted) {
+        setIsLoading(false);
+      }
+    };
+
+    void loadData(true);
     // Refresh every 30 seconds to catch updates (Supabase is real-time, but keeping for safety)
-    // Don't show loading spinner on subsequent refreshes
-    const interval = setInterval(() => refreshData(false), 30000);
-    return () => clearInterval(interval);
+    const interval = window.setInterval(() => {
+      void loadData(false);
+    }, 30000);
+
+    return () => {
+      isMounted = false;
+      window.clearInterval(interval);
+    };
   }, [querySeason]); // Refresh when season changes
 
   // Prevent body scroll when modal is open
@@ -209,7 +217,7 @@ export default function Dashboard() {
                     // Get players with their scores, sorted by score (highest to lowest)
                     const playersWithScores = sum.players
                       .map(playerId => {
-                        const player = players.find((p: any) => p.id === playerId);
+                        const player = players.find((p) => p.id === playerId);
                         const game = sum.games.find(g => g.playerId === playerId);
                         if (!player || !game) return null;
                         return {
@@ -331,7 +339,7 @@ export default function Dashboard() {
                 // Get players with their scores, sorted by score (highest to lowest)
                 const playersWithScores = sum.players
                   .map(playerId => {
-                    const player = players.find((p: any) => p.id === playerId);
+                    const player = players.find((p) => p.id === playerId);
                     const game = sum.games.find(g => g.playerId === playerId);
                     if (!player || !game) return null;
                     return {
@@ -439,7 +447,7 @@ export default function Dashboard() {
                   {selectedTeamGame.games
                     .sort((a, b) => b.totalScore - a.totalScore)
                     .map((game, index) => {
-                      const player = players.find((p: any) => p.id === game.playerId);
+                      const player = players.find((p) => p.id === game.playerId);
                       return (
                         <div
                           key={game.id}

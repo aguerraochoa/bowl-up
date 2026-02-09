@@ -1,24 +1,26 @@
 import { useState, useEffect } from 'react';
-import { getTeam, saveTeam, startNewSeason } from '../utils/storage';
+import { getTeam, saveTeam, saveTeamUsername } from '../utils/storage';
 import { supabase } from '../lib/supabase';
 import { cache } from '../utils/cache';
 import { t, setLanguage, getLanguage } from '../i18n';
-import { useSeason } from '../contexts/SeasonContext';
+import { useSeason } from '../contexts/useSeason';
 import type { Team } from '../types';
-import { User, LogOut, Edit2, Check, X, Loader2, Globe, Calendar, Plus } from 'lucide-react';
+import { User, LogOut, Edit2, Check, X, Loader2, Globe, Calendar } from 'lucide-react';
 
 interface ProfileProps {
   onSignOut: () => void;
 }
 
 export default function Profile({ onSignOut }: ProfileProps) {
-  const { currentSeason, selectedSeason, availableSeasons, setSelectedSeason, isViewingAllSeasons, isViewingPastSeason, refreshSeasons } = useSeason();
+  const { currentSeason, selectedSeason, availableSeasons, setSelectedSeason, isViewingAllSeasons, isViewingPastSeason } = useSeason();
   const [team, setTeam] = useState<Team | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isEditingName, setIsEditingName] = useState(false);
   const [editedTeamName, setEditedTeamName] = useState('');
+  const [isEditingUsername, setIsEditingUsername] = useState(false);
+  const [editedUsername, setEditedUsername] = useState('');
   const [isSaving, setIsSaving] = useState(false);
-  const [isStartingSeason, setIsStartingSeason] = useState(false);
+  const [isSavingUsername, setIsSavingUsername] = useState(false);
   const [error, setError] = useState<string>('');
   const [currentLang, setCurrentLang] = useState<'es' | 'en'>(() => getLanguage());
 
@@ -43,6 +45,7 @@ export default function Profile({ onSignOut }: ProfileProps) {
         setTeam(teamData);
         if (teamData) {
           setEditedTeamName(teamData.name);
+          setEditedUsername(teamData.username);
         }
       } catch (error) {
         console.error('Error loading team:', error);
@@ -66,6 +69,22 @@ export default function Profile({ onSignOut }: ProfileProps) {
     if (team) {
       setEditedTeamName(team.name);
       setIsEditingName(false);
+      setError('');
+    }
+  };
+
+  const handleStartUsernameEdit = () => {
+    if (team) {
+      setEditedUsername(team.username);
+      setIsEditingUsername(true);
+      setError('');
+    }
+  };
+
+  const handleCancelUsernameEdit = () => {
+    if (team) {
+      setEditedUsername(team.username);
+      setIsEditingUsername(false);
       setError('');
     }
   };
@@ -105,6 +124,43 @@ export default function Profile({ onSignOut }: ProfileProps) {
     }
   };
 
+  const isValidUsername = (value: string): boolean => /^[a-z0-9._]{3,20}$/.test(value);
+
+  const handleSaveUsername = async () => {
+    if (!team) return;
+
+    const normalized = editedUsername.trim().toLowerCase();
+    if (!isValidUsername(normalized)) {
+      setError(t('profile.usernameInvalid'));
+      return;
+    }
+
+    if (normalized === team.username) {
+      setIsEditingUsername(false);
+      return;
+    }
+
+    setIsSavingUsername(true);
+    setError('');
+    try {
+      await saveTeamUsername(normalized);
+      setTeam({ ...team, username: normalized });
+      setEditedUsername(normalized);
+      setIsEditingUsername(false);
+    } catch (error: unknown) {
+      const code = typeof error === 'object' && error !== null && 'code' in error
+        ? String((error as { code?: unknown }).code)
+        : '';
+      if (code === '23505') {
+        setError(t('profile.usernameTaken'));
+      } else {
+        setError(t('profile.errorSavingUsername'));
+      }
+    } finally {
+      setIsSavingUsername(false);
+    }
+  };
+
   const handleLanguageChange = (lang: 'es' | 'en') => {
     setLanguage(lang);
     setCurrentLang(lang);
@@ -120,28 +176,6 @@ export default function Profile({ onSignOut }: ProfileProps) {
       setSelectedSeason('ALL');
     } else {
       setSelectedSeason(season);
-    }
-  };
-
-  const handleStartNewSeason = async () => {
-    const confirmMessage = `${t('profile.confirmStartNewSeason')}\n\n${t('profile.startNewSeasonWarning')}`;
-    if (!confirm(confirmMessage)) {
-      return;
-    }
-
-    setIsStartingSeason(true);
-    setError('');
-
-    try {
-      await startNewSeason();
-      await refreshSeasons();
-      setSelectedSeason(null); // Reset to current season
-      alert(t('profile.seasonStarted'));
-    } catch (error) {
-      console.error('Error starting new season:', error);
-      setError(t('profile.errorStartingSeason'));
-    } finally {
-      setIsStartingSeason(false);
     }
   };
 
@@ -264,6 +298,77 @@ export default function Profile({ onSignOut }: ProfileProps) {
           )}
         </div>
 
+        {/* Username Section */}
+        <div className="bg-white rounded-none border-4 border-black p-4 sm:p-6 mb-4 sm:mb-6">
+          <div className="flex items-center gap-3 mb-4">
+            <User className="w-6 h-6 sm:w-8 sm:h-8 text-black" />
+            <h2 className="text-lg sm:text-xl lg:text-2xl font-black text-black uppercase">{t('profile.username')}</h2>
+          </div>
+
+          {isEditingUsername ? (
+            <div className="space-y-3">
+              <input
+                type="text"
+                value={editedUsername}
+                onChange={(e) => setEditedUsername(e.target.value.toLowerCase())}
+                className="w-full px-3 sm:px-4 py-2 sm:py-3 rounded-none border-4 border-black focus:outline-none font-bold bg-white text-base sm:text-lg"
+                placeholder={t('profile.usernamePlaceholder')}
+                autoFocus
+                onKeyPress={(e) => {
+                  if (e.key === 'Enter') {
+                    void handleSaveUsername();
+                  } else if (e.key === 'Escape') {
+                    handleCancelUsernameEdit();
+                  }
+                }}
+              />
+              <p className="text-xs sm:text-sm text-black font-bold">{t('profile.usernameHelp')}</p>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => void handleSaveUsername()}
+                  disabled={isSavingUsername || !isValidUsername(editedUsername.trim().toLowerCase())}
+                  className="flex-1 bg-lime-500 border-4 border-black text-black py-2 sm:py-2 md:py-1.5 rounded-none font-black flex items-center justify-center gap-2 disabled:bg-gray-300 disabled:cursor-not-allowed disabled:opacity-70 text-sm sm:text-sm md:text-xs"
+                >
+                  {isSavingUsername ? (
+                    <>
+                      <Loader2 className="w-4 h-4 sm:w-4 md:w-3.5 animate-spin" />
+                      <span>{t('profile.saving')}</span>
+                    </>
+                  ) : (
+                    <>
+                      <Check className="w-4 h-4 sm:w-4 md:w-3.5" />
+                      <span>{t('profile.save')}</span>
+                    </>
+                  )}
+                </button>
+                <button
+                  onClick={handleCancelUsernameEdit}
+                  disabled={isSavingUsername}
+                  className="flex-1 bg-white border-4 border-black text-black py-2 sm:py-2 md:py-1.5 rounded-none font-black flex items-center justify-center gap-2 disabled:bg-gray-300 disabled:cursor-not-allowed disabled:opacity-70 text-sm sm:text-sm md:text-xs"
+                >
+                  <X className="w-4 h-4 sm:w-4 md:w-3.5" />
+                  <span>{t('profile.cancel')}</span>
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="flex items-center justify-between">
+              <div className="flex-1">
+                <p className="text-base sm:text-lg font-black text-black">@{team.username}</p>
+                <p className="text-xs sm:text-sm text-black font-bold mt-1">{t('profile.usernameHelp')}</p>
+              </div>
+              <button
+                onClick={handleStartUsernameEdit}
+                className="bg-orange-500 border-4 border-black text-black px-3 sm:px-3 md:px-2 py-2 sm:py-2 md:py-1.5 rounded-none font-black flex items-center gap-2 hover:bg-orange-600 transition-all text-sm sm:text-sm md:text-xs"
+                aria-label={t('profile.edit')}
+              >
+                <Edit2 className="w-4 h-4 sm:w-4 md:w-3.5" />
+                <span className="hidden sm:inline">{t('profile.edit')}</span>
+              </button>
+            </div>
+          )}
+        </div>
+
         {/* Language Section */}
         <div className="bg-white rounded-none border-4 border-black p-4 sm:p-6 mb-4 sm:mb-6">
           <div className="flex items-center gap-3 mb-4">
@@ -312,26 +417,9 @@ export default function Profile({ onSignOut }: ProfileProps) {
               </select>
             </div>
 
-            {/* Start New Season button - only show when viewing current season */}
-            {!isViewingPastSeason && !isViewingAllSeasons && (
-              <button
-                onClick={handleStartNewSeason}
-                disabled={isStartingSeason}
-                className="w-full bg-amber-400 border-4 border-black text-black py-2 sm:py-2 md:py-1.5 rounded-none font-black flex items-center justify-center gap-2 hover:bg-amber-500 transition-all disabled:bg-gray-300 disabled:cursor-not-allowed disabled:opacity-70 text-sm sm:text-sm md:text-xs"
-              >
-                {isStartingSeason ? (
-                  <>
-                    <Loader2 className="w-4 h-4 sm:w-4 md:w-3.5 animate-spin" />
-                    <span className="hidden sm:inline">{t('profile.saving')}</span>
-                  </>
-                ) : (
-                  <>
-                    <Plus className="w-4 h-4 sm:w-4 md:w-3.5" />
-                    <span className="hidden sm:inline">{t('profile.startNewSeason')}</span>
-                  </>
-                )}
-              </button>
-            )}
+            <div className="p-3 bg-amber-400 border-4 border-black rounded-none text-black text-sm font-bold">
+              {t('profile.seasonManagedByLeague')}
+            </div>
 
             {(isViewingPastSeason || isViewingAllSeasons) && (
               <div className="p-3 bg-yellow-300 border-4 border-black rounded-none text-black text-sm font-bold">
