@@ -1,7 +1,15 @@
 import { useEffect, useState } from 'react';
 import KPICard from '../components/KPICard';
 import LeaderboardCard from '../components/LeaderboardCard';
-import { calculateTeamStatsFromData, getTopIndividualGamesFromData, getTopTeamSumGamesFromData, getTopIndividualAveragesFromData, getTopTenthFrameAveragesFromData } from '../utils/stats';
+import {
+  calculateTeamStatsFromData,
+  getTopIndividualGamesFromData,
+  getTopTeamSumGamesFromData,
+  getTopIndividualAveragesFromData,
+  getTopTenthFrameAveragesFromData,
+  getTopStrikePercentagesFromData,
+  getTopSparePercentagesFromData,
+} from '../utils/stats';
 import { getPlayers, getGames } from '../utils/storage';
 import { t, getLanguage } from '../i18n';
 import { useSeason } from '../contexts/useSeason';
@@ -22,9 +30,13 @@ export default function Dashboard() {
   const [topTeamSums, setTopTeamSums] = useState<Array<{ date: string; totalSum: number; players: string[]; games: Game[] }>>([]);
   const [topAverages, setTopAverages] = useState<Array<{ playerName: string; average: number }>>([]);
   const [topTenthFrameAverages, setTopTenthFrameAverages] = useState<Array<{ playerName: string; average: number }>>([]);
+  const [topStrikeLeaders, setTopStrikeLeaders] = useState<Array<{ playerName: string; percentage: number; gamesPlayed: number }>>([]);
+  const [topSpareLeaders, setTopSpareLeaders] = useState<Array<{ playerName: string; percentage: number; gamesPlayed: number }>>([]);
   const [selectedTeamGame, setSelectedTeamGame] = useState<{ date: string; totalSum: number; games: Game[] } | null>(null);
   const [isClosingModal, setIsClosingModal] = useState(false);
   const [showMoreGames, setShowMoreGames] = useState(false);
+  const [showMoreStrikeLeaders, setShowMoreStrikeLeaders] = useState(false);
+  const [showMoreSpareLeaders, setShowMoreSpareLeaders] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [currentLang, setCurrentLang] = useState<'es' | 'en'>(() => getLanguage());
 
@@ -68,12 +80,16 @@ export default function Dashboard() {
         teamSumsData,
         averagesData,
         tenthFrameAveragesData,
+        strikeLeadersData,
+        spareLeadersData,
       ] = await Promise.all([
         calculateTeamStatsFromData(allGames),
         getTopIndividualGamesFromData(allGames, loadedPlayers, 10),
         getTopTeamSumGamesFromData(allGames, 5),
         getTopIndividualAveragesFromData(allGames, loadedPlayers, 10),
         getTopTenthFrameAveragesFromData(allGames, loadedPlayers, 10),
+        getTopStrikePercentagesFromData(allGames, loadedPlayers, 10),
+        getTopSparePercentagesFromData(allGames, loadedPlayers, 10),
       ]);
 
       if (!isMounted) return;
@@ -91,6 +107,16 @@ export default function Dashboard() {
       setTopTenthFrameAverages(tenthFrameAveragesData.map(a => ({
         playerName: a.playerName,
         average: a.average,
+      })));
+      setTopStrikeLeaders(strikeLeadersData.map((leader) => ({
+        playerName: leader.playerName,
+        percentage: leader.percentage,
+        gamesPlayed: leader.gamesPlayed,
+      })));
+      setTopSpareLeaders(spareLeadersData.map((leader) => ({
+        playerName: leader.playerName,
+        percentage: leader.percentage,
+        gamesPlayed: leader.gamesPlayed,
       })));
 
       if (showLoading && isMounted) {
@@ -278,6 +304,32 @@ export default function Dashboard() {
                   }))}
                   emptyMessage={t('dashboard.noTenthFrame')}
                 />
+                <LeaderboardCard
+                  title={`⚡ ${t('dashboard.topStrikeLeaders')}`}
+                  items={(showMoreStrikeLeaders ? topStrikeLeaders : topStrikeLeaders.slice(0, 5)).map((leader, index) => ({
+                    rank: index + 1,
+                    name: leader.playerName,
+                    value: `${leader.percentage.toFixed(1)}%`,
+                    subtitle: `${leader.gamesPlayed} ${t('dashboard.gamesLabel')}`,
+                  }))}
+                  emptyMessage={t('dashboard.noStrikeLeaders')}
+                  showMoreButton={!showMoreStrikeLeaders && topStrikeLeaders.length > 5}
+                  onShowMore={() => setShowMoreStrikeLeaders(true)}
+                  showMoreLabel={t('dashboard.showMore')}
+                />
+                <LeaderboardCard
+                  title={`🛡️ ${t('dashboard.topSpareLeaders')}`}
+                  items={(showMoreSpareLeaders ? topSpareLeaders : topSpareLeaders.slice(0, 5)).map((leader, index) => ({
+                    rank: index + 1,
+                    name: leader.playerName,
+                    value: `${leader.percentage.toFixed(1)}%`,
+                    subtitle: `${leader.gamesPlayed} ${t('dashboard.gamesLabel')}`,
+                  }))}
+                  emptyMessage={t('dashboard.noSpareLeaders')}
+                  showMoreButton={!showMoreSpareLeaders && topSpareLeaders.length > 5}
+                  onShowMore={() => setShowMoreSpareLeaders(true)}
+                  showMoreLabel={t('dashboard.showMore')}
+                />
               </div>
             </div>
           </div>
@@ -395,6 +447,34 @@ export default function Dashboard() {
                 subtitle: t('dashboard.clutchPerformance'),
               }))}
               emptyMessage={t('dashboard.noTenthFrame')}
+            />
+
+            <LeaderboardCard
+              title={`⚡ ${t('dashboard.topStrikeLeaders')}`}
+              items={(showMoreStrikeLeaders ? topStrikeLeaders : topStrikeLeaders.slice(0, 5)).map((leader, index) => ({
+                rank: index + 1,
+                name: leader.playerName,
+                value: `${leader.percentage.toFixed(1)}%`,
+                subtitle: `${leader.gamesPlayed} ${t('dashboard.gamesLabel')}`,
+              }))}
+              emptyMessage={t('dashboard.noStrikeLeaders')}
+              showMoreButton={!showMoreStrikeLeaders && topStrikeLeaders.length > 5}
+              onShowMore={() => setShowMoreStrikeLeaders(true)}
+              showMoreLabel={t('dashboard.showMore')}
+            />
+
+            <LeaderboardCard
+              title={`🛡️ ${t('dashboard.topSpareLeaders')}`}
+              items={(showMoreSpareLeaders ? topSpareLeaders : topSpareLeaders.slice(0, 5)).map((leader, index) => ({
+                rank: index + 1,
+                name: leader.playerName,
+                value: `${leader.percentage.toFixed(1)}%`,
+                subtitle: `${leader.gamesPlayed} ${t('dashboard.gamesLabel')}`,
+              }))}
+              emptyMessage={t('dashboard.noSpareLeaders')}
+              showMoreButton={!showMoreSpareLeaders && topSpareLeaders.length > 5}
+              onShowMore={() => setShowMoreSpareLeaders(true)}
+              showMoreLabel={t('dashboard.showMore')}
             />
           </div>
         </div>

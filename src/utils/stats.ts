@@ -255,3 +255,53 @@ export const getTopTenthFrameAverages = async (limit: number = 5): Promise<Array
   const games = await getGames();
   return getTopTenthFrameAveragesFromData(games, players, limit);
 };
+
+export const getTopStrikePercentagesFromData = (
+  games: Game[],
+  players: Player[],
+  limit: number = 10,
+): Array<{ playerId: string; playerName: string; percentage: number; gamesPlayed: number }> => {
+  const activePlayerGames = games.filter((g) => g.playerId !== null);
+
+  const rows = players
+    .map((player) => {
+      const playerGames = activePlayerGames.filter((g) => g.playerId === player.id);
+      if (playerGames.length === 0) return null;
+
+      const total = playerGames.reduce((sum, game) => sum + calculateStrikePercentage(game), 0);
+      return {
+        playerId: player.id,
+        playerName: player.name,
+        percentage: Math.round((total / playerGames.length) * 10) / 10,
+        gamesPlayed: playerGames.length,
+      };
+    })
+    .filter((row): row is { playerId: string; playerName: string; percentage: number; gamesPlayed: number } => row !== null);
+
+  return rows.sort((a, b) => b.percentage - a.percentage).slice(0, limit);
+};
+
+export const getTopSparePercentagesFromData = (
+  games: Game[],
+  players: Player[],
+  limit: number = 10,
+): Array<{ playerId: string; playerName: string; percentage: number; gamesPlayed: number }> => {
+  const activePlayerGames = games.filter((g) => g.playerId !== null);
+
+  const rows = players
+    .map((player) => {
+      const playerGames = activePlayerGames.filter((g) => g.playerId === player.id);
+      if (playerGames.length === 0) return null;
+
+      const total = playerGames.reduce((sum, game) => sum + calculateSparePercentage(game), 0);
+      return {
+        playerId: player.id,
+        playerName: player.name,
+        percentage: Math.round((total / playerGames.length) * 10) / 10,
+        gamesPlayed: playerGames.length,
+      };
+    })
+    .filter((row): row is { playerId: string; playerName: string; percentage: number; gamesPlayed: number } => row !== null);
+
+  return rows.sort((a, b) => b.percentage - a.percentage).slice(0, limit);
+};

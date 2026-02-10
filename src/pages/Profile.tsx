@@ -1,18 +1,19 @@
 import { useState, useEffect } from 'react';
-import { getTeam, saveTeam, saveTeamUsername } from '../utils/storage';
+import { getTeam, saveTeam, saveTeamUsername, getGames, getPlayers } from '../utils/storage';
+import { exportGamesCsv, exportPlayerStatsCsv } from '../utils/export';
 import { supabase } from '../lib/supabase';
 import { cache } from '../utils/cache';
 import { t, setLanguage, getLanguage } from '../i18n';
 import { useSeason } from '../contexts/useSeason';
 import type { Team } from '../types';
-import { User, LogOut, Edit2, Check, X, Loader2, Globe, Calendar } from 'lucide-react';
+import { User, LogOut, Edit2, Check, X, Loader2, Globe, Calendar, Download } from 'lucide-react';
 
 interface ProfileProps {
   onSignOut: () => void;
 }
 
 export default function Profile({ onSignOut }: ProfileProps) {
-  const { currentSeason, selectedSeason, availableSeasons, setSelectedSeason, isViewingAllSeasons, isViewingPastSeason } = useSeason();
+  const { currentSeason, selectedSeason, availableSeasons, setSelectedSeason, isViewingAllSeasons, isViewingPastSeason, querySeason } = useSeason();
   const [team, setTeam] = useState<Team | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isEditingName, setIsEditingName] = useState(false);
@@ -21,6 +22,8 @@ export default function Profile({ onSignOut }: ProfileProps) {
   const [editedUsername, setEditedUsername] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [isSavingUsername, setIsSavingUsername] = useState(false);
+  const [isExportingGames, setIsExportingGames] = useState(false);
+  const [isExportingStats, setIsExportingStats] = useState(false);
   const [error, setError] = useState<string>('');
   const [currentLang, setCurrentLang] = useState<'es' | 'en'>(() => getLanguage());
 
@@ -176,6 +179,32 @@ export default function Profile({ onSignOut }: ProfileProps) {
       setSelectedSeason('ALL');
     } else {
       setSelectedSeason(season);
+    }
+  };
+
+  const handleExportGames = async () => {
+    setIsExportingGames(true);
+    try {
+      const [games, players] = await Promise.all([
+        getGames(true, querySeason),
+        getPlayers(true),
+      ]);
+      exportGamesCsv(games, players, querySeason);
+    } finally {
+      setIsExportingGames(false);
+    }
+  };
+
+  const handleExportPlayerStats = async () => {
+    setIsExportingStats(true);
+    try {
+      const [games, players] = await Promise.all([
+        getGames(true, querySeason),
+        getPlayers(true),
+      ]);
+      exportPlayerStatsCsv(games, players.filter((player) => !player.deletedAt), querySeason);
+    } finally {
+      setIsExportingStats(false);
     }
   };
 
@@ -428,6 +457,33 @@ export default function Profile({ onSignOut }: ProfileProps) {
                   : `${selectedSeason} - ${t('profile.readOnly')}`}
               </div>
             )}
+          </div>
+        </div>
+
+        {/* Export Section */}
+        <div className="bg-white rounded-none border-4 border-black p-4 sm:p-6 mb-4 sm:mb-6">
+          <div className="flex items-center gap-3 mb-4">
+            <Download className="w-6 h-6 sm:w-8 sm:h-8 text-black" />
+            <h2 className="text-lg sm:text-xl lg:text-2xl font-black text-black uppercase">{t('profile.exportData')}</h2>
+          </div>
+          <p className="text-sm text-black font-bold mb-4">{t('profile.exportDataSubtitle')}</p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <button
+              onClick={() => void handleExportGames()}
+              disabled={isExportingGames}
+              className="bg-amber-400 border-4 border-black text-black py-3 px-4 rounded-none font-black hover:bg-amber-500 transition-all disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+            >
+              {isExportingGames ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
+              {t('profile.exportGamesCsv')}
+            </button>
+            <button
+              onClick={() => void handleExportPlayerStats()}
+              disabled={isExportingStats}
+              className="bg-orange-500 border-4 border-black text-black py-3 px-4 rounded-none font-black hover:bg-orange-600 transition-all disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+            >
+              {isExportingStats ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
+              {t('profile.exportPlayerStatsCsv')}
+            </button>
           </div>
         </div>
 

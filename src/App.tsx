@@ -9,6 +9,8 @@ import Players from './pages/Players';
 import Debts from './pages/Debts';
 import BetTracker from './pages/BetTracker';
 import Profile from './pages/Profile';
+import WeeklyReport from './pages/WeeklyReport';
+import HeadToHead from './pages/HeadToHead';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
 import { supabase } from './lib/supabase';
@@ -171,6 +173,10 @@ function App() {
         setActiveTab('debts-designs');
       } else if (path === '/color') {
         setActiveTab('color');
+      } else if (path === '/weekly-report') {
+        setActiveTab('weekly-report');
+      } else if (path === '/head-to-head') {
+        setActiveTab('head-to-head');
       } else if (path === '/' || path === '') {
         // Only set to dashboard if no saved tab exists
         const savedTab = sessionStorage.getItem('activeTab');
@@ -211,6 +217,10 @@ function App() {
       window.history.pushState({}, '', '/debts-designs');
     } else if (tab === 'color') {
       window.history.pushState({}, '', '/color');
+    } else if (tab === 'weekly-report') {
+      window.history.pushState({}, '', '/weekly-report');
+    } else if (tab === 'head-to-head') {
+      window.history.pushState({}, '', '/head-to-head');
     } else {
       window.history.pushState({}, '', '/');
     }
@@ -309,6 +319,10 @@ function App() {
         return <BetTracker />;
       case 'profile':
         return <Profile onSignOut={handleSignOut} />;
+      case 'weekly-report':
+        return <WeeklyReport />;
+      case 'head-to-head':
+        return <HeadToHead />;
       case 'designs':
         return <Suspense fallback={<LoadingSpinner />}><Designs /></Suspense>;
       case 'debts-designs':
