@@ -11,6 +11,39 @@ const formatDateLabel = (date: Date): string =>
   date.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
 
 const toDateOnly = (value: string): Date => new Date(`${value}T00:00:00`);
+const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
+
+const getWeekStartFromDate = (value: Date): Date => {
+  const date = new Date(value);
+  const day = date.getDay(); // 0 Sun -> 6 Sat
+  const diffToMonday = day === 0 ? -6 : 1 - day;
+  date.setDate(date.getDate() + diffToMonday);
+  date.setHours(0, 0, 0, 0);
+  return date;
+};
+
+const getInitialWeekOffset = (allGames: Game[]): number => {
+  const currentWeek = getWeekRange(0);
+  const hasCurrentWeekGames = allGames.some((game) => isInRange(toDateOnly(game.date), currentWeek.start, currentWeek.end));
+  if (hasCurrentWeekGames) return 0;
+
+  let latestWeekStart: Date | null = null;
+  allGames.forEach((game) => {
+    const gameDate = toDateOnly(game.date);
+    if (Number.isNaN(gameDate.getTime())) return;
+
+    const gameWeekStart = getWeekStartFromDate(gameDate);
+    if (gameWeekStart.getTime() > currentWeek.start.getTime()) return;
+
+    if (!latestWeekStart || gameWeekStart.getTime() > latestWeekStart.getTime()) {
+      latestWeekStart = gameWeekStart;
+    }
+  });
+
+  const selectedWeekStart = latestWeekStart ?? currentWeek.start;
+  const offset = Math.round((selectedWeekStart.getTime() - currentWeek.start.getTime()) / WEEK_MS);
+  return Math.min(0, offset);
+};
 
 const getWeekRange = (offset: number): { start: Date; end: Date } => {
   const now = new Date();
@@ -65,6 +98,7 @@ export default function WeeklyReport() {
       ]);
       setPlayers(loadedPlayers);
       setGames(loadedGames);
+      setWeekOffset(getInitialWeekOffset(loadedGames));
       setIsLoading(false);
     };
     void loadData();
@@ -148,7 +182,7 @@ export default function WeeklyReport() {
     return {
       week,
       weeklyGames,
-      hasPreviousWeekStats: previousGames.length > 0,
+      hasPreviousWeekStats: weeklyGames.length > 0 && previousGames.length > 0,
       weeklyTeamStats,
       previousWeekStats: previousTeamStats,
       bestSession,
@@ -517,7 +551,10 @@ export default function WeeklyReport() {
             ) : (
               <div className="space-y-3">
                 {report.topPlayers.map((player, index) => (
-                  <div key={player.id} className="bg-amber-400 border-4 border-black p-3 flex items-center justify-between">
+                  <div
+                    key={player.id}
+                    className={`${index === 0 ? 'bg-amber-400' : index === 1 ? 'bg-lime-500' : 'bg-orange-500'} border-4 border-black p-3 flex items-center justify-between`}
+                  >
                     <div>
                       <p className="font-black text-black">#{index + 1} {player.name}</p>
                       <p className="text-xs font-bold text-black">{player.games} {t('weeklyReport.gamesLabel')}</p>

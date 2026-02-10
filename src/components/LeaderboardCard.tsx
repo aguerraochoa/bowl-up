@@ -25,7 +25,7 @@ export default function LeaderboardCard({
 }: LeaderboardCardProps) {
   const getRankColor = (rank: number) => {
     if (rank === 1) return 'bg-amber-400 border-black text-black';
-    if (rank === 2) return 'bg-white border-black text-black';
+    if (rank === 2) return 'bg-lime-500 border-black text-black';
     if (rank === 3) return 'bg-orange-500 border-black text-black';
     return 'bg-white border-black text-black';
   };

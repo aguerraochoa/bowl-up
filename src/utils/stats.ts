@@ -2,9 +2,34 @@ import type { Game, Player, Stats } from '../types';
 import { getGames, getPlayers } from './storage';
 import { calculateStrikePercentage, calculateSparePercentage, parseTenthFrame } from './scoring';
 
+const TYPICAL_RANGE_WINDOW = 30;
+const MIN_GAMES_FOR_TYPICAL_RANGE = 10;
+
+const round1 = (value: number): number => Math.round(value * 10) / 10;
+
+const getPercentile = (sortedValues: number[], percentile: number): number => {
+  if (sortedValues.length === 0) return 0;
+  if (sortedValues.length === 1) return sortedValues[0];
+
+  const clamped = Math.min(Math.max(percentile, 0), 1);
+  const index = (sortedValues.length - 1) * clamped;
+  const lower = Math.floor(index);
+  const upper = Math.ceil(index);
+
+  if (lower === upper) return sortedValues[lower];
+  const weight = index - lower;
+  return sortedValues[lower] + ((sortedValues[upper] - sortedValues[lower]) * weight);
+};
+
 // Optimized version that accepts games data
 export const calculatePlayerStatsFromData = (playerId: string, games: Game[]): Stats => {
-  const playerGames = games.filter(g => g.playerId === playerId);
+  const playerGames = games
+    .filter(g => g.playerId === playerId)
+    .sort((a, b) => {
+      const aDate = a.created_at || a.date;
+      const bDate = b.created_at || b.date;
+      return new Date(aDate).getTime() - new Date(bDate).getTime();
+    });
   
   if (playerGames.length === 0) {
     return {
@@ -14,6 +39,11 @@ export const calculatePlayerStatsFromData = (playerId: string, games: Game[]): S
       sparePercentage: 0,
       floor: 0,
       ceiling: 0,
+      typicalLow: 0,
+      typicalHigh: 0,
+      consistencyRange: 0,
+      personalLow: 0,
+      personalBest: 0,
       recentAverage: 0,
       averageTenthFrame: 0,
       gamesAbove200: 0,
@@ -35,9 +65,19 @@ export const calculatePlayerStatsFromData = (playerId: string, games: Game[]): S
   const strikePercentage = playerGames.length > 0 ? totalStrikePct / playerGames.length : 0;
   const sparePercentage = playerGames.length > 0 ? totalSparePct / playerGames.length : 0;
   
-  // Floor and ceiling
+  // Personal extremes (all-time)
   const floor = Math.min(...scores);
   const ceiling = Math.max(...scores);
+  const personalLow = floor;
+  const personalBest = ceiling;
+
+  // Typical range (robust to outliers): P20/P80 over last N games
+  const rangeWindowGames = playerGames.slice(-TYPICAL_RANGE_WINDOW);
+  const rangeWindowScores = rangeWindowGames.map((g) => g.totalScore).sort((a, b) => a - b);
+  const usePercentileRange = rangeWindowScores.length >= MIN_GAMES_FOR_TYPICAL_RANGE;
+  const typicalLow = usePercentileRange ? getPercentile(rangeWindowScores, 0.2) : Math.min(...rangeWindowScores);
+  const typicalHigh = usePercentileRange ? getPercentile(rangeWindowScores, 0.8) : Math.max(...rangeWindowScores);
+  const consistencyRange = typicalHigh - typicalLow;
   
   // Recent average (last 10 games)
   const recentGames = playerGames.slice(-10);
@@ -58,15 +98,20 @@ export const calculatePlayerStatsFromData = (playerId: string, games: Game[]): S
   
   return {
     gamesPlayed: playerGames.length,
-    averageScore: Math.round(averageScore * 10) / 10,
-    strikePercentage: Math.round(strikePercentage * 10) / 10,
-    sparePercentage: Math.round(sparePercentage * 10) / 10,
+    averageScore: round1(averageScore),
+    strikePercentage: round1(strikePercentage),
+    sparePercentage: round1(sparePercentage),
     floor,
     ceiling,
-    recentAverage: Math.round(recentAverage * 10) / 10,
-    averageTenthFrame: Math.round(averageTenthFrame * 10) / 10,
+    typicalLow: round1(typicalLow),
+    typicalHigh: round1(typicalHigh),
+    consistencyRange: round1(consistencyRange),
+    personalLow,
+    personalBest,
+    recentAverage: round1(recentAverage),
+    averageTenthFrame: round1(averageTenthFrame),
     gamesAbove200,
-    gamesAbove200Percentage: Math.round(gamesAbove200Percentage * 10) / 10,
+    gamesAbove200Percentage: round1(gamesAbove200Percentage),
   };
 };
 

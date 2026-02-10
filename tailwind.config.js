@@ -7,6 +7,56 @@ export default {
   theme: {
     extend: {
       colors: {
+        // Brand palette remap (coral, sage, sky, violet)
+        // Keeps existing utility names used across the app.
+        orange: {
+          50: '#FFF1F2',
+          100: '#FFE2E4',
+          200: '#FFC9CC',
+          300: '#FFA4A8',
+          400: '#FF7A7F',
+          500: '#FF5B61',
+          600: '#E4474F',
+          700: '#C1373E',
+          800: '#9F2D33',
+          900: '#86292E',
+        },
+        amber: {
+          50: '#F5F9EB',
+          100: '#ECF4D9',
+          200: '#DFEDBE',
+          300: '#D2E6A5',
+          400: '#CBE199',
+          500: '#BEDA81',
+          600: '#A6C06D',
+          700: '#859A57',
+          800: '#6C7D46',
+          900: '#58673A',
+        },
+        lime: {
+          50: '#EDF4FB',
+          100: '#DDEBFA',
+          200: '#C6DCF2',
+          300: '#AACAE9',
+          400: '#95BCDF',
+          500: '#86B0DA',
+          600: '#6D97C1',
+          700: '#587AA0',
+          800: '#496481',
+          900: '#3F5470',
+        },
+        yellow: {
+          50: '#F1EFFF',
+          100: '#E4E0FF',
+          200: '#CEC8FF',
+          300: '#B0A6FF',
+          400: '#8A7DF8',
+          500: '#675AF4',
+          600: '#5749DD',
+          700: '#473BB8',
+          800: '#3B3196',
+          900: '#322B79',
+        },
         primary: {
           50: '#f0f9ff',
           100: '#e0f2fe',

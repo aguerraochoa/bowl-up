@@ -35,6 +35,7 @@ export default function Dashboard() {
   const [selectedTeamGame, setSelectedTeamGame] = useState<{ date: string; totalSum: number; games: Game[] } | null>(null);
   const [isClosingModal, setIsClosingModal] = useState(false);
   const [showMoreGames, setShowMoreGames] = useState(false);
+  const [showMoreTeamSums, setShowMoreTeamSums] = useState(false);
   const [showMoreStrikeLeaders, setShowMoreStrikeLeaders] = useState(false);
   const [showMoreSpareLeaders, setShowMoreSpareLeaders] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -85,7 +86,7 @@ export default function Dashboard() {
       ] = await Promise.all([
         calculateTeamStatsFromData(allGames),
         getTopIndividualGamesFromData(allGames, loadedPlayers, 10),
-        getTopTeamSumGamesFromData(allGames, 5),
+        getTopTeamSumGamesFromData(allGames, 10),
         getTopIndividualAveragesFromData(allGames, loadedPlayers, 10),
         getTopTenthFrameAveragesFromData(allGames, loadedPlayers, 10),
         getTopStrikePercentagesFromData(allGames, loadedPlayers, 10),
@@ -186,152 +187,136 @@ export default function Dashboard() {
 
         {/* Desktop One-Pager Layout */}
         <div className="hidden lg:block">
-          <div className="grid grid-cols-12 gap-4">
-            {/* Left Column - KPIs */}
-            <div className="col-span-3">
-              <div className="grid grid-cols-1 gap-4">
-                <KPICard
-                  title={t('dashboard.teamAverage')}
-                  value={teamStats.teamGameAverage.toFixed(1)}
-                  subtitle={t('dashboard.teamAverageSubtitle')}
-                  icon={<Target className="w-6 h-6 opacity-60" />}
-                  color="primary"
-                />
-                <KPICard
-                  title={t('dashboard.totalGames')}
-                  value={teamStats.totalGames}
-                  subtitle={t('dashboard.totalGamesSubtitle')}
-                  icon={<Gamepad2 className="w-6 h-6 opacity-60" />}
-                  color="accent"
-                />
-                <KPICard
-                  title={t('dashboard.strikePercentage')}
-                  value={`${teamStats.totalStrikePercentage.toFixed(1)}%`}
-                  subtitle={t('dashboard.strikePercentageSubtitle')}
-                  icon={<Zap className="w-6 h-6 opacity-60" />}
-                  color="purple"
-                />
-                <KPICard
-                  title={t('dashboard.sparePercentage')}
-                  value={`${teamStats.totalSparePercentage.toFixed(1)}%`}
-                  subtitle={t('dashboard.sparePercentageSubtitle')}
-                  icon={<TrendingUp className="w-6 h-6 opacity-60" />}
-                  color="orange"
-                />
-              </div>
-            </div>
+          <div className="grid grid-cols-2 xl:grid-cols-4 gap-4 mb-4">
+            <KPICard
+              title={t('dashboard.teamAverage')}
+              value={teamStats.teamGameAverage.toFixed(1)}
+              subtitle={t('dashboard.teamAverageSubtitle')}
+              icon={<Target className="w-6 h-6 opacity-60" />}
+              color="primary"
+            />
+            <KPICard
+              title={t('dashboard.totalGames')}
+              value={teamStats.totalGames}
+              subtitle={t('dashboard.totalGamesSubtitle')}
+              icon={<Gamepad2 className="w-6 h-6 opacity-60" />}
+              color="accent"
+            />
+            <KPICard
+              title={t('dashboard.strikePercentage')}
+              value={`${teamStats.totalStrikePercentage.toFixed(1)}%`}
+              subtitle={t('dashboard.strikePercentageSubtitle')}
+              icon={<Zap className="w-6 h-6 opacity-60" />}
+              color="purple"
+            />
+            <KPICard
+              title={t('dashboard.sparePercentage')}
+              value={`${teamStats.totalSparePercentage.toFixed(1)}%`}
+              subtitle={t('dashboard.sparePercentageSubtitle')}
+              icon={<TrendingUp className="w-6 h-6 opacity-60" />}
+              color="orange"
+            />
+          </div>
 
-            {/* Middle Column - Top Games */}
-            <div className="col-span-5">
-              <div className="space-y-4">
-                <LeaderboardCard
-                  title={`🏆 ${t('dashboard.topIndividualGames')}`}
-                  items={(showMoreGames ? topGames : topGames.slice(0, 5)).map((game, index) => ({
-                    rank: index + 1,
-                    name: game.playerName,
-                    value: game.totalScore,
-                    subtitle: new Date(game.date).toLocaleDateString(),
-                  }))}
-                  emptyMessage={t('dashboard.noGames')}
-                  showMoreButton={!showMoreGames && topGames.length > 5}
-                  onShowMore={() => setShowMoreGames(true)}
-                  showMoreLabel={t('dashboard.showMore')}
-                />
-                <LeaderboardCard
-                  title={`👥 ${t('dashboard.topTeamGames')}`}
-                  items={topTeamSums.map((sum, index) => {
-                    // Get players with their scores, sorted by score (highest to lowest)
-                    const playersWithScores = sum.players
-                      .map(playerId => {
-                        const player = players.find((p) => p.id === playerId);
-                        const game = sum.games.find(g => g.playerId === playerId);
-                        if (!player || !game) return null;
-                        return {
-                          name: player.name,
-                          score: game.totalScore,
-                        };
-                      })
-                      .filter((p): p is { name: string; score: number } => p !== null)
-                      .sort((a, b) => b.score - a.score); // Sort by score descending
-                    
-                    // Convert names to initials (e.g., "John Doe" -> "JD", "Maria" -> "MA")
-                    const initials = playersWithScores
-                      .map(({ name }) => {
-                        const parts = name.trim().split(/\s+/);
-                        if (parts.length > 1) {
-                          // First letter of first name + first letter of last name
-                          return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
-                        } else {
-                          // Single name: first two letters
-                          return name.substring(0, 2).toUpperCase();
-                        }
-                      })
-                      .join(', ');
-                    
+          <div className="grid grid-cols-1 xl:grid-cols-2 2xl:grid-cols-3 gap-4">
+            <LeaderboardCard
+              title={`🏆 ${t('dashboard.topIndividualGames')}`}
+              items={(showMoreGames ? topGames : topGames.slice(0, 5)).map((game, index) => ({
+                rank: index + 1,
+                name: game.playerName,
+                value: game.totalScore,
+                subtitle: new Date(game.date).toLocaleDateString(),
+              }))}
+              emptyMessage={t('dashboard.noGames')}
+              showMoreButton={topGames.length > 5}
+              onShowMore={() => setShowMoreGames((prev) => !prev)}
+              showMoreLabel={showMoreGames ? t('dashboard.showLess') : t('dashboard.showMore')}
+            />
+            <LeaderboardCard
+              title={`👥 ${t('dashboard.topTeamGames')}`}
+              items={(showMoreTeamSums ? topTeamSums : topTeamSums.slice(0, 5)).map((sum, index) => {
+                const playersWithScores = sum.players
+                  .map(playerId => {
+                    const player = players.find((p) => p.id === playerId);
+                    const game = sum.games.find(g => g.playerId === playerId);
+                    if (!player || !game) return null;
                     return {
-                      rank: index + 1,
-                      name: initials || t('dashboard.removedPlayer'),
-                      value: sum.totalSum,
-                      subtitle: new Date(sum.date).toLocaleDateString(),
-                      onClick: () => handleTeamGameClick(sum),
+                      name: player.name,
+                      score: game.totalScore,
                     };
-                  })}
-                  emptyMessage={t('dashboard.noTeamGames')}
-                />
-              </div>
-            </div>
+                  })
+                  .filter((p): p is { name: string; score: number } => p !== null)
+                  .sort((a, b) => b.score - a.score);
 
-            {/* Right Column - Averages */}
-            <div className="col-span-4">
-              <div className="space-y-4">
-                <LeaderboardCard
-                  title={`⭐ ${t('dashboard.individualAverages')}`}
-                  items={topAverages.map((avg, index) => ({
-                    rank: index + 1,
-                    name: avg.playerName,
-                    value: avg.average.toFixed(1),
-                    subtitle: t('dashboard.seasonAverage'),
-                  }))}
-                  emptyMessage={t('dashboard.noAverages')}
-                />
-                <LeaderboardCard
-                  title={`🎯 ${t('dashboard.avgTenthFrame')}`}
-                  items={topTenthFrameAverages.map((avg, index) => ({
-                    rank: index + 1,
-                    name: avg.playerName,
-                    value: avg.average.toFixed(1),
-                    subtitle: t('dashboard.clutchPerformance'),
-                  }))}
-                  emptyMessage={t('dashboard.noTenthFrame')}
-                />
-                <LeaderboardCard
-                  title={`⚡ ${t('dashboard.topStrikeLeaders')}`}
-                  items={(showMoreStrikeLeaders ? topStrikeLeaders : topStrikeLeaders.slice(0, 5)).map((leader, index) => ({
-                    rank: index + 1,
-                    name: leader.playerName,
-                    value: `${leader.percentage.toFixed(1)}%`,
-                    subtitle: `${leader.gamesPlayed} ${t('dashboard.gamesLabel')}`,
-                  }))}
-                  emptyMessage={t('dashboard.noStrikeLeaders')}
-                  showMoreButton={!showMoreStrikeLeaders && topStrikeLeaders.length > 5}
-                  onShowMore={() => setShowMoreStrikeLeaders(true)}
-                  showMoreLabel={t('dashboard.showMore')}
-                />
-                <LeaderboardCard
-                  title={`🛡️ ${t('dashboard.topSpareLeaders')}`}
-                  items={(showMoreSpareLeaders ? topSpareLeaders : topSpareLeaders.slice(0, 5)).map((leader, index) => ({
-                    rank: index + 1,
-                    name: leader.playerName,
-                    value: `${leader.percentage.toFixed(1)}%`,
-                    subtitle: `${leader.gamesPlayed} ${t('dashboard.gamesLabel')}`,
-                  }))}
-                  emptyMessage={t('dashboard.noSpareLeaders')}
-                  showMoreButton={!showMoreSpareLeaders && topSpareLeaders.length > 5}
-                  onShowMore={() => setShowMoreSpareLeaders(true)}
-                  showMoreLabel={t('dashboard.showMore')}
-                />
-              </div>
-            </div>
+                const initials = playersWithScores
+                  .map(({ name }) => {
+                    const parts = name.trim().split(/\s+/);
+                    if (parts.length > 1) {
+                      return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+                    }
+                    return name.substring(0, 2).toUpperCase();
+                  })
+                  .join(', ');
+
+                return {
+                  rank: index + 1,
+                  name: initials || t('dashboard.removedPlayer'),
+                  value: sum.totalSum,
+                  subtitle: new Date(sum.date).toLocaleDateString(),
+                  onClick: () => handleTeamGameClick(sum),
+                };
+              })}
+              emptyMessage={t('dashboard.noTeamGames')}
+              showMoreButton={topTeamSums.length > 5}
+              onShowMore={() => setShowMoreTeamSums((prev) => !prev)}
+              showMoreLabel={showMoreTeamSums ? t('dashboard.showLess') : t('dashboard.showMore')}
+            />
+            <LeaderboardCard
+              title={`⭐ ${t('dashboard.individualAverages')}`}
+              items={topAverages.map((avg, index) => ({
+                rank: index + 1,
+                name: avg.playerName,
+                value: avg.average.toFixed(1),
+                subtitle: t('dashboard.seasonAverage'),
+              }))}
+              emptyMessage={t('dashboard.noAverages')}
+            />
+            <LeaderboardCard
+              title={`🎯 ${t('dashboard.avgTenthFrame')}`}
+              items={topTenthFrameAverages.map((avg, index) => ({
+                rank: index + 1,
+                name: avg.playerName,
+                value: avg.average.toFixed(1),
+                subtitle: t('dashboard.clutchPerformance'),
+              }))}
+              emptyMessage={t('dashboard.noTenthFrame')}
+            />
+            <LeaderboardCard
+              title={`⚡ ${t('dashboard.topStrikeLeaders')}`}
+              items={(showMoreStrikeLeaders ? topStrikeLeaders : topStrikeLeaders.slice(0, 5)).map((leader, index) => ({
+                rank: index + 1,
+                name: leader.playerName,
+                value: `${leader.percentage.toFixed(1)}%`,
+                subtitle: `${leader.gamesPlayed} ${t('dashboard.gamesLabel')}`,
+              }))}
+              emptyMessage={t('dashboard.noStrikeLeaders')}
+              showMoreButton={!showMoreStrikeLeaders && topStrikeLeaders.length > 5}
+              onShowMore={() => setShowMoreStrikeLeaders(true)}
+              showMoreLabel={t('dashboard.showMore')}
+            />
+            <LeaderboardCard
+              title={`🛡️ ${t('dashboard.topSpareLeaders')}`}
+              items={(showMoreSpareLeaders ? topSpareLeaders : topSpareLeaders.slice(0, 5)).map((leader, index) => ({
+                rank: index + 1,
+                name: leader.playerName,
+                value: `${leader.percentage.toFixed(1)}%`,
+                subtitle: `${leader.gamesPlayed} ${t('dashboard.gamesLabel')}`,
+              }))}
+              emptyMessage={t('dashboard.noSpareLeaders')}
+              showMoreButton={!showMoreSpareLeaders && topSpareLeaders.length > 5}
+              onShowMore={() => setShowMoreSpareLeaders(true)}
+              showMoreLabel={t('dashboard.showMore')}
+            />
           </div>
         </div>
 
@@ -380,14 +365,14 @@ export default function Dashboard() {
                 subtitle: new Date(game.date).toLocaleDateString(),
               }))}
               emptyMessage={t('dashboard.noGames')}
-              showMoreButton={!showMoreGames && topGames.length > 5}
-              onShowMore={() => setShowMoreGames(true)}
-              showMoreLabel={t('dashboard.showMore')}
+              showMoreButton={topGames.length > 5}
+              onShowMore={() => setShowMoreGames((prev) => !prev)}
+              showMoreLabel={showMoreGames ? t('dashboard.showLess') : t('dashboard.showMore')}
             />
 
             <LeaderboardCard
               title={`👥 ${t('dashboard.topTeamGames')}`}
-              items={topTeamSums.map((sum, index) => {
+              items={(showMoreTeamSums ? topTeamSums : topTeamSums.slice(0, 5)).map((sum, index) => {
                 // Get players with their scores, sorted by score (highest to lowest)
                 const playersWithScores = sum.players
                   .map(playerId => {
@@ -425,6 +410,9 @@ export default function Dashboard() {
                 };
               })}
               emptyMessage={t('dashboard.noTeamGames')}
+              showMoreButton={topTeamSums.length > 5}
+              onShowMore={() => setShowMoreTeamSums((prev) => !prev)}
+              showMoreLabel={showMoreTeamSums ? t('dashboard.showLess') : t('dashboard.showMore')}
             />
 
             <LeaderboardCard

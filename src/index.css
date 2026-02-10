@@ -1,10 +1,60 @@
 @import "tailwindcss";
 
+@theme {
+  /* Coral */
+  --color-orange-50: #fff1f2;
+  --color-orange-100: #ffe2e4;
+  --color-orange-200: #ffc9cc;
+  --color-orange-300: #ffa4a8;
+  --color-orange-400: #ff7a7f;
+  --color-orange-500: #ff5b61;
+  --color-orange-600: #e4474f;
+  --color-orange-700: #c1373e;
+  --color-orange-800: #9f2d33;
+  --color-orange-900: #86292e;
+
+  /* Sage */
+  --color-amber-50: #f5f9eb;
+  --color-amber-100: #ecf4d9;
+  --color-amber-200: #dfedbe;
+  --color-amber-300: #d2e6a5;
+  --color-amber-400: #cbe199;
+  --color-amber-500: #beda81;
+  --color-amber-600: #a6c06d;
+  --color-amber-700: #859a57;
+  --color-amber-800: #6c7d46;
+  --color-amber-900: #58673a;
+
+  /* Sky */
+  --color-lime-50: #edf4fb;
+  --color-lime-100: #ddebfa;
+  --color-lime-200: #c6dcf2;
+  --color-lime-300: #aacae9;
+  --color-lime-400: #95bcdf;
+  --color-lime-500: #86b0da;
+  --color-lime-600: #6d97c1;
+  --color-lime-700: #587aa0;
+  --color-lime-800: #496481;
+  --color-lime-900: #3f5470;
+
+  /* Violet */
+  --color-yellow-50: #f1efff;
+  --color-yellow-100: #e4e0ff;
+  --color-yellow-200: #cec8ff;
+  --color-yellow-300: #b0a6ff;
+  --color-yellow-400: #8a7df8;
+  --color-yellow-500: #675af4;
+  --color-yellow-600: #5749dd;
+  --color-yellow-700: #473bb8;
+  --color-yellow-800: #3b3196;
+  --color-yellow-900: #322b79;
+}
+
 @layer base {
   body {
     margin: 0;
     min-height: 100vh;
-    background-color: #FFF7ED; /* Orange-50 */
+    background-color: #F5F9EB; /* amber-50 from new palette */
     color: #000000;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;

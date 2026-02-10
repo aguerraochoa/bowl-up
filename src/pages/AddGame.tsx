@@ -492,13 +492,7 @@ export default function AddGame() {
               {allPlayers.map(player => {
                 const isSelected = selectedPlayers.includes(player.id);
                 const position = isSelected ? selectedPlayers.indexOf(player.id) + 1 : null;
-                const positionColors = [
-                  'bg-orange-500',
-                  'bg-amber-500',
-                  'bg-lime-500',
-                  'bg-orange-600',
-                ];
-                const selectedColor = position ? positionColors[position - 1] : '';
+                const selectedColor = position ? 'bg-lime-500' : '';
                 return (
                   <button
                     key={player.id}

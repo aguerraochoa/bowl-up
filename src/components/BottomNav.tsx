@@ -71,9 +71,9 @@ export default function BottomNav({ activeTab, onTabChange, onSignOut }: BottomN
   };
 
   const menuOptions = [
+    { id: 'weekly-report', label: t('nav.weeklyReport'), icon: FileText, action: () => onTabChange('weekly-report') },
     { id: 'bet-tracker', label: t('nav.betTracker'), icon: Target, action: () => onTabChange('bet-tracker') },
     { id: 'head-to-head', label: t('nav.headToHead'), icon: Swords, action: () => onTabChange('head-to-head') },
-    { id: 'weekly-report', label: t('nav.weeklyReport'), icon: FileText, action: () => onTabChange('weekly-report') },
     { id: 'profile', label: t('nav.profile'), icon: User, action: () => onTabChange('profile') },
   ];
 
@@ -85,9 +85,9 @@ export default function BottomNav({ activeTab, onTabChange, onSignOut }: BottomN
           <div className="w-full">
             {[
               ...mainTabs,
+              { id: 'weekly-report', label: t('nav.weeklyReport'), icon: FileText },
               { id: 'bet-tracker', label: t('nav.betTracker'), icon: Target },
               { id: 'head-to-head', label: t('nav.headToHead'), icon: Swords },
-              { id: 'weekly-report', label: t('nav.weeklyReport'), icon: FileText },
               { id: 'profile', label: t('nav.profile'), icon: User },
             ].map(({ id, label, icon: Icon }) => (
               <button

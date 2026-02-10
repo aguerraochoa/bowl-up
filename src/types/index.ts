@@ -72,8 +72,13 @@ export interface Stats {
   averageScore: number;
   strikePercentage: number;
   sparePercentage: number;
-  floor: number; // lowest score
-  ceiling: number; // highest score
+  floor: number; // personal lowest score (legacy alias)
+  ceiling: number; // personal highest score (legacy alias)
+  typicalLow: number; // 20th percentile from recent games window
+  typicalHigh: number; // 80th percentile from recent games window
+  consistencyRange: number; // typicalHigh - typicalLow
+  personalLow: number; // all-time lowest score
+  personalBest: number; // all-time highest score
   recentAverage: number; // last 10 games
   averageTenthFrame: number; // average 10th frame score
   gamesAbove200: number; // number of games with score > 200
