@@ -136,12 +136,14 @@ export default function WeeklyReport() {
           id: player.id,
           name: player.name,
           games: playerGames,
+          average: playerGames.reduce((sum, game) => sum + game.totalScore, 0) / playerGames.length,
         };
       })
       .filter((row) => row.games.length > 0)
-      .sort((a, b) => a.name.localeCompare(b.name));
+      .sort((a, b) => b.average - a.average || a.name.localeCompare(b.name));
 
     const maxGamesPerPlayer = allGamesByPlayer.reduce((max, row) => Math.max(max, row.games.length), 0);
+    const playerPercentages = [...playerRows].sort((a, b) => b.strike - a.strike || b.spare - a.spare || a.name.localeCompare(b.name));
 
     return {
       week,
@@ -158,6 +160,7 @@ export default function WeeklyReport() {
       spareDelta: weeklyTeamStats.totalSparePercentage - previousTeamStats.totalSparePercentage,
       allGamesByPlayer,
       maxGamesPerPlayer,
+      playerPercentages,
     };
   }, [weekOffset, games, players]);
 
@@ -185,6 +188,10 @@ export default function WeeklyReport() {
 
     return lines.filter(Boolean).join('\n');
   }, [report]);
+
+  const weekSelectorLabel = weekOffset === 0
+    ? t('weeklyReport.thisWeek')
+    : `${formatDateLabel(report.week.start)} - ${formatDateLabel(report.week.end)}`;
 
   const handleCopy = async () => {
     await navigator.clipboard.writeText(whatsappText);
@@ -233,6 +240,20 @@ export default function WeeklyReport() {
       })
       .join('');
 
+    const playerPercentRows = report.playerPercentages.length
+      ? report.playerPercentages
+          .map(
+            (player) => `
+              <tr>
+                <td>${escapeHtml(player.name)}</td>
+                <td>${player.strike.toFixed(1)}%</td>
+                <td>${player.spare.toFixed(1)}%</td>
+              </tr>
+            `,
+          )
+          .join('')
+      : `<tr><td colspan="3">${escapeHtml(t('weeklyReport.noGamesThisWeek'))}</td></tr>`;
+
     const html = `
       <!doctype html>
       <html>
@@ -241,8 +262,8 @@ export default function WeeklyReport() {
         <title>${escapeHtml(t('weeklyReport.title'))}</title>
         <style>
           @page { size: A4; margin: 18mm; }
-          body { font-family: Arial, sans-serif; color: #111; background: #fff; margin: 0; }
-          .wrap { border: 3px solid #111; padding: 18px; }
+          body { font-family: Arial, sans-serif; color: #111; background: #fff; margin: 0; padding: 12px; }
+          .wrap { border: 3px solid #111; padding: 18px; max-width: 920px; margin: 0 auto; }
           .header { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; margin-bottom: 14px; }
           .title { margin: 0; font-size: 28px; line-height: 1.1; text-transform: uppercase; }
           .subtitle { margin: 6px 0 0 0; font-size: 13px; font-weight: 700; }
@@ -274,6 +295,18 @@ export default function WeeklyReport() {
           .toolbar { display: flex; justify-content: flex-end; margin-bottom: 10px; }
           .print-btn { border: 2px solid #111; background: #f8c74f; color: #111; padding: 8px 12px; font-size: 11px; font-weight: 800; text-transform: uppercase; cursor: pointer; }
           .print-btn:hover { background: #efb936; }
+          @media screen and (max-width: 820px) {
+            body { padding: 8px; }
+            .wrap { border-width: 2px; padding: 12px; }
+            .header { flex-direction: column; }
+            .title { font-size: 22px; }
+            .stats, .two-col, .deltas { grid-template-columns: 1fr; }
+            .toolbar { justify-content: stretch; }
+            .print-btn { width: 100%; }
+          }
+          @media print {
+            .toolbar { display: none; }
+          }
         </style>
       </head>
       <body>
@@ -375,14 +408,37 @@ export default function WeeklyReport() {
             }
           </div>
 
+          <div class="games-by-player">
+            <h2>${escapeHtml(t('weeklyReport.strikeSpareByPlayer'))}</h2>
+            <table class="games-table" style="width:100%; border-collapse: collapse;">
+              <thead>
+                <tr>
+                  <th>${escapeHtml(t('weeklyReport.player'))}</th>
+                  <th>${escapeHtml(t('headToHead.strike'))}</th>
+                  <th>${escapeHtml(t('headToHead.spare'))}</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${playerPercentRows}
+              </tbody>
+            </table>
+          </div>
+
           <div class="footer">Powered by BowlUp</div>
         </div>
       </body>
       </html>
     `;
 
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent)
+      || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
     const printWindow = window.open('', '_blank', 'width=980,height=720');
     if (!printWindow) return;
+    if (isIOS) {
+      printWindow.addEventListener('load', () => {
+        printWindow.print();
+      }, { once: true });
+    }
     printWindow.document.open();
     printWindow.document.write(html);
     printWindow.document.close();
@@ -422,9 +478,9 @@ export default function WeeklyReport() {
               </button>
               <button
                 onClick={() => setWeekOffset(0)}
-                className="bg-white border-4 border-black text-black px-4 py-2 font-black hover:bg-gray-100 transition-all text-sm"
+                className="bg-white border-4 border-black text-black w-[272px] py-2 font-black hover:bg-gray-100 transition-all text-sm text-center whitespace-nowrap"
               >
-                {t('weeklyReport.thisWeek')}
+                {weekSelectorLabel}
               </button>
               <button
                 onClick={() => setWeekOffset((prev) => Math.min(0, prev + 1))}
@@ -549,6 +605,34 @@ export default function WeeklyReport() {
           )}
         </div>
 
+        <div className="bg-white border-4 border-black p-4 sm:p-6 mb-4">
+          <h2 className="text-xl font-black text-black uppercase mb-4">{t('weeklyReport.strikeSpareByPlayer')}</h2>
+          {report.playerPercentages.length === 0 ? (
+            <p className="text-black font-bold">{t('weeklyReport.noGamesThisWeek')}</p>
+          ) : (
+            <div className="border-2 border-black overflow-x-auto">
+              <table className="w-full min-w-[520px] border-collapse">
+                <thead>
+                  <tr className="bg-amber-200 border-b-2 border-black">
+                    <th className="text-left px-3 py-2 font-black text-black">{t('weeklyReport.player')}</th>
+                    <th className="text-center px-3 py-2 font-black text-black">{t('headToHead.strike')}</th>
+                    <th className="text-center px-3 py-2 font-black text-black">{t('headToHead.spare')}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {report.playerPercentages.map((player, rowIndex) => (
+                    <tr key={player.id} className={`${rowIndex % 2 === 0 ? 'bg-white' : 'bg-orange-50'} border-b border-black`}>
+                      <td className="px-3 py-3 font-black text-black">{player.name}</td>
+                      <td className="px-3 py-3 text-center font-black text-black">{player.strike.toFixed(1)}%</td>
+                      <td className="px-3 py-3 text-center font-black text-black">{player.spare.toFixed(1)}%</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+
         <div className="bg-white border-4 border-black p-4 sm:p-6">
           <h2 className="text-xl font-black text-black uppercase mb-3">{t('weeklyReport.shareTitle')}</h2>
           <p className="text-sm font-bold text-black mb-4">{t('weeklyReport.shareSubtitle')}</p>
@@ -581,9 +665,6 @@ export default function WeeklyReport() {
               <Share2 className="w-5 h-5" />
               {t('weeklyReport.share')}
             </button>
-          </div>
-          <div className="mt-4 p-3 border-4 border-black bg-orange-50">
-            <p className="text-xs font-bold text-black whitespace-pre-line">{whatsappText}</p>
           </div>
         </div>
 
