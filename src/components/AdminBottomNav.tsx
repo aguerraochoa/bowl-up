@@ -49,20 +49,27 @@ export default function AdminBottomNav({ activePage, onNavigate, onSignOut }: Ad
       </nav>
 
       {/* Mobile Bottom Nav */}
-      <nav className="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t-4 border-black z-50" style={{ paddingBottom: 'max(env(safe-area-inset-bottom, 0px), 12px)' }}>
+      <nav
+        className="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t-4 border-black z-50"
+        style={{
+          paddingBottom: 'max(env(safe-area-inset-bottom, 0px), 12px)',
+          paddingLeft: 'max(env(safe-area-inset-left, 0px), 8px)',
+          paddingRight: 'max(env(safe-area-inset-right, 0px), 8px)',
+        }}
+      >
         <div className="flex justify-around items-center h-16">
           {mainTabs.map(({ id, label, icon: Icon }) => (
             <button
               key={id}
               onClick={() => onNavigate(id)}
-              className={`flex flex-col items-center justify-center flex-1 h-full transition-all ${
+              className={`flex flex-col items-center justify-center flex-1 min-w-0 h-full px-1 transition-all ${
                 activePage === id
                   ? 'bg-orange-500 text-black font-black'
                   : 'text-black hover:bg-amber-400 font-bold'
               }`}
             >
               <Icon className={`w-6 h-6 ${activePage === id ? 'scale-110' : ''} transition-transform`} />
-              <span className="text-xs mt-1 uppercase">{label}</span>
+              <span className="text-[11px] mt-1 uppercase leading-tight whitespace-nowrap">{label}</span>
             </button>
           ))}
         </div>

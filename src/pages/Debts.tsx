@@ -562,7 +562,7 @@ export default function Debts() {
                     <p className="text-black font-bold text-base">{t('common.loading')}</p>
                   </div>
                 ) : tags.length === 0 ? (
-                  <p className="text-black text-center py-4 font-bold">{t('debts.tags')}</p>
+                  <p className="text-black text-center py-4 font-bold">{t('debts.noTags')}</p>
                 ) : (
                   <div className="grid grid-cols-1 gap-3">
                     {tags.map(tag => (

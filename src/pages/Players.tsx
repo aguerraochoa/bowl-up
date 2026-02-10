@@ -744,7 +744,7 @@ export default function Players() {
                 <div className="bg-white rounded-none border-4 border-black p-4 sm:p-6 mb-4 sm:mb-6 ">
                   <h2 className="text-lg sm:text-xl font-black text-black mb-2 uppercase">{t('players.typicalRange')}</h2>
                   <p className="text-xs sm:text-sm text-black mb-4 font-bold">{t('players.typicalRangeHelp')}</p>
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                       <p className="text-xs sm:text-sm text-black mb-1 font-bold">{t('players.typicalLow')}</p>
                       <p className="text-2xl sm:text-3xl font-black text-black">{playerStats.typicalLow.toFixed(1)}</p>
@@ -752,10 +752,6 @@ export default function Players() {
                     <div>
                       <p className="text-xs sm:text-sm text-black mb-1 font-bold">{t('players.typicalHigh')}</p>
                       <p className="text-2xl sm:text-3xl font-black text-black">{playerStats.typicalHigh.toFixed(1)}</p>
-                    </div>
-                    <div>
-                      <p className="text-xs sm:text-sm text-black mb-1 font-bold">{t('players.consistencyRange')}</p>
-                      <p className="text-2xl sm:text-3xl font-black text-black">{playerStats.consistencyRange.toFixed(1)}</p>
                     </div>
                   </div>
                   <div className="mt-6">
