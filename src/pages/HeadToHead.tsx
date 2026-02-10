@@ -7,10 +7,12 @@ import { t, getLanguage } from '../i18n';
 import { useSeason } from '../contexts/useSeason';
 
 type ComparisonMetric = {
+  id: string;
   label: string;
   aValue: string;
   bValue: string;
   winner: 'a' | 'b' | 'tie';
+  countsForScore: boolean;
 };
 
 const metricWinner = (a: number, b: number, inverse = false): 'a' | 'b' | 'tie' => {
@@ -81,58 +83,76 @@ export default function HeadToHead() {
     if (!statsA || !statsB) return [];
     return [
       {
+        id: 'games_played',
         label: t('headToHead.gamesPlayed'),
         aValue: String(statsA.gamesPlayed),
         bValue: String(statsB.gamesPlayed),
         winner: metricWinner(statsA.gamesPlayed, statsB.gamesPlayed),
+        countsForScore: false,
       },
       {
+        id: 'average',
         label: t('headToHead.average'),
         aValue: statsA.averageScore.toFixed(1),
         bValue: statsB.averageScore.toFixed(1),
         winner: metricWinner(statsA.averageScore, statsB.averageScore),
+        countsForScore: true,
       },
       {
+        id: 'high',
         label: t('headToHead.high'),
         aValue: String(statsA.ceiling),
         bValue: String(statsB.ceiling),
         winner: metricWinner(statsA.ceiling, statsB.ceiling),
+        countsForScore: true,
       },
       {
-        label: t('headToHead.low'),
+        id: 'best_low',
+        label: t('headToHead.bestLow'),
         aValue: String(statsA.floor),
         bValue: String(statsB.floor),
-        winner: metricWinner(statsA.floor, statsB.floor, true),
+        winner: metricWinner(statsA.floor, statsB.floor),
+        countsForScore: true,
       },
       {
+        id: 'strike',
         label: t('headToHead.strike'),
         aValue: `${statsA.strikePercentage.toFixed(1)}%`,
         bValue: `${statsB.strikePercentage.toFixed(1)}%`,
         winner: metricWinner(statsA.strikePercentage, statsB.strikePercentage),
+        countsForScore: true,
       },
       {
+        id: 'spare',
         label: t('headToHead.spare'),
         aValue: `${statsA.sparePercentage.toFixed(1)}%`,
         bValue: `${statsB.sparePercentage.toFixed(1)}%`,
         winner: metricWinner(statsA.sparePercentage, statsB.sparePercentage),
+        countsForScore: true,
       },
       {
+        id: 'recent_10',
         label: t('headToHead.recent10'),
         aValue: statsA.recentAverage.toFixed(1),
         bValue: statsB.recentAverage.toFixed(1),
         winner: metricWinner(statsA.recentAverage, statsB.recentAverage),
+        countsForScore: true,
       },
       {
+        id: 'tenth_frame',
         label: t('headToHead.tenthFrame'),
         aValue: statsA.averageTenthFrame.toFixed(1),
         bValue: statsB.averageTenthFrame.toFixed(1),
         winner: metricWinner(statsA.averageTenthFrame, statsB.averageTenthFrame),
+        countsForScore: true,
       },
       {
+        id: 'games_200',
         label: t('headToHead.games200'),
         aValue: String(statsA.gamesAbove200),
         bValue: String(statsB.gamesAbove200),
         winner: metricWinner(statsA.gamesAbove200, statsB.gamesAbove200),
+        countsForScore: true,
       },
     ];
   }, [statsA, statsB]);
@@ -140,6 +160,7 @@ export default function HeadToHead() {
   const summary = useMemo(() => {
     const tally = comparisonMetrics.reduce(
       (acc, metric) => {
+        if (!metric.countsForScore) return acc;
         if (metric.winner === 'a') acc.a += 1;
         if (metric.winner === 'b') acc.b += 1;
         if (metric.winner === 'tie') acc.tie += 1;
@@ -150,18 +171,19 @@ export default function HeadToHead() {
     return tally;
   }, [comparisonMetrics]);
 
+  const getWinnerLabel = (metric: ComparisonMetric, contenderA: Player, contenderB: Player): string => {
+    if (!metric.countsForScore) return t('headToHead.noPoint');
+    if (metric.winner === 'tie') return t('headToHead.tie');
+    return metric.winner === 'a' ? contenderA.name : contenderB.name;
+  };
+
   const generatePdf = () => {
     if (!playerA || !playerB || !statsA || !statsB) return;
 
     const seasonLabel = selectedSeason === 'ALL' ? t('profile.allSeasons') : (selectedSeason || currentSeason);
     const metricRows = comparisonMetrics
       .map((metric) => {
-        const winner =
-          metric.winner === 'tie'
-            ? t('headToHead.tie')
-            : metric.winner === 'a'
-            ? playerA.name
-            : playerB.name;
+        const winner = getWinnerLabel(metric, playerA, playerB);
         return `
           <tr>
             <td>${metric.label}</td>
@@ -190,9 +212,15 @@ export default function HeadToHead() {
           th, td { border: 1px solid #111; padding: 8px; text-align: left; }
           th { background: #f2f2f2; text-transform: uppercase; font-size: 12px; }
           .summary { margin-top: 16px; padding: 12px; border: 2px solid #111; background: #fff4d6; font-weight: 700; }
+          .toolbar { display: flex; justify-content: flex-end; margin-bottom: 12px; }
+          .print-btn { border: 2px solid #111; background: #f8c74f; color: #111; padding: 8px 12px; font-size: 11px; font-weight: 800; text-transform: uppercase; cursor: pointer; }
+          .print-btn:hover { background: #efb936; }
         </style>
       </head>
       <body>
+        <div class="toolbar">
+          <button class="print-btn" onclick="window.print()">${t('headToHead.downloadPdf')}</button>
+        </div>
         <h1>${t('headToHead.title')}</h1>
         <p>${t('headToHead.seasonScope')}: ${seasonLabel}</p>
         <div class="grid">
@@ -223,15 +251,16 @@ export default function HeadToHead() {
           </tbody>
         </table>
         <div class="summary">${playerA.name}: ${summary.a} | ${playerB.name}: ${summary.b} | ${t('headToHead.tie')}: ${summary.tie}</div>
-        <script>window.onload = () => window.print();</script>
       </body>
       </html>
     `;
 
-    const printWindow = window.open('', '_blank', 'noopener,noreferrer,width=900,height=700');
+    const printWindow = window.open('', '_blank', 'width=900,height=700');
     if (!printWindow) return;
+    printWindow.document.open();
     printWindow.document.write(html);
     printWindow.document.close();
+    printWindow.focus();
   };
 
   if (isLoading) {
@@ -305,19 +334,27 @@ export default function HeadToHead() {
         {playerA && playerB && playerA.id !== playerB.id && statsA && statsB ? (
           <>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-              <div className="bg-white border-4 border-black p-4 sm:p-6">
-                <p className="text-xs uppercase font-black text-black">{t('headToHead.contender')}</p>
-                <h2 className="text-2xl font-black text-black uppercase">{playerName(playerA)}</h2>
-                <p className="text-sm font-bold text-black mt-2">{t('headToHead.average')}: {statsA.averageScore.toFixed(1)}</p>
-                <p className="text-sm font-bold text-black">{t('headToHead.strike')}: {statsA.strikePercentage.toFixed(1)}%</p>
-                <p className="text-sm font-bold text-black">{t('headToHead.spare')}: {statsA.sparePercentage.toFixed(1)}%</p>
+              <div className="bg-white border-4 border-black overflow-hidden">
+                <div className="bg-amber-400 border-b-4 border-black px-4 py-3">
+                  <p className="text-xs uppercase font-black text-black">{t('headToHead.contender')}</p>
+                  <h2 className="text-2xl font-black text-black uppercase">{playerName(playerA)}</h2>
+                </div>
+                <div className="p-4 space-y-2">
+                  <p className="text-sm font-bold text-black">{t('headToHead.average')}: <span className="font-black">{statsA.averageScore.toFixed(1)}</span></p>
+                  <p className="text-sm font-bold text-black">{t('headToHead.strike')}: <span className="font-black">{statsA.strikePercentage.toFixed(1)}%</span></p>
+                  <p className="text-sm font-bold text-black">{t('headToHead.spare')}: <span className="font-black">{statsA.sparePercentage.toFixed(1)}%</span></p>
+                </div>
               </div>
-              <div className="bg-white border-4 border-black p-4 sm:p-6">
-                <p className="text-xs uppercase font-black text-black">{t('headToHead.contender')}</p>
-                <h2 className="text-2xl font-black text-black uppercase">{playerName(playerB)}</h2>
-                <p className="text-sm font-bold text-black mt-2">{t('headToHead.average')}: {statsB.averageScore.toFixed(1)}</p>
-                <p className="text-sm font-bold text-black">{t('headToHead.strike')}: {statsB.strikePercentage.toFixed(1)}%</p>
-                <p className="text-sm font-bold text-black">{t('headToHead.spare')}: {statsB.sparePercentage.toFixed(1)}%</p>
+              <div className="bg-white border-4 border-black overflow-hidden">
+                <div className="bg-orange-500 border-b-4 border-black px-4 py-3">
+                  <p className="text-xs uppercase font-black text-black">{t('headToHead.contender')}</p>
+                  <h2 className="text-2xl font-black text-black uppercase">{playerName(playerB)}</h2>
+                </div>
+                <div className="p-4 space-y-2">
+                  <p className="text-sm font-bold text-black">{t('headToHead.average')}: <span className="font-black">{statsB.averageScore.toFixed(1)}</span></p>
+                  <p className="text-sm font-bold text-black">{t('headToHead.strike')}: <span className="font-black">{statsB.strikePercentage.toFixed(1)}%</span></p>
+                  <p className="text-sm font-bold text-black">{t('headToHead.spare')}: <span className="font-black">{statsB.sparePercentage.toFixed(1)}%</span></p>
+                </div>
               </div>
             </div>
 
@@ -326,28 +363,50 @@ export default function HeadToHead() {
                 <Swords className="w-5 h-5 text-black" />
                 <h3 className="text-xl font-black text-black uppercase">{t('headToHead.metricBreakdown')}</h3>
               </div>
-              <div className="space-y-2">
-                {comparisonMetrics.map((metric) => (
-                  <div key={metric.label} className="grid grid-cols-[1fr_auto_auto] gap-3 border-4 border-black p-3 items-center bg-white">
-                    <div>
-                      <p className="font-black text-black">{metric.label}</p>
-                      <p className="text-xs font-bold text-black">
-                        {metric.winner === 'tie'
-                          ? t('headToHead.tie')
-                          : `${t('headToHead.winner')}: ${metric.winner === 'a' ? playerA.name : playerB.name}`}
-                      </p>
+              <div className="border-4 border-black overflow-hidden">
+                {comparisonMetrics.map((metric, index) => {
+                  const rowBg = index % 2 === 0 ? 'bg-white' : 'bg-orange-50';
+                  const isInfoOnly = !metric.countsForScore;
+                  return (
+                    <div key={metric.id} className={`${rowBg} border-b-2 border-black last:border-b-0`}>
+                      <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3 px-3 py-4 sm:px-5">
+                        <div className="text-left">
+                          <p className={`text-3xl sm:text-4xl font-black ${metric.winner === 'a' && !isInfoOnly ? 'text-lime-600' : 'text-black'}`}>
+                            {metric.aValue}
+                          </p>
+                          <p className="text-xs font-black uppercase text-black mt-1">{playerA.name}</p>
+                        </div>
+
+                        <div className="text-center px-2">
+                          <p className="text-lg sm:text-2xl font-black text-black">{metric.label}</p>
+                        </div>
+
+                        <div className="text-right">
+                          <p className={`text-3xl sm:text-4xl font-black ${metric.winner === 'b' && !isInfoOnly ? 'text-lime-600' : 'text-black'}`}>
+                            {metric.bValue}
+                          </p>
+                          <p className="text-xs font-black uppercase text-black mt-1">{playerB.name}</p>
+                        </div>
+                      </div>
                     </div>
-                    <p className={`font-black ${metric.winner === 'a' ? 'text-lime-600' : 'text-black'}`}>{metric.aValue}</p>
-                    <p className={`font-black ${metric.winner === 'b' ? 'text-lime-600' : 'text-black'}`}>{metric.bValue}</p>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
 
-            <div className="bg-amber-400 border-4 border-black p-4">
-              <p className="font-black text-black">
-                {playerA.name}: {summary.a} | {playerB.name}: {summary.b} | {t('headToHead.tie')}: {summary.tie}
-              </p>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div className="bg-amber-400 border-4 border-black p-4 text-center">
+                <p className="text-xs uppercase font-black text-black">{playerA.name}</p>
+                <p className="text-3xl font-black text-black">{summary.a}</p>
+              </div>
+              <div className="bg-white border-4 border-black p-4 text-center">
+                <p className="text-xs uppercase font-black text-black">{t('headToHead.tie')}</p>
+                <p className="text-3xl font-black text-black">{summary.tie}</p>
+              </div>
+              <div className="bg-orange-500 border-4 border-black p-4 text-center">
+                <p className="text-xs uppercase font-black text-black">{playerB.name}</p>
+                <p className="text-3xl font-black text-black">{summary.b}</p>
+              </div>
             </div>
           </>
         ) : (

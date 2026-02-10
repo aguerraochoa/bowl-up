@@ -29,6 +29,13 @@ const downloadCsv = (filename: string, headers: string[], rows: Array<Array<stri
 const getSeasonLabel = (querySeason: string | null | undefined): string =>
   querySeason === null ? 'all-seasons' : (querySeason || 'current-season').replace(/\s+/g, '-').toLowerCase();
 
+const formatTenthFrameForCsv = (value: string): string => {
+  const notation = String(value || '').trim().toUpperCase();
+  if (!notation) return '';
+  // Keep 10th-frame notation as text so spreadsheet apps do not coerce values like "8-" into "-8".
+  return `="${notation.replace(/"/g, '""')}"`;
+};
+
 export const exportGamesCsv = (games: Game[], players: Player[], querySeason: string | null | undefined): void => {
   const playerById = new Map(players.map((p) => [p.id, p.name]));
   const rows = [...games]
@@ -45,7 +52,7 @@ export const exportGamesCsv = (games: Game[], players: Player[], querySeason: st
       game.totalScore,
       game.strikesFrames1to9,
       game.sparesFrames1to9,
-      game.tenthFrame,
+      formatTenthFrameForCsv(game.tenthFrame),
       game.created_at || '',
     ]);
 

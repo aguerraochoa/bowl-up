@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
-import { ArrowLeft, ArrowRight, Clipboard, Loader2, MessageCircle, Share2, Trophy } from 'lucide-react';
-import { getDebts, getGames, getPlayers } from '../utils/storage';
+import { ArrowLeft, ArrowRight, Clipboard, Download, Loader2, MessageCircle, Share2, Trophy } from 'lucide-react';
+import { getGames, getPlayers } from '../utils/storage';
 import { calculateTeamStatsFromData } from '../utils/stats';
 import { calculateStrikePercentage, calculateSparePercentage } from '../utils/scoring';
-import type { Debt, Game, Player } from '../types';
+import type { Game, Player } from '../types';
 import { t, getLanguage } from '../i18n';
 import { useSeason } from '../contexts/useSeason';
 
@@ -28,12 +28,19 @@ const getWeekRange = (offset: number): { start: Date; end: Date } => {
 };
 
 const isInRange = (date: Date, start: Date, end: Date): boolean => date >= start && date <= end;
+const formatSigned = (value: number, suffix = ''): string => `${value >= 0 ? '+' : ''}${value.toFixed(1)}${suffix}`;
+const escapeHtml = (value: string): string =>
+  value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
 
 export default function WeeklyReport() {
   const { querySeason } = useSeason();
   const [players, setPlayers] = useState<Player[]>([]);
   const [games, setGames] = useState<Game[]>([]);
-  const [debts, setDebts] = useState<Debt[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [weekOffset, setWeekOffset] = useState(0);
   const [copySuccess, setCopySuccess] = useState(false);
@@ -52,14 +59,12 @@ export default function WeeklyReport() {
   useEffect(() => {
     const loadData = async () => {
       setIsLoading(true);
-      const [loadedPlayers, loadedGames, loadedDebts] = await Promise.all([
+      const [loadedPlayers, loadedGames] = await Promise.all([
         getPlayers(),
         getGames(false, querySeason),
-        getDebts(),
       ]);
       setPlayers(loadedPlayers);
       setGames(loadedGames);
-      setDebts(loadedDebts);
       setIsLoading(false);
     };
     void loadData();
@@ -68,11 +73,9 @@ export default function WeeklyReport() {
   const report = useMemo(() => {
     const week = getWeekRange(weekOffset);
     const previousWeek = getWeekRange(weekOffset - 1);
-    const playerNameById = new Map(players.map((p) => [p.id, p.name]));
 
     const weeklyGames = games.filter((game) => isInRange(toDateOnly(game.date), week.start, week.end));
     const previousGames = games.filter((game) => isInRange(toDateOnly(game.date), previousWeek.start, previousWeek.end));
-    const weeklyDebts = debts.filter((debt) => isInRange(toDateOnly(debt.date), week.start, week.end));
 
     const weeklyTeamStats = calculateTeamStatsFromData(weeklyGames);
     const previousTeamStats = calculateTeamStatsFromData(previousGames);
@@ -119,57 +122,44 @@ export default function WeeklyReport() {
     const strikeLeader = [...playerRows].sort((a, b) => b.strike - a.strike)[0] || null;
     const spareLeader = [...playerRows].sort((a, b) => b.spare - a.spare)[0] || null;
 
-    const balances: Record<string, number> = {};
-    players.forEach((player) => {
-      balances[player.id] = 0;
-    });
+    const allGamesByPlayer = players
+      .map((player) => {
+        const playerGames = weeklyGames
+          .filter((game) => game.playerId === player.id)
+          .sort((a, b) => {
+            const aDate = a.created_at || a.date;
+            const bDate = b.created_at || b.date;
+            return new Date(aDate).getTime() - new Date(bDate).getTime();
+          });
 
-    debts.forEach((debt) => {
-      balances[debt.paidBy] = (balances[debt.paidBy] || 0) + debt.amount;
-      if (debt.splitMethod === 'equal') {
-        const perPerson = debt.amount / Math.max(1, debt.splitBetween.length);
-        debt.splitBetween.forEach((playerId) => {
-          balances[playerId] = (balances[playerId] || 0) - perPerson;
-        });
-      } else if (debt.splitMethod === 'games' && debt.gameCounts) {
-        const totalGamesCount = Object.values(debt.gameCounts).reduce((sum, count) => sum + count, 0);
-        Object.entries(debt.gameCounts).forEach(([playerId, count]) => {
-          const share = totalGamesCount > 0 ? (count / totalGamesCount) * debt.amount : 0;
-          balances[playerId] = (balances[playerId] || 0) - share;
-        });
-      } else if (debt.splitMethod === 'custom' && debt.customAmounts) {
-        Object.entries(debt.customAmounts).forEach(([playerId, amount]) => {
-          balances[playerId] = (balances[playerId] || 0) - amount;
-        });
-      }
-    });
+        return {
+          id: player.id,
+          name: player.name,
+          games: playerGames,
+        };
+      })
+      .filter((row) => row.games.length > 0)
+      .sort((a, b) => a.name.localeCompare(b.name));
 
-    const biggestPositiveBalance = Object.entries(balances)
-      .sort((a, b) => b[1] - a[1])
-      .find(([, value]) => value > 0.01);
+    const maxGamesPerPlayer = allGamesByPlayer.reduce((max, row) => Math.max(max, row.games.length), 0);
 
     return {
       week,
       weeklyGames,
-      weeklyDebts,
+      hasPreviousWeekStats: previousGames.length > 0,
       weeklyTeamStats,
-      previousTeamStats,
+      previousWeekStats: previousTeamStats,
       bestSession,
       topPlayers: playerRows.slice(0, 3),
       strikeLeader,
       spareLeader,
-      expensesTotal: weeklyDebts.reduce((sum, debt) => sum + debt.amount, 0),
-      topBalance: biggestPositiveBalance
-        ? {
-            name: playerNameById.get(biggestPositiveBalance[0]) || t('dashboard.removedPlayer'),
-            amount: biggestPositiveBalance[1],
-          }
-        : null,
       avgDelta: weeklyTeamStats.teamGameAverage - previousTeamStats.teamGameAverage,
       strikeDelta: weeklyTeamStats.totalStrikePercentage - previousTeamStats.totalStrikePercentage,
       spareDelta: weeklyTeamStats.totalSparePercentage - previousTeamStats.totalSparePercentage,
+      allGamesByPlayer,
+      maxGamesPerPlayer,
     };
-  }, [weekOffset, games, debts, players]);
+  }, [weekOffset, games, players]);
 
   const whatsappText = useMemo(() => {
     const lines = [
@@ -190,9 +180,6 @@ export default function WeeklyReport() {
       `- ${t('weeklyReport.strikeLeader')}: ${report.strikeLeader ? `${report.strikeLeader.name} (${report.strikeLeader.strike.toFixed(1)}%)` : '-'}`,
       `- ${t('weeklyReport.spareLeader')}: ${report.spareLeader ? `${report.spareLeader.name} (${report.spareLeader.spare.toFixed(1)}%)` : '-'}`,
       '',
-      `${t('weeklyReport.expenses')}: $${report.expensesTotal.toFixed(2)}`,
-      report.topBalance ? `${t('weeklyReport.topBalance')}: ${report.topBalance.name} ($${report.topBalance.amount.toFixed(2)})` : '',
-      '',
       'Powered by BowlUp',
     ];
 
@@ -208,6 +195,198 @@ export default function WeeklyReport() {
   const handleShareWhatsapp = () => {
     const encoded = encodeURIComponent(whatsappText);
     window.open(`https://wa.me/?text=${encoded}`, '_blank', 'noopener,noreferrer');
+  };
+
+  const handleDownloadPdf = () => {
+    const topPlayersHtml = report.topPlayers.length
+      ? report.topPlayers
+          .map(
+            (player, index) => `
+              <tr>
+                <td>${index + 1}</td>
+                <td>${escapeHtml(player.name)}</td>
+                <td>${player.games}</td>
+                <td>${player.average.toFixed(1)}</td>
+                <td>${player.best}</td>
+              </tr>
+            `,
+          )
+          .join('')
+      : `<tr><td colspan="5">${escapeHtml(t('weeklyReport.noGamesThisWeek'))}</td></tr>`;
+
+    const allGamesTableHeaders = Array.from({ length: Math.max(1, report.maxGamesPerPlayer) })
+      .map((_, index) => `<th>${escapeHtml(`${t('weeklyReport.game')} ${index + 1}`)}</th>`)
+      .join('');
+
+    const allGamesTableRows = report.allGamesByPlayer
+      .map((row) => {
+        const cells = Array.from({ length: Math.max(1, report.maxGamesPerPlayer) }).map((_, index) => {
+          const game = row.games[index];
+          return `<td>${game ? game.totalScore : '-'}</td>`;
+        });
+        return `
+          <tr>
+            <td>${escapeHtml(row.name)}</td>
+            ${cells.join('')}
+          </tr>
+        `;
+      })
+      .join('');
+
+    const html = `
+      <!doctype html>
+      <html>
+      <head>
+        <meta charset="utf-8" />
+        <title>${escapeHtml(t('weeklyReport.title'))}</title>
+        <style>
+          @page { size: A4; margin: 18mm; }
+          body { font-family: Arial, sans-serif; color: #111; background: #fff; margin: 0; }
+          .wrap { border: 3px solid #111; padding: 18px; }
+          .header { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; margin-bottom: 14px; }
+          .title { margin: 0; font-size: 28px; line-height: 1.1; text-transform: uppercase; }
+          .subtitle { margin: 6px 0 0 0; font-size: 13px; font-weight: 700; }
+          .badge { border: 2px solid #111; background: #f8c74f; padding: 8px 10px; font-size: 12px; font-weight: 700; text-transform: uppercase; }
+          .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 14px; }
+          .stat { border: 2px solid #111; padding: 10px; }
+          .stat .label { font-size: 11px; font-weight: 700; text-transform: uppercase; }
+          .stat .value { font-size: 26px; font-weight: 800; margin-top: 6px; }
+          .two-col { display: grid; grid-template-columns: 1.4fr 1fr; gap: 10px; margin-bottom: 14px; }
+          .card { border: 2px solid #111; padding: 10px; }
+          .card h2 { margin: 0 0 8px 0; font-size: 13px; text-transform: uppercase; }
+          table { width: 100%; border-collapse: collapse; font-size: 12px; }
+          th, td { border: 1px solid #111; padding: 6px; text-align: left; }
+          th { background: #ffe9b6; text-transform: uppercase; font-size: 10px; }
+          .leader { border: 2px solid #111; background: #fff3cc; padding: 8px; margin-bottom: 8px; }
+          .leader .k { font-size: 10px; text-transform: uppercase; font-weight: 700; }
+          .leader .v { font-size: 14px; font-weight: 800; margin-top: 2px; }
+          .deltas { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 14px; }
+          .delta { border: 2px solid #111; padding: 10px; }
+          .delta .k { font-size: 10px; text-transform: uppercase; font-weight: 700; }
+          .delta .v { font-size: 18px; font-weight: 800; margin-top: 4px; }
+          .games-by-player { border: 2px solid #111; padding: 10px; margin-bottom: 10px; }
+          .games-by-player h2 { margin: 0 0 8px 0; font-size: 13px; text-transform: uppercase; }
+          .games-table th, .games-table td { border: 1px solid #111; padding: 6px; text-align: center; font-size: 11px; }
+          .games-table th:first-child, .games-table td:first-child { text-align: left; font-weight: 800; }
+          .games-table th { background: #ffe9b6; font-size: 10px; text-transform: uppercase; }
+          .line { font-size: 12px; font-weight: 700; margin: 4px 0; }
+          .footer { text-align: center; font-size: 10px; font-weight: 700; text-transform: uppercase; margin-top: 10px; }
+          .toolbar { display: flex; justify-content: flex-end; margin-bottom: 10px; }
+          .print-btn { border: 2px solid #111; background: #f8c74f; color: #111; padding: 8px 12px; font-size: 11px; font-weight: 800; text-transform: uppercase; cursor: pointer; }
+          .print-btn:hover { background: #efb936; }
+        </style>
+      </head>
+      <body>
+        <div class="wrap">
+          <div class="toolbar">
+            <button class="print-btn" onclick="window.print()">${escapeHtml(t('weeklyReport.downloadPdf'))}</button>
+          </div>
+          <div class="header">
+            <div>
+              <h1 class="title">${escapeHtml(t('weeklyReport.title'))}</h1>
+              <p class="subtitle">${escapeHtml(formatDateLabel(report.week.start))} - ${escapeHtml(formatDateLabel(report.week.end))}</p>
+            </div>
+            <div class="badge">${escapeHtml(t('weeklyReport.snapshotTitle'))}</div>
+          </div>
+
+          <div class="stats">
+            <div class="stat">
+              <div class="label">${escapeHtml(t('weeklyReport.games'))}</div>
+              <div class="value">${report.weeklyGames.length}</div>
+            </div>
+            <div class="stat">
+              <div class="label">${escapeHtml(t('weeklyReport.teamAverage'))}</div>
+              <div class="value">${report.weeklyTeamStats.teamGameAverage.toFixed(1)}</div>
+            </div>
+            <div class="stat">
+              <div class="label">${escapeHtml(t('weeklyReport.bestSession'))}</div>
+              <div class="value">${report.bestSession ? report.bestSession.total : '-'}</div>
+            </div>
+          </div>
+
+          <div class="two-col">
+            <div class="card">
+              <h2>${escapeHtml(t('weeklyReport.topPerformers'))}</h2>
+              <table>
+                <thead>
+                  <tr>
+                    <th>#</th>
+                    <th>${escapeHtml(t('weeklyReport.player'))}</th>
+                    <th>${escapeHtml(t('weeklyReport.games'))}</th>
+                    <th>${escapeHtml(t('headToHead.average'))}</th>
+                    <th>${escapeHtml(t('weeklyReport.high'))}</th>
+                  </tr>
+                </thead>
+                <tbody>${topPlayersHtml}</tbody>
+              </table>
+            </div>
+            <div class="card">
+              <h2>${escapeHtml(t('weeklyReport.leaders'))}</h2>
+              <div class="leader">
+                <div class="k">${escapeHtml(t('weeklyReport.strikeLeader'))}</div>
+                <div class="v">${escapeHtml(report.strikeLeader ? `${report.strikeLeader.name} (${report.strikeLeader.strike.toFixed(1)}%)` : '-')}</div>
+              </div>
+              <div class="leader">
+                <div class="k">${escapeHtml(t('weeklyReport.spareLeader'))}</div>
+                <div class="v">${escapeHtml(report.spareLeader ? `${report.spareLeader.name} (${report.spareLeader.spare.toFixed(1)}%)` : '-')}</div>
+              </div>
+            </div>
+          </div>
+
+          ${
+            report.hasPreviousWeekStats
+              ? `
+              <div class="deltas">
+                <div class="delta">
+                  <div class="k">${escapeHtml(t('weeklyReport.teamAverage'))}</div>
+                  <div class="v">${formatSigned(report.avgDelta)}</div>
+                </div>
+                <div class="delta">
+                  <div class="k">${escapeHtml(t('weeklyReport.strikeDelta'))}</div>
+                  <div class="v">${formatSigned(report.strikeDelta, '%')}</div>
+                </div>
+                <div class="delta">
+                  <div class="k">${escapeHtml(t('weeklyReport.spareDelta'))}</div>
+                  <div class="v">${formatSigned(report.spareDelta, '%')}</div>
+                </div>
+              </div>
+              `
+              : ''
+          }
+
+          <div class="games-by-player">
+            <h2>${escapeHtml(t('weeklyReport.allGamesByPlayer'))}</h2>
+            ${
+              report.weeklyGames.length === 0
+                ? `<p class="line">${escapeHtml(t('weeklyReport.noGamesThisWeek'))}</p>`
+                : `
+                  <table class="games-table" style="width:100%; border-collapse: collapse;">
+                    <thead>
+                      <tr>
+                        <th>${escapeHtml(t('weeklyReport.player'))}</th>
+                        ${allGamesTableHeaders}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      ${allGamesTableRows}
+                    </tbody>
+                  </table>
+                `
+            }
+          </div>
+
+          <div class="footer">Powered by BowlUp</div>
+        </div>
+      </body>
+      </html>
+    `;
+
+    const printWindow = window.open('', '_blank', 'width=980,height=720');
+    if (!printWindow) return;
+    printWindow.document.open();
+    printWindow.document.write(html);
+    printWindow.document.close();
+    printWindow.focus();
   };
 
   if (isLoading) {
@@ -316,38 +495,71 @@ export default function WeeklyReport() {
           </div>
         </div>
 
-        <div className="bg-white border-4 border-black p-4 sm:p-6 mb-4">
-          <h2 className="text-xl font-black text-black uppercase mb-4">{t('weeklyReport.vsLastWeek')}</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <div className="border-4 border-black p-3 bg-white">
-              <p className="text-xs uppercase font-black text-black">{t('weeklyReport.teamAverage')}</p>
-              <p className="text-lg font-black text-black">{report.avgDelta >= 0 ? '+' : ''}{report.avgDelta.toFixed(1)}</p>
-            </div>
-            <div className="border-4 border-black p-3 bg-white">
-              <p className="text-xs uppercase font-black text-black">{t('weeklyReport.strikeDelta')}</p>
-              <p className="text-lg font-black text-black">{report.strikeDelta >= 0 ? '+' : ''}{report.strikeDelta.toFixed(1)}%</p>
-            </div>
-            <div className="border-4 border-black p-3 bg-white">
-              <p className="text-xs uppercase font-black text-black">{t('weeklyReport.spareDelta')}</p>
-              <p className="text-lg font-black text-black">{report.spareDelta >= 0 ? '+' : ''}{report.spareDelta.toFixed(1)}%</p>
+        {report.hasPreviousWeekStats && (
+          <div className="bg-white border-4 border-black p-4 sm:p-6 mb-4">
+            <h2 className="text-xl font-black text-black uppercase mb-4">{t('weeklyReport.vsLastWeek')}</h2>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div className="border-4 border-black p-3 bg-white">
+                <p className="text-xs uppercase font-black text-black">{t('weeklyReport.teamAverage')}</p>
+                <p className="text-lg font-black text-black">{report.avgDelta >= 0 ? '+' : ''}{report.avgDelta.toFixed(1)}</p>
+              </div>
+              <div className="border-4 border-black p-3 bg-white">
+                <p className="text-xs uppercase font-black text-black">{t('weeklyReport.strikeDelta')}</p>
+                <p className="text-lg font-black text-black">{report.strikeDelta >= 0 ? '+' : ''}{report.strikeDelta.toFixed(1)}%</p>
+              </div>
+              <div className="border-4 border-black p-3 bg-white">
+                <p className="text-xs uppercase font-black text-black">{t('weeklyReport.spareDelta')}</p>
+                <p className="text-lg font-black text-black">{report.spareDelta >= 0 ? '+' : ''}{report.spareDelta.toFixed(1)}%</p>
+              </div>
             </div>
           </div>
-        </div>
+        )}
 
         <div className="bg-white border-4 border-black p-4 sm:p-6 mb-4">
-          <h2 className="text-xl font-black text-black uppercase mb-3">{t('weeklyReport.financeSummary')}</h2>
-          <p className="text-base font-black text-black">{t('weeklyReport.expenses')}: ${report.expensesTotal.toFixed(2)}</p>
-          <p className="text-sm font-bold text-black mt-2">
-            {report.topBalance
-              ? `${t('weeklyReport.topBalance')}: ${report.topBalance.name} ($${report.topBalance.amount.toFixed(2)})`
-              : t('weeklyReport.noBalanceData')}
-          </p>
+          <h2 className="text-xl font-black text-black uppercase mb-4">{t('weeklyReport.allGamesByPlayer')}</h2>
+          {report.weeklyGames.length === 0 ? (
+            <p className="text-black font-bold">{t('weeklyReport.noGamesThisWeek')}</p>
+          ) : (
+            <div className="border-2 border-black overflow-x-auto">
+              <table className="w-full min-w-[600px] border-collapse">
+                <thead>
+                  <tr className="bg-amber-200 border-b-2 border-black">
+                    <th className="text-left px-3 py-2 font-black text-black">{t('weeklyReport.player')}</th>
+                    {Array.from({ length: Math.max(1, report.maxGamesPerPlayer) }).map((_, index) => (
+                      <th key={index} className="text-center px-3 py-2 font-black text-black">
+                        {t('weeklyReport.game')} {index + 1}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {report.allGamesByPlayer.map((row, rowIndex) => (
+                    <tr key={row.id} className={`${rowIndex % 2 === 0 ? 'bg-white' : 'bg-orange-50'} border-b border-black`}>
+                      <td className="px-3 py-3 font-black text-black">{row.name}</td>
+                      {Array.from({ length: Math.max(1, report.maxGamesPerPlayer) }).map((_, gameIndex) => (
+                        <td key={`${row.id}-${gameIndex}`} className="px-3 py-3 text-center font-black text-black">
+                          {row.games[gameIndex]?.totalScore ?? '-'}
+                        </td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
 
         <div className="bg-white border-4 border-black p-4 sm:p-6">
           <h2 className="text-xl font-black text-black uppercase mb-3">{t('weeklyReport.shareTitle')}</h2>
           <p className="text-sm font-bold text-black mb-4">{t('weeklyReport.shareSubtitle')}</p>
           <div className="flex flex-col sm:flex-row gap-3">
+            <button
+              onClick={handleDownloadPdf}
+              className="flex-1 bg-white border-4 border-black text-black py-3 font-black hover:bg-gray-100 transition-all flex items-center justify-center gap-2"
+            >
+              <Download className="w-5 h-5" />
+              {t('weeklyReport.downloadPdf')}
+            </button>
             <button
               onClick={() => void handleCopy()}
               className="flex-1 bg-amber-400 border-4 border-black text-black py-3 font-black hover:bg-amber-500 transition-all flex items-center justify-center gap-2"
