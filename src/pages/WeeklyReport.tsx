@@ -261,7 +261,7 @@ export default function WeeklyReport() {
     window.open(`https://wa.me/?text=${encoded}`, '_blank', 'noopener,noreferrer');
   };
 
-  const handleDownloadPdf = () => {
+  const handleDownloadPdf = async () => {
     const topPlayersHtml = report.topPlayers.length
       ? report.topPlayers
           .map(
@@ -323,65 +323,224 @@ export default function WeeklyReport() {
         <meta charset="utf-8" />
         <title>${escapeHtml(t('weeklyReport.title'))}</title>
         <style>
-          @page { size: A4; margin: 18mm; }
-          body { font-family: Arial, sans-serif; color: #111; background: #fff; margin: 0; padding: 12px; }
-          .wrap { border: 3px solid #111; padding: 18px; max-width: 920px; margin: 0 auto; }
-          .header { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; margin-bottom: 14px; }
-          .title { margin: 0; font-size: 28px; line-height: 1.1; text-transform: uppercase; }
-          .subtitle { margin: 6px 0 0 0; font-size: 13px; font-weight: 700; }
-          .badge { border: 2px solid #111; background: #f8c74f; padding: 8px 10px; font-size: 12px; font-weight: 700; text-transform: uppercase; }
-          .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 14px; }
-          .stat { border: 2px solid #111; padding: 10px; }
-          .stat .label { font-size: 11px; font-weight: 700; text-transform: uppercase; }
-          .stat .value { font-size: 26px; font-weight: 800; margin-top: 6px; }
-          .two-col { display: grid; grid-template-columns: 1.4fr 1fr; gap: 10px; margin-bottom: 14px; }
-          .card { border: 2px solid #111; padding: 10px; }
-          .card h2 { margin: 0 0 8px 0; font-size: 13px; text-transform: uppercase; }
-          table { width: 100%; border-collapse: collapse; font-size: 12px; }
-          th, td { border: 1px solid #111; padding: 6px; text-align: left; }
-          th { background: #ffe9b6; text-transform: uppercase; font-size: 10px; }
-          .leader { border: 2px solid #111; background: #fff3cc; padding: 8px; margin-bottom: 8px; }
-          .leader .k { font-size: 10px; text-transform: uppercase; font-weight: 700; }
-          .leader .v { font-size: 14px; font-weight: 800; margin-top: 2px; }
-          .deltas { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 14px; }
-          .delta { border: 2px solid #111; padding: 10px; }
-          .delta .k { font-size: 10px; text-transform: uppercase; font-weight: 700; }
-          .delta .v { font-size: 18px; font-weight: 800; margin-top: 4px; }
-          .games-by-player { border: 2px solid #111; padding: 10px; margin-bottom: 10px; }
-          .games-by-player h2 { margin: 0 0 8px 0; font-size: 13px; text-transform: uppercase; }
-          .games-table th, .games-table td { border: 1px solid #111; padding: 6px; text-align: center; font-size: 11px; }
-          .games-table th:first-child, .games-table td:first-child { text-align: left; font-weight: 800; }
-          .games-table th { background: #ffe9b6; font-size: 10px; text-transform: uppercase; }
-          .line { font-size: 12px; font-weight: 700; margin: 4px 0; }
-          .footer { text-align: center; font-size: 10px; font-weight: 700; text-transform: uppercase; margin-top: 10px; }
-          .toolbar { display: flex; justify-content: flex-end; margin-bottom: 10px; }
-          .print-btn { border: 2px solid #111; background: #f8c74f; color: #111; padding: 8px 12px; font-size: 11px; font-weight: 800; text-transform: uppercase; cursor: pointer; }
-          .print-btn:hover { background: #efb936; }
-          @media screen and (max-width: 820px) {
-            body { padding: 8px; }
-            .wrap { border-width: 2px; padding: 12px; }
-            .header { flex-direction: column; }
-            .title { font-size: 22px; }
-            .stats, .two-col, .deltas { grid-template-columns: 1fr; }
-            .toolbar { justify-content: stretch; }
-            .print-btn { width: 100%; }
+          :root {
+            --ink: #111;
+            --paper: #f7f8fb;
+            --coral: #ff5a67;
+            --mint: #c5de97;
+            --sky: #88b3dc;
+            --violet: #6458f5;
           }
-          @media print {
-            .toolbar { display: none; }
+          @page { size: A4; margin: 7mm; }
+          body {
+            font-family: "Avenir Next", "Segoe UI", Arial, sans-serif;
+            color: var(--ink);
+            margin: 0;
+            padding: 0;
+            background: #fff;
+          }
+          .wrap {
+            width: 100%;
+            margin: 0;
+            box-sizing: border-box;
+            background: #fff;
+            border: 2px solid var(--ink);
+            border-radius: 0;
+            padding: 12px;
+          }
+          .accent {
+            height: 8px;
+            border-radius: 999px;
+            background: linear-gradient(90deg, var(--coral) 0 33%, var(--mint) 33% 66%, var(--sky) 66% 100%);
+            margin-bottom: 10px;
+          }
+          .header {
+            display: flex;
+            justify-content: flex-start;
+            align-items: flex-start;
+            gap: 8px;
+            margin-bottom: 10px;
+          }
+          .title {
+            margin: 0;
+            font-size: 31px;
+            line-height: 1;
+            letter-spacing: 0.4px;
+            text-transform: uppercase;
+          }
+          .subtitle {
+            margin: 5px 0 0 0;
+            font-size: 13px;
+            font-weight: 400;
+            color: #202430;
+          }
+          .stats {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 7px;
+            margin-bottom: 8px;
+          }
+          .stat {
+            border: 2px solid var(--ink);
+            border-radius: 10px;
+            padding: 8px 9px;
+            min-height: 72px;
+          }
+          .stat:nth-child(1) { background: #ffe8ea; }
+          .stat:nth-child(2) { background: #eef8dd; }
+          .stat:nth-child(3) { background: #e8f2ff; }
+          .stat .label {
+            font-size: 9px;
+            font-weight: 400;
+            text-transform: uppercase;
+            letter-spacing: 0.4px;
+          }
+          .stat .value {
+            font-size: 31px;
+            font-weight: 400;
+            margin-top: 4px;
+            line-height: 1;
+          }
+          .two-col {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 7px;
+            margin-bottom: 8px;
+          }
+          .card {
+            border: 2px solid var(--ink);
+            border-radius: 10px;
+            background: var(--paper);
+            padding: 7px;
+          }
+          .card h2 {
+            margin: 0 0 10px 0;
+            font-size: 14px;
+            line-height: 1;
+            text-transform: uppercase;
+            letter-spacing: 0.35px;
+          }
+          .card table {
+            margin-top: 2px;
+          }
+          table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+            font-size: 10px;
+          }
+          th, td {
+            border: 1px solid #202530;
+            border-right: 0;
+            border-bottom: 0;
+            padding: 4px 5px;
+            text-align: left;
+          }
+          tr > *:last-child { border-right: 1px solid #202530; }
+          tbody tr:last-child td { border-bottom: 1px solid #202530; }
+          th {
+            background: #1a2232;
+            color: #fff;
+            text-transform: uppercase;
+            font-size: 9px;
+            font-weight: 800;
+            letter-spacing: 0.35px;
+          }
+          tbody tr:nth-child(even) td { background: #f3f5fa; }
+          .leader {
+            border: 2px solid var(--ink);
+            border-radius: 10px;
+            padding: 8px;
+            margin-bottom: 6px;
+            background: #fff;
+          }
+          .leader:first-child { background: #e8f2ff; }
+          .leader:last-child { background: #eef8dd; }
+          .leader .k {
+            font-size: 9px;
+            text-transform: uppercase;
+            font-weight: 400;
+            letter-spacing: 0.4px;
+          }
+          .leader .v {
+            font-size: 18px;
+            font-weight: 400;
+            margin-top: 3px;
+            line-height: 1.1;
+          }
+          .deltas {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 7px;
+            margin-bottom: 8px;
+          }
+          .delta {
+            border: 2px solid var(--ink);
+            border-radius: 10px;
+            padding: 7px 8px;
+            background: #fff;
+          }
+          .delta .k {
+            font-size: 9px;
+            text-transform: uppercase;
+            font-weight: 400;
+            letter-spacing: 0.35px;
+          }
+          .delta .v {
+            font-size: 16px;
+            font-weight: 400;
+            margin-top: 3px;
+          }
+          .games-by-player {
+            border: 2px solid var(--ink);
+            border-radius: 10px;
+            padding: 7px;
+            margin-bottom: 7px;
+            background: var(--paper);
+          }
+          .games-by-player h2 {
+            margin: 0 0 10px 0;
+            font-size: 13px;
+            line-height: 1;
+            text-transform: uppercase;
+            letter-spacing: 0.35px;
+          }
+          .games-table th, .games-table td {
+            text-align: center;
+            font-size: 9px;
+            padding: 4px 4px;
+          }
+          .games-table td:first-child {
+            text-align: left;
+            font-weight: 400;
+            width: 36%;
+          }
+          .line { font-size: 11px; font-weight: 400; margin: 4px 0; }
+          .footer {
+            text-align: center;
+            font-size: 9px;
+            font-weight: 400;
+            text-transform: uppercase;
+            letter-spacing: 0.4px;
+            margin-top: 7px;
+            color: #222a3b;
+          }
+          @media screen and (max-width: 820px) {
+            body { padding: 6px; }
+            .header { flex-direction: column; }
+            .title { font-size: 20px; }
+            .stats, .two-col, .deltas { grid-template-columns: 1fr; }
           }
         </style>
       </head>
       <body>
         <div class="wrap">
-          <div class="toolbar">
-            <button class="print-btn" onclick="window.print()">${escapeHtml(t('weeklyReport.downloadPdf'))}</button>
-          </div>
+          <div class="accent"></div>
           <div class="header">
             <div>
               <h1 class="title">${escapeHtml(t('weeklyReport.title'))}</h1>
               <p class="subtitle">${escapeHtml(formatDateLabel(report.week.start))} - ${escapeHtml(formatDateLabel(report.week.end))}</p>
             </div>
-            <div class="badge">${escapeHtml(t('weeklyReport.snapshotTitle'))}</div>
           </div>
 
           <div class="stats">
@@ -465,7 +624,7 @@ export default function WeeklyReport() {
                     <tbody>
                       ${allGamesTableRows}
                       <tr>
-                        <td><strong>${escapeHtml(t('weeklyReport.teamTotal'))}</strong></td>
+                        <td>${escapeHtml(t('weeklyReport.teamTotal'))}</td>
                         ${allGamesTotalsRow}
                       </tr>
                     </tbody>
@@ -500,61 +659,131 @@ export default function WeeklyReport() {
       || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 
     if (isIOS) {
+      // iOS Safari can ignore opener-side print callbacks.
+      // Trigger print from within the opened document itself with a few retries.
+      const htmlWithAutoPrint = html.replace(
+        '</body>',
+        `
+          <script>
+            (function () {
+              var triggerPrint = function () {
+                try {
+                  window.focus();
+                  window.print();
+                } catch (e) {}
+              };
+
+              if (document.readyState === 'complete') {
+                setTimeout(triggerPrint, 80);
+              } else {
+                window.addEventListener('load', function () {
+                  setTimeout(triggerPrint, 80);
+                }, { once: true });
+              }
+
+              setTimeout(triggerPrint, 400);
+              setTimeout(triggerPrint, 1200);
+            })();
+          </script>
+        </body>
+      `,
+      );
+
       const printWindow = window.open('', '_blank', 'width=980,height=720');
       if (!printWindow) return;
-      printWindow.addEventListener('load', () => {
-        printWindow.print();
-      }, { once: true });
       printWindow.document.open();
-      printWindow.document.write(html);
+      printWindow.document.write(htmlWithAutoPrint);
       printWindow.document.close();
       printWindow.focus();
       return;
     }
 
-    // Desktop: print/download dialog directly, without opening a visible preview tab.
+    // Desktop: generate and download a real PDF file directly (no print dialog).
     const iframe = document.createElement('iframe');
     iframe.style.position = 'fixed';
-    iframe.style.right = '0';
-    iframe.style.bottom = '0';
-    iframe.style.width = '0';
-    iframe.style.height = '0';
+    iframe.style.left = '-10000px';
+    iframe.style.top = '0';
+    iframe.style.width = '1200px';
+    iframe.style.height = '1800px';
     iframe.style.border = '0';
+    iframe.style.opacity = '0';
+    iframe.style.visibility = 'hidden';
+    iframe.style.pointerEvents = 'none';
     iframe.setAttribute('aria-hidden', 'true');
     document.body.appendChild(iframe);
 
-    const frameDoc = iframe.contentDocument || iframe.contentWindow?.document;
-    if (!frameDoc) {
-      document.body.removeChild(iframe);
-      return;
-    }
+    const cleanupIframe = () => {
+      if (document.body.contains(iframe)) {
+        document.body.removeChild(iframe);
+      }
+    };
 
-    frameDoc.open();
-    frameDoc.write(html);
-    frameDoc.close();
-
-    const runPrint = () => {
-      const frameWindow = iframe.contentWindow;
-      if (!frameWindow) {
-        if (document.body.contains(iframe)) document.body.removeChild(iframe);
+    try {
+      const frameDoc = iframe.contentDocument || iframe.contentWindow?.document;
+      if (!frameDoc) {
+        cleanupIframe();
         return;
       }
 
-      frameWindow.focus();
-      frameWindow.print();
+      const loadPromise = new Promise<void>((resolve) => {
+        iframe.onload = () => resolve();
+      });
 
-      // Cleanup after dialog is opened/closed.
-      window.setTimeout(() => {
-        if (document.body.contains(iframe)) {
-          document.body.removeChild(iframe);
-        }
-      }, 1500);
-    };
+      frameDoc.open();
+      frameDoc.write(html);
+      frameDoc.close();
 
-    if (iframe.contentWindow?.document.readyState === 'complete') {
-      runPrint();
-    } else {
-      iframe.onload = runPrint;
+      await loadPromise;
+      await new Promise((resolve) => window.setTimeout(resolve, 80));
+
+      const target = frameDoc.querySelector('.wrap') as HTMLElement | null;
+      if (!target) {
+        cleanupIframe();
+        return;
+      }
+
+      const [{ jsPDF }, { default: html2canvas }] = await Promise.all([
+        import('jspdf'),
+        import('html2canvas'),
+      ]);
+
+      const canvas = await html2canvas(target, {
+        scale: 2,
+        backgroundColor: '#ffffff',
+        useCORS: true,
+        windowWidth: 1200,
+        windowHeight: Math.max(1800, target.scrollHeight + 40),
+      });
+
+      const imgData = canvas.toDataURL('image/png');
+      const pdf = new jsPDF('p', 'mm', 'a4');
+      const margin = 0;
+      const pageWidth = pdf.internal.pageSize.getWidth();
+      const pageHeight = pdf.internal.pageSize.getHeight();
+      const maxWidth = pageWidth - margin * 2;
+      const maxHeight = pageHeight - margin * 2;
+      const imageRatio = canvas.width / canvas.height;
+
+      let renderWidth = maxWidth;
+      let renderHeight = renderWidth / imageRatio;
+
+      if (renderHeight > maxHeight) {
+        renderHeight = maxHeight;
+        renderWidth = renderHeight * imageRatio;
+      }
+
+      const offsetX = (pageWidth - renderWidth) / 2;
+      const offsetY = margin;
+      pdf.addImage(imgData, 'PNG', offsetX, offsetY, renderWidth, renderHeight, undefined, 'FAST');
+
+      const startLabel = report.week.start.toISOString().slice(0, 10);
+      const endLabel = report.week.end.toISOString().slice(0, 10);
+      pdf.save(`reporte-semanal-${startLabel}-${endLabel}.pdf`);
+    } catch (error) {
+      console.error('Error downloading weekly report PDF:', error);
+      alert('Could not download PDF. Please try again.');
+    } finally {
+      cleanupIframe();
     }
   };
 

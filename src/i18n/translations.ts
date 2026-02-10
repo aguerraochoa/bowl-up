@@ -312,6 +312,11 @@ export const translations = {
     'headToHead.pdfTitle': 'Head to Head Comparison',
     'headToHead.seasonScope': 'Season scope',
     'headToHead.metric': 'Metric',
+    'headToHead.dateRange': 'Date Range',
+    'headToHead.startDate': 'Start Date',
+    'headToHead.endDate': 'End Date',
+    'headToHead.allDates': 'All Dates',
+    'headToHead.gamesInRange': 'Games in range',
 
     // Login
     'login.emailOrTeam': 'Email or Team Name',
@@ -719,6 +724,11 @@ export const translations = {
     'headToHead.pdfTitle': 'Comparación Cara a Cara',
     'headToHead.seasonScope': 'Alcance de temporada',
     'headToHead.metric': 'Métrica',
+    'headToHead.dateRange': 'Rango de Fechas',
+    'headToHead.startDate': 'Fecha Inicial',
+    'headToHead.endDate': 'Fecha Final',
+    'headToHead.allDates': 'Todas las fechas',
+    'headToHead.gamesInRange': 'Juegos en rango',
 
     // Login
     'login.emailOrTeam': 'Email o Nombre del Equipo',
