@@ -3,6 +3,7 @@ import { ArrowLeft, ArrowRight, Clipboard, Download, Loader2, MessageCircle, Sha
 import { getGames, getPlayers } from '../utils/storage';
 import { calculateTeamStatsFromData } from '../utils/stats';
 import { calculateStrikePercentage, calculateSparePercentage } from '../utils/scoring';
+import { downloadOrSharePdf, renderPdfBlobFromHtml } from '../utils/pdfExport';
 import type { Game, Player } from '../types';
 import { t, getLanguage } from '../i18n';
 import { useSeason } from '../contexts/useSeason';
@@ -655,55 +656,25 @@ export default function WeeklyReport() {
       </html>
     `;
 
-    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent)
-      || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+    try {
+      const pdfBlob = await renderPdfBlobFromHtml({
+        html,
+        selector: '.wrap',
+        orientation: 'p',
+        format: 'a4',
+      });
 
-    if (isIOS) {
-      // iOS Safari can ignore opener-side print callbacks.
-      // Trigger print from within the opened document itself with a few retries.
-      const htmlWithAutoPrint = html.replace(
-        '</body>',
-        `
-          <script>
-            (function () {
-              var triggerPrint = function () {
-                try {
-                  window.focus();
-                  window.print();
-                } catch (e) {}
-              };
-
-              if (document.readyState === 'complete') {
-                setTimeout(triggerPrint, 80);
-              } else {
-                window.addEventListener('load', function () {
-                  setTimeout(triggerPrint, 80);
-                }, { once: true });
-              }
-
-              setTimeout(triggerPrint, 400);
-              setTimeout(triggerPrint, 1200);
-            })();
-          </script>
-        </body>
-      `,
+      const startLabel = report.week.start.toISOString().slice(0, 10);
+      const endLabel = report.week.end.toISOString().slice(0, 10);
+      await downloadOrSharePdf(
+        pdfBlob,
+        `reporte-semanal-${startLabel}-${endLabel}.pdf`,
+        t('weeklyReport.title'),
       );
-
-      const printWindow = window.open('', '_blank', 'width=980,height=720');
-      if (!printWindow) return;
-      printWindow.document.open();
-      printWindow.document.write(htmlWithAutoPrint);
-      printWindow.document.close();
-      printWindow.focus();
-      return;
+    } catch (error) {
+      console.error('Error downloading weekly report PDF:', error);
+      alert('Could not download PDF. Please try again.');
     }
-
-    const printWindow = window.open('', '_blank', 'width=980,height=720');
-    if (!printWindow) return;
-    printWindow.document.open();
-    printWindow.document.write(html);
-    printWindow.document.close();
-    printWindow.focus();
   };
 
   if (isLoading) {
