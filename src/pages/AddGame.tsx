@@ -46,6 +46,7 @@ export default function AddGame() {
   const [isLoadingGames, setIsLoadingGames] = useState(true);
   const [expandedSessions, setExpandedSessions] = useState<Set<string>>(new Set());
   const [currentLang, setCurrentLang] = useState<'es' | 'en'>(() => getLanguage());
+  const [hasInitializedDraft, setHasInitializedDraft] = useState(false);
 
   useEffect(() => {
     // Listen for language changes
@@ -157,12 +158,14 @@ export default function AddGame() {
 
       setIsLoadingPlayers(false);
       setIsLoadingGames(false);
+      setHasInitializedDraft(true);
     };
     loadData();
   }, []);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
+    if (!hasInitializedDraft) return;
 
     if (entryMode === 'live' && currentStep !== 0 && selectedPlayers.length > 0) {
       const draft: LiveDraftState = {
@@ -179,7 +182,7 @@ export default function AddGame() {
     }
 
     window.localStorage.removeItem(LIVE_DRAFT_STORAGE_KEY);
-  }, [entryMode, currentStep, selectedPlayers, currentPlayerIndex, liveGames, gameData, currentGame]);
+  }, [hasInitializedDraft, entryMode, currentStep, selectedPlayers, currentPlayerIndex, liveGames, gameData, currentGame]);
 
   const handleAddPlayer = (playerId: string) => {
     if (selectedPlayers.includes(playerId)) {
