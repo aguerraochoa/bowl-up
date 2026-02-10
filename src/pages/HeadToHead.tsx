@@ -461,98 +461,12 @@ export default function HeadToHead() {
       return;
     }
 
-    const iframe = document.createElement('iframe');
-    iframe.style.position = 'fixed';
-    iframe.style.left = '-10000px';
-    iframe.style.top = '0';
-    iframe.style.width = '1200px';
-    iframe.style.height = '1800px';
-    iframe.style.border = '0';
-    iframe.style.opacity = '0';
-    iframe.style.visibility = 'hidden';
-    iframe.style.pointerEvents = 'none';
-    iframe.setAttribute('aria-hidden', 'true');
-    document.body.appendChild(iframe);
-
-    const cleanupIframe = () => {
-      if (document.body.contains(iframe)) {
-        document.body.removeChild(iframe);
-      }
-    };
-
-    try {
-      const frameDoc = iframe.contentDocument || iframe.contentWindow?.document;
-      if (!frameDoc) {
-        cleanupIframe();
-        return;
-      }
-
-      const loadPromise = new Promise<void>((resolve) => {
-        iframe.onload = () => resolve();
-      });
-
-      frameDoc.open();
-      frameDoc.write(html);
-      frameDoc.close();
-
-      await loadPromise;
-      await new Promise((resolve) => window.setTimeout(resolve, 80));
-
-      const target = frameDoc.querySelector('.wrap') as HTMLElement | null;
-      if (!target) {
-        cleanupIframe();
-        return;
-      }
-
-      const [{ jsPDF }, { default: html2canvas }] = await Promise.all([
-        import('jspdf'),
-        import('html2canvas'),
-      ]);
-
-      const canvas = await html2canvas(target, {
-        scale: 2,
-        backgroundColor: '#ffffff',
-        useCORS: true,
-        windowWidth: 1200,
-        windowHeight: Math.max(1800, target.scrollHeight + 40),
-      });
-
-      const imgData = canvas.toDataURL('image/png');
-      const pdf = new jsPDF('p', 'mm', 'a4');
-      const margin = 0;
-      const pageWidth = pdf.internal.pageSize.getWidth();
-      const pageHeight = pdf.internal.pageSize.getHeight();
-      const maxWidth = pageWidth - margin * 2;
-      const maxHeight = pageHeight - margin * 2;
-      const imageRatio = canvas.width / canvas.height;
-
-      let renderWidth = maxWidth;
-      let renderHeight = renderWidth / imageRatio;
-
-      if (renderHeight > maxHeight) {
-        renderHeight = maxHeight;
-        renderWidth = renderHeight * imageRatio;
-      }
-
-      const offsetX = (pageWidth - renderWidth) / 2;
-      const offsetY = margin;
-      pdf.addImage(imgData, 'PNG', offsetX, offsetY, renderWidth, renderHeight, undefined, 'FAST');
-
-      const sanitizeName = (value: string) =>
-        value
-          .toLowerCase()
-          .replace(/[^a-z0-9]+/g, '-')
-          .replace(/^-+|-+$/g, '') || 'jugador';
-
-      const startLabel = dateFrom || 'all';
-      const endLabel = dateTo || 'all';
-      pdf.save(`cara-a-cara-${sanitizeName(playerA.name)}-vs-${sanitizeName(playerB.name)}-${startLabel}-${endLabel}.pdf`);
-    } catch (error) {
-      console.error('Error downloading head-to-head PDF:', error);
-      alert('Could not download PDF. Please try again.');
-    } finally {
-      cleanupIframe();
-    }
+    const printWindow = window.open('', '_blank', 'width=980,height=720');
+    if (!printWindow) return;
+    printWindow.document.open();
+    printWindow.document.write(html);
+    printWindow.document.close();
+    printWindow.focus();
   };
 
   if (isLoading) {
