@@ -495,22 +495,22 @@ export default function HeadToHead() {
         <div className="bg-white border-4 border-black p-4 sm:p-6 mb-4">
           <p className="text-xs uppercase font-black text-black mb-3">{t('headToHead.dateRange')}</p>
           <div className="grid grid-cols-1 md:grid-cols-[1fr_1fr_auto] gap-3">
-            <div>
+            <div className="min-w-0">
               <label className="block text-xs uppercase font-black text-black mb-2">{t('headToHead.startDate')}</label>
               <input
                 type="date"
                 value={dateFrom}
                 onChange={(e) => handleDateFromChange(e.target.value)}
-                className="w-full px-4 py-3 border-4 border-black focus:outline-none font-bold bg-white"
+                className="block w-full max-w-full min-w-0 box-border px-4 py-3 border-4 border-black focus:outline-none font-bold bg-white"
               />
             </div>
-            <div>
+            <div className="min-w-0">
               <label className="block text-xs uppercase font-black text-black mb-2">{t('headToHead.endDate')}</label>
               <input
                 type="date"
                 value={dateTo}
                 onChange={(e) => handleDateToChange(e.target.value)}
-                className="w-full px-4 py-3 border-4 border-black focus:outline-none font-bold bg-white"
+                className="block w-full max-w-full min-w-0 box-border px-4 py-3 border-4 border-black focus:outline-none font-bold bg-white"
               />
             </div>
             <button
