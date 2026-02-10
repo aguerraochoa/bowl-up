@@ -4,7 +4,7 @@ import { validateGame, validateTenthFrame } from '../utils/scoring';
 import { t, getLanguage } from '../i18n';
 import { useSeason } from '../contexts/useSeason';
 import type { Player, Game } from '../types';
-import { Check, X, ArrowRight, ArrowLeft, Loader2, Trash2, Clock, Eraser, ChevronDown, ChevronUp } from 'lucide-react';
+import { Check, X, ArrowRight, ArrowLeft, Loader2, Trash2, Clock, Eraser, ChevronDown, ChevronUp, Plus, Minus } from 'lucide-react';
 
 const EMPTY_GAME: Partial<Game> = {
   totalScore: undefined,
@@ -13,13 +13,27 @@ const EMPTY_GAME: Partial<Game> = {
   tenthFrame: '',
 };
 
+const LIVE_DRAFT_STORAGE_KEY = 'bowlup_live_add_game_draft_v1';
+
+type LiveDraftState = {
+  entryMode: 'live';
+  selectedPlayers: string[];
+  currentStep: number;
+  currentPlayerIndex: number;
+  liveGames: Partial<Game>[];
+  gameData: Partial<Game>[];
+  currentGame: Partial<Game>;
+};
+
 export default function AddGame() {
   const { currentSeason } = useSeason();
   const [allPlayers, setAllPlayers] = useState<Player[]>([]);
   const [selectedPlayers, setSelectedPlayers] = useState<string[]>([]); // Array of player IDs in order
-  const [currentStep, setCurrentStep] = useState(0); // 0 = select players, 1 = enter scores, 2 = review
+  const [currentStep, setCurrentStep] = useState(0); // 0 = select players, 1 = classic entry, 2 = review, 3 = live entry
+  const [entryMode, setEntryMode] = useState<'classic' | 'live'>('classic');
   const [currentPlayerIndex, setCurrentPlayerIndex] = useState(0);
   const [gameData, setGameData] = useState<Partial<Game>[]>([]);
+  const [liveGames, setLiveGames] = useState<Partial<Game>[]>([]);
   const [currentGame, setCurrentGame] = useState<Partial<Game>>(EMPTY_GAME);
   const [error, setError] = useState<string>('');
   const [tenthFrameError, setTenthFrameError] = useState<string>('');
@@ -49,11 +63,26 @@ export default function AddGame() {
   // Force re-render when language changes
   void currentLang;
 
+  const clearLiveDraftStorage = () => {
+    if (typeof window === 'undefined') return;
+    window.localStorage.removeItem(LIVE_DRAFT_STORAGE_KEY);
+  };
+
+  const normalizeDraftGames = (gamesDraft: Partial<Game>[] | undefined, count: number): Partial<Game>[] => {
+    return Array.from({ length: count }, (_, index) => ({
+      ...EMPTY_GAME,
+      ...(gamesDraft?.[index] || {}),
+    }));
+  };
+
   const resetDraftState = () => {
+    clearLiveDraftStorage();
     setCurrentStep(0);
+    setEntryMode('classic');
     setSelectedPlayers([]);
     setCurrentPlayerIndex(0);
     setGameData([]);
+    setLiveGames([]);
     setCurrentGame(EMPTY_GAME);
     setError('');
     setTenthFrameError('');
@@ -71,13 +100,86 @@ export default function AddGame() {
       ]);
 
       // Filter out deleted players (only show active players for adding games)
-      setAllPlayers(players.filter(p => !p.deletedAt));
+      const activePlayers = players.filter(p => !p.deletedAt);
+      setAllPlayers(activePlayers);
       setGames(loadedGames);
+
+      // Restore in-progress live draft after accidental refresh.
+      try {
+        if (typeof window !== 'undefined') {
+          const rawDraft = window.localStorage.getItem(LIVE_DRAFT_STORAGE_KEY);
+          if (rawDraft) {
+            const parsed = JSON.parse(rawDraft) as LiveDraftState;
+            if (parsed?.entryMode === 'live' && Array.isArray(parsed.selectedPlayers)) {
+              const restoredSelectedPlayers = parsed.selectedPlayers
+                .filter((playerId) => activePlayers.some((player) => player.id === playerId))
+                .slice(0, 4);
+
+              if (restoredSelectedPlayers.length > 0) {
+                const restoredLiveGames = normalizeDraftGames(parsed.liveGames, restoredSelectedPlayers.length);
+                const restoredGameData = normalizeDraftGames(parsed.gameData || parsed.liveGames, restoredSelectedPlayers.length);
+                const restoredStep = [1, 2, 3].includes(parsed.currentStep) ? parsed.currentStep : 3;
+                const restoredIndex = Math.min(
+                  Math.max(parsed.currentPlayerIndex ?? 0, 0),
+                  restoredSelectedPlayers.length - 1,
+                );
+                const restoredCurrentGame = {
+                  ...EMPTY_GAME,
+                  ...(parsed.currentGame || restoredGameData[restoredIndex] || {}),
+                };
+
+                setEntryMode('live');
+                setSelectedPlayers(restoredSelectedPlayers);
+                setLiveGames(restoredLiveGames);
+                setGameData(restoredGameData);
+                setCurrentPlayerIndex(restoredIndex);
+                setCurrentStep(restoredStep);
+                setCurrentGame(restoredCurrentGame);
+                setError('');
+
+                if (restoredCurrentGame.tenthFrame && restoredStep !== 3) {
+                  const validation = validateTenthFrame(restoredCurrentGame.tenthFrame);
+                  setTenthFrameError(validation.valid ? '' : (validation.error || t('addGame.tenthFrameInvalid')));
+                } else {
+                  setTenthFrameError('');
+                }
+              } else {
+                clearLiveDraftStorage();
+              }
+            } else {
+              clearLiveDraftStorage();
+            }
+          }
+        }
+      } catch {
+        clearLiveDraftStorage();
+      }
+
       setIsLoadingPlayers(false);
       setIsLoadingGames(false);
     };
     loadData();
   }, []);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    if (entryMode === 'live' && currentStep !== 0 && selectedPlayers.length > 0) {
+      const draft: LiveDraftState = {
+        entryMode: 'live',
+        selectedPlayers,
+        currentStep,
+        currentPlayerIndex,
+        liveGames,
+        gameData,
+        currentGame,
+      };
+      window.localStorage.setItem(LIVE_DRAFT_STORAGE_KEY, JSON.stringify(draft));
+      return;
+    }
+
+    window.localStorage.removeItem(LIVE_DRAFT_STORAGE_KEY);
+  }, [entryMode, currentStep, selectedPlayers, currentPlayerIndex, liveGames, gameData, currentGame]);
 
   const handleAddPlayer = (playerId: string) => {
     if (selectedPlayers.includes(playerId)) {
@@ -98,13 +200,17 @@ export default function AddGame() {
     resetDraftState();
   };
 
-  const handleStartGame = () => {
+  const handleStartGame = (mode: 'classic' | 'live' = 'classic') => {
     if (selectedPlayers.length === 0) {
       setError(t('addGame.selectAtLeastOne'));
       return;
     }
-    setGameData(selectedPlayers.map(() => ({})));
-    setCurrentStep(1);
+    const emptyGames = selectedPlayers.map(() => ({ ...EMPTY_GAME }));
+    setEntryMode(mode);
+    setGameData(emptyGames);
+    setLiveGames(emptyGames);
+    setCurrentGame(EMPTY_GAME);
+    setCurrentStep(mode === 'live' ? 3 : 1);
     setCurrentPlayerIndex(0);
     setError('');
   };
@@ -143,6 +249,34 @@ export default function AddGame() {
       }
       setError(''); // Clear general error when typing
     }
+  };
+
+  const handleLiveCounterChange = (index: number, field: 'strikesFrames1to9' | 'sparesFrames1to9', delta: number) => {
+    setLiveGames((prev) => {
+      const next = [...prev];
+      const existing = next[index] || { ...EMPTY_GAME };
+      const strikes = existing.strikesFrames1to9 ?? 0;
+      const spares = existing.sparesFrames1to9 ?? 0;
+
+      if (field === 'strikesFrames1to9') {
+        const maxStrikes = Math.max(0, 9 - spares);
+        const nextStrikes = Math.max(0, Math.min(maxStrikes, strikes + delta));
+        next[index] = {
+          ...existing,
+          strikesFrames1to9: nextStrikes,
+        };
+      } else {
+        const maxSpares = Math.max(0, 9 - strikes);
+        const nextSpares = Math.max(0, Math.min(maxSpares, spares + delta));
+        next[index] = {
+          ...existing,
+          sparesFrames1to9: nextSpares,
+        };
+      }
+
+      return next;
+    });
+    setError('');
   };
 
   const handleNext = () => {
@@ -187,10 +321,17 @@ export default function AddGame() {
 
     // Move to next player or finish
     if (currentPlayerIndex < playersList.length - 1) {
-      setCurrentPlayerIndex(prev => prev + 1);
-      setCurrentGame(EMPTY_GAME);
+      const nextIndex = currentPlayerIndex + 1;
+      const nextGame = updatedGameData[nextIndex] || EMPTY_GAME;
+      setCurrentPlayerIndex(nextIndex);
+      setCurrentGame(nextGame);
       setError('');
-      setTenthFrameError('');
+      if (nextGame.tenthFrame) {
+        const validation = validateTenthFrame(nextGame.tenthFrame);
+        setTenthFrameError(validation.valid ? '' : (validation.error || t('addGame.tenthFrameInvalid')));
+      } else {
+        setTenthFrameError('');
+      }
       // Scroll to top when moving to next player (after state update)
       setTimeout(() => {
         window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -230,11 +371,11 @@ export default function AddGame() {
     return fullValidation.valid;
   };
 
-  // Check if all games are valid and complete for review
+  // Check if review data is valid and complete
   const areAllGamesValid = (): boolean => {
     const playersList = getSelectedPlayersList();
     for (let i = 0; i < playersList.length; i++) {
-      const game = i === currentPlayerIndex ? currentGame : gameData[i];
+      const game = gameData[i];
       if (!game || !game.totalScore || game.totalScore <= 0) {
         return false;
       }
@@ -262,8 +403,50 @@ export default function AddGame() {
     return true;
   };
 
+  const handleLiveContinueToScores = () => {
+    const playersList = getSelectedPlayersList();
+    const mergedGameData = playersList.map((_, index) => {
+      const live = liveGames[index] || EMPTY_GAME;
+      const existing = gameData[index] || EMPTY_GAME;
+      return {
+        ...EMPTY_GAME,
+        ...existing,
+        ...live,
+        strikesFrames1to9: live.strikesFrames1to9 ?? existing.strikesFrames1to9 ?? 0,
+        sparesFrames1to9: live.sparesFrames1to9 ?? existing.sparesFrames1to9 ?? 0,
+      };
+    });
+
+    setGameData(mergedGameData);
+    setCurrentPlayerIndex(0);
+    setCurrentGame(mergedGameData[0] || EMPTY_GAME);
+    setError('');
+    setTenthFrameError('');
+    setCurrentStep(1);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
   const handleBack = () => {
-    if (currentPlayerIndex > 0) {
+    if (currentStep === 3) {
+      const shouldExitLiveMode = confirm(t('addGame.liveExitWarning'));
+      if (!shouldExitLiveMode) {
+        return;
+      }
+
+      clearLiveDraftStorage();
+      setCurrentStep(0);
+      setEntryMode('classic');
+      setCurrentPlayerIndex(0);
+      setGameData([]);
+      setLiveGames([]);
+      setCurrentGame(EMPTY_GAME);
+      setError('');
+      setTenthFrameError('');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
+    }
+
+    if (currentStep === 1 && currentPlayerIndex > 0) {
       const prevIndex = currentPlayerIndex - 1;
       const prevGame = gameData[prevIndex] || EMPTY_GAME;
       setCurrentPlayerIndex(prevIndex);
@@ -304,7 +487,7 @@ export default function AddGame() {
         window.scrollTo({ top: 0, behavior: 'smooth' });
       }, 0);
     } else if (currentStep === 1 && currentPlayerIndex === 0) {
-      setCurrentStep(0);
+      setCurrentStep(entryMode === 'live' ? 3 : 0);
       setError('');
       setTenthFrameError('');
       window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -410,14 +593,14 @@ export default function AddGame() {
         className="flex-1 bg-amber-400 border-4 border-black text-black py-2 sm:py-2 md:py-1.5 rounded-none font-black flex items-center justify-center gap-2 text-sm sm:text-sm md:text-xs"
       >
         <ArrowLeft className="w-4 h-4 sm:w-4 md:w-3.5" />
-        <span>{isFirstPlayer ? t('addGame.backToPlayerSelection') : t('addGame.previous')}</span>
+        <span>{isFirstPlayer ? (entryMode === 'live' ? t('addGame.backToLiveStats') : t('addGame.playerSelectionShort')) : t('addGame.previous')}</span>
       </button>
       <button
         onClick={handleNext}
         disabled={!isCurrentGameValid()}
-        className="flex-1 bg-orange-500 border-4 border-black text-black py-2 sm:py-2 md:py-1.5 rounded-none font-black flex items-center justify-center gap-2 text-sm sm:text-sm md:text-xs disabled:bg-gray-300 disabled:cursor-not-allowed disabled:opacity-70"
+        className="flex-1 bg-blue-400 border-4 border-black text-black py-2 sm:py-2 md:py-1.5 rounded-none font-black flex items-center justify-center gap-2 text-sm sm:text-sm md:text-xs hover:bg-blue-500 disabled:bg-gray-300 disabled:cursor-not-allowed disabled:opacity-70"
       >
-        <span className="hidden sm:inline">{isLastPlayer ? t('addGame.review') : t('addGame.next')}</span>
+        <span>{isLastPlayer ? t('addGame.review') : t('addGame.nextPlayer')}</span>
         <ArrowRight className="w-4 h-4 sm:w-4 md:w-3.5" />
       </button>
     </div>
@@ -711,14 +894,138 @@ export default function AddGame() {
             </div>
           )}
 
-          <button
-            onClick={handleStartGame}
-            disabled={selectedPlayers.length === 0}
-            className="w-full bg-orange-500 border-4 border-black text-black py-4 rounded-none font-black flex items-center justify-center gap-2  disabled:bg-gray-300 disabled:cursor-not-allowed "
-          >
-            {t('addGame.startGame')}
-            <ArrowRight className="w-5 h-5" />
-          </button>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <button
+              onClick={() => handleStartGame('classic')}
+              disabled={selectedPlayers.length === 0}
+              className="w-full bg-orange-500 border-4 border-black text-black py-4 rounded-none font-black flex items-center justify-center gap-2 disabled:bg-gray-300 disabled:cursor-not-allowed"
+            >
+              {t('addGame.startGame')}
+              <ArrowRight className="w-5 h-5" />
+            </button>
+            <button
+              onClick={() => handleStartGame('live')}
+              disabled={selectedPlayers.length === 0}
+              className="w-full bg-blue-400 border-4 border-black text-black py-4 rounded-none font-black flex items-center justify-center gap-2 disabled:bg-gray-300 disabled:cursor-not-allowed"
+            >
+              {t('addGame.startGameLive')}
+              <ArrowRight className="w-5 h-5" />
+            </button>
+          </div>
+          <p className="mt-3 text-xs sm:text-sm text-black font-bold">
+            {t('addGame.liveModeHint')}
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  if (currentStep === 3) {
+    return (
+      <div className="min-h-screen bg-orange-50 pb-20 safe-top relative">
+        <div className="max-w-5xl mx-auto px-4 py-4 sm:py-6">
+          <div className="mb-4 sm:mb-6 flex items-start justify-between gap-3">
+            <div>
+              <h1 className="text-3xl sm:text-4xl md:text-5xl font-black text-black uppercase">{t('addGame.liveTitle')}</h1>
+              <p className="text-sm sm:text-base text-black font-bold">{t('addGame.liveSubtitle')}</p>
+            </div>
+            <button
+              onClick={handleBack}
+              className="bg-amber-400 border-4 border-black text-black px-3 py-2 rounded-none font-black flex items-center gap-2"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              <span className="hidden sm:inline">{t('addGame.backToPlayerSelection')}</span>
+            </button>
+          </div>
+
+          {error && (
+            <div className="mb-4 p-4 bg-red-600 border-4 border-black rounded-none text-black text-sm font-black">
+              {error}
+            </div>
+          )}
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4 mb-4 sm:mb-6">
+            {selectedPlayersList.map((player, index) => {
+              const game = liveGames[index] || EMPTY_GAME;
+              const strikes = game.strikesFrames1to9 ?? 0;
+              const spares = game.sparesFrames1to9 ?? 0;
+              const canIncreaseStrikes = strikes + spares < 9;
+              const canIncreaseSpares = strikes + spares < 9;
+
+              return (
+                <div key={player.id} className="bg-white border-4 border-black p-4">
+                  <h2 className="text-xl sm:text-2xl font-black text-black uppercase mb-3">{player.name}</h2>
+
+                  <div className="space-y-3">
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="border-4 border-black p-2">
+                        <p className="text-xs font-black uppercase text-black mb-2">{t('addGame.strikes')}</p>
+                        <div className="flex items-center justify-between gap-2">
+                          <button
+                            onClick={() => handleLiveCounterChange(index, 'strikesFrames1to9', -1)}
+                            disabled={strikes <= 0}
+                            className="bg-white border-4 border-black text-black p-1 disabled:bg-gray-300 disabled:cursor-not-allowed"
+                            aria-label={t('addGame.decrease')}
+                          >
+                            <Minus className="w-4 h-4" />
+                          </button>
+                          <span className="text-3xl font-black text-black min-w-[2ch] text-center">{strikes}</span>
+                          <button
+                            onClick={() => handleLiveCounterChange(index, 'strikesFrames1to9', 1)}
+                            disabled={!canIncreaseStrikes}
+                            className="bg-blue-400 border-4 border-black text-black p-1 disabled:bg-gray-300 disabled:cursor-not-allowed"
+                            aria-label={t('addGame.increase')}
+                          >
+                            <Plus className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </div>
+
+                      <div className="border-4 border-black p-2">
+                        <p className="text-xs font-black uppercase text-black mb-2">{t('addGame.spares')}</p>
+                        <div className="flex items-center justify-between gap-2">
+                          <button
+                            onClick={() => handleLiveCounterChange(index, 'sparesFrames1to9', -1)}
+                            disabled={spares <= 0}
+                            className="bg-white border-4 border-black text-black p-1 disabled:bg-gray-300 disabled:cursor-not-allowed"
+                            aria-label={t('addGame.decrease')}
+                          >
+                            <Minus className="w-4 h-4" />
+                          </button>
+                          <span className="text-3xl font-black text-black min-w-[2ch] text-center">{spares}</span>
+                          <button
+                            onClick={() => handleLiveCounterChange(index, 'sparesFrames1to9', 1)}
+                            disabled={!canIncreaseSpares}
+                            className="bg-blue-400 border-4 border-black text-black p-1 disabled:bg-gray-300 disabled:cursor-not-allowed"
+                            aria-label={t('addGame.increase')}
+                          >
+                            <Plus className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <button
+              onClick={handleBack}
+              className="w-full bg-lime-400 border-4 border-black text-black px-4 py-3 sm:py-4 rounded-none font-black text-sm sm:text-base leading-none flex items-center justify-center gap-2 hover:bg-lime-500 transition-all"
+            >
+              <ArrowLeft className="w-4 h-4 sm:w-5 sm:h-5 shrink-0" />
+              <span className="truncate">{t('addGame.playerSelectionShort')}</span>
+            </button>
+            <button
+              onClick={handleLiveContinueToScores}
+              className="w-full bg-red-400 border-4 border-black text-black px-4 py-3 sm:py-4 rounded-none font-black text-sm sm:text-base leading-none flex items-center justify-center gap-2 hover:bg-red-500 transition-all"
+            >
+              <span className="truncate">{t('addGame.scoresShort')}</span>
+              <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5 shrink-0" />
+            </button>
+          </div>
         </div>
       </div>
     );
@@ -773,7 +1080,7 @@ export default function AddGame() {
             <button
               onClick={handleSave}
               disabled={isSaving || !areAllGamesValid()}
-              className="flex-1 bg-lime-500 border-4 border-black text-black py-3 sm:py-4 rounded-none font-black flex items-center justify-center gap-2 text-sm sm:text-base disabled:bg-gray-300 disabled:cursor-not-allowed disabled:opacity-70"
+              className="flex-1 bg-blue-400 border-4 border-black text-black py-3 sm:py-4 rounded-none font-black flex items-center justify-center gap-2 text-sm sm:text-base hover:bg-blue-500 disabled:bg-gray-300 disabled:cursor-not-allowed disabled:opacity-70"
             >
               {isSaving ? (
                 <>
@@ -794,7 +1101,7 @@ export default function AddGame() {
   }
 
   return (
-    <div className="min-h-screen bg-yellow-100 pb-20 safe-top">
+    <div className="min-h-screen bg-orange-50 pb-20 safe-top">
       <div className="max-w-2xl mx-auto px-4 py-6">
         {/* Progress */}
         <div className="mb-4 sm:mb-6">
@@ -806,7 +1113,7 @@ export default function AddGame() {
           </div>
           <div className="w-full bg-white border-4 border-black h-3 sm:h-4">
             <div
-              className="bg-orange-500 h-full transition-all"
+              className="bg-blue-400 h-full transition-all"
               style={{ width: `${((currentPlayerIndex + 1) / selectedPlayersList.length) * 100}%` }}
             />
           </div>
@@ -912,47 +1219,51 @@ export default function AddGame() {
             </div>
           </div>
 
-          {/* Strikes */}
-          <div className="mb-6">
-            <label className="block text-sm font-black text-black mb-3 uppercase">
-              {t('addGame.strikes')}
-            </label>
-            <div className="grid grid-cols-5 gap-2">
-              {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9].map(num => (
-                <button
-                  key={num}
-                  onClick={() => handleNumberInput('strikesFrames1to9', num)}
-                  className={`py-2 sm:py-3 rounded-none border-4 border-black font-black transition-all  text-sm sm:text-base ${currentGame.strikesFrames1to9 === num
-                    ? 'bg-orange-500 text-black'
-                    : 'bg-amber-400 hover:bg-amber-500 text-black'
-                    }`}
-                >
-                  {num}
-                </button>
-              ))}
-            </div>
-          </div>
+          {entryMode === 'classic' && (
+            <>
+              {/* Strikes */}
+              <div className="mb-6">
+                <label className="block text-sm font-black text-black mb-3 uppercase">
+                  {t('addGame.strikes')}
+                </label>
+                <div className="grid grid-cols-5 gap-2">
+                  {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9].map(num => (
+                    <button
+                      key={num}
+                      onClick={() => handleNumberInput('strikesFrames1to9', num)}
+                      className={`py-2 sm:py-3 rounded-none border-4 border-black font-black transition-all  text-sm sm:text-base ${currentGame.strikesFrames1to9 === num
+                        ? 'bg-blue-400 text-black'
+                        : 'bg-amber-400 hover:bg-amber-500 text-black'
+                        }`}
+                    >
+                      {num}
+                    </button>
+                  ))}
+                </div>
+              </div>
 
-          {/* Spares */}
-          <div className="mb-6">
-            <label className="block text-sm font-black text-black mb-3 uppercase">
-              {t('addGame.spares')}
-            </label>
-            <div className="grid grid-cols-5 gap-2">
-              {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9].map(num => (
-                <button
-                  key={num}
-                  onClick={() => handleNumberInput('sparesFrames1to9', num)}
-                  className={`py-2 sm:py-3 rounded-none border-4 border-black font-black transition-all  text-sm sm:text-base ${currentGame.sparesFrames1to9 === num
-                    ? 'bg-orange-500 text-black'
-                    : 'bg-amber-400 hover:bg-amber-500 text-black'
-                    }`}
-                >
-                  {num}
-                </button>
-              ))}
-            </div>
-          </div>
+              {/* Spares */}
+              <div className="mb-6">
+                <label className="block text-sm font-black text-black mb-3 uppercase">
+                  {t('addGame.spares')}
+                </label>
+                <div className="grid grid-cols-5 gap-2">
+                  {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9].map(num => (
+                    <button
+                      key={num}
+                      onClick={() => handleNumberInput('sparesFrames1to9', num)}
+                      className={`py-2 sm:py-3 rounded-none border-4 border-black font-black transition-all  text-sm sm:text-base ${currentGame.sparesFrames1to9 === num
+                        ? 'bg-blue-400 text-black'
+                        : 'bg-amber-400 hover:bg-amber-500 text-black'
+                        }`}
+                    >
+                      {num}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </>
+          )}
 
           {/* 10th Frame */}
           <div className="mb-6">

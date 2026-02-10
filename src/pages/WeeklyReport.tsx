@@ -156,27 +156,49 @@ export default function WeeklyReport() {
     const strikeLeader = [...playerRows].sort((a, b) => b.strike - a.strike)[0] || null;
     const spareLeader = [...playerRows].sort((a, b) => b.spare - a.spare)[0] || null;
 
+    const weeklySessionEntries = Array.from(
+      weeklyGames.reduce((map, game) => {
+        const key = game.gameSessionId || game.id;
+        const timestamp = new Date(game.created_at || `${game.date}T00:00:00`);
+        const existing = map.get(key);
+        if (!existing || timestamp.getTime() < existing.getTime()) {
+          map.set(key, timestamp);
+        }
+        return map;
+      }, new Map<string, Date>()),
+    )
+      .sort((a, b) => a[1].getTime() - b[1].getTime())
+      .map(([key]) => key);
+
     const allGamesByPlayer = players
       .map((player) => {
-        const playerGames = weeklyGames
-          .filter((game) => game.playerId === player.id)
-          .sort((a, b) => {
-            const aDate = a.created_at || a.date;
-            const bDate = b.created_at || b.date;
-            return new Date(aDate).getTime() - new Date(bDate).getTime();
-          });
+        const playerGames = weeklyGames.filter((game) => game.playerId === player.id);
+        if (playerGames.length === 0) return null;
+
+        const scoreBySession = new Map<string, number>();
+        playerGames.forEach((game) => {
+          const key = game.gameSessionId || game.id;
+          if (!scoreBySession.has(key)) {
+            scoreBySession.set(key, game.totalScore);
+          }
+        });
 
         return {
           id: player.id,
           name: player.name,
-          games: playerGames,
+          sessionScores: weeklySessionEntries.map((sessionKey) => scoreBySession.get(sessionKey) ?? null),
           average: playerGames.reduce((sum, game) => sum + game.totalScore, 0) / playerGames.length,
         };
       })
-      .filter((row) => row.games.length > 0)
+      .filter((row): row is { id: string; name: string; sessionScores: Array<number | null>; average: number } => row !== null)
       .sort((a, b) => b.average - a.average || a.name.localeCompare(b.name));
 
-    const maxGamesPerPlayer = allGamesByPlayer.reduce((max, row) => Math.max(max, row.games.length), 0);
+    const sessionCount = weeklySessionEntries.length;
+    const sessionTotals = weeklySessionEntries.map((sessionKey) =>
+      weeklyGames
+        .filter((game) => (game.gameSessionId || game.id) === sessionKey)
+        .reduce((sum, game) => sum + game.totalScore, 0),
+    );
     const playerPercentages = [...playerRows].sort((a, b) => b.strike - a.strike || b.spare - a.spare || a.name.localeCompare(b.name));
 
     return {
@@ -193,7 +215,8 @@ export default function WeeklyReport() {
       strikeDelta: weeklyTeamStats.totalStrikePercentage - previousTeamStats.totalStrikePercentage,
       spareDelta: weeklyTeamStats.totalSparePercentage - previousTeamStats.totalSparePercentage,
       allGamesByPlayer,
-      maxGamesPerPlayer,
+      sessionCount,
+      sessionTotals,
       playerPercentages,
     };
   }, [weekOffset, games, players]);
@@ -255,15 +278,15 @@ export default function WeeklyReport() {
           .join('')
       : `<tr><td colspan="5">${escapeHtml(t('weeklyReport.noGamesThisWeek'))}</td></tr>`;
 
-    const allGamesTableHeaders = Array.from({ length: Math.max(1, report.maxGamesPerPlayer) })
+    const allGamesTableHeaders = Array.from({ length: Math.max(1, report.sessionCount) })
       .map((_, index) => `<th>${escapeHtml(`${t('weeklyReport.game')} ${index + 1}`)}</th>`)
       .join('');
 
     const allGamesTableRows = report.allGamesByPlayer
       .map((row) => {
-        const cells = Array.from({ length: Math.max(1, report.maxGamesPerPlayer) }).map((_, index) => {
-          const game = row.games[index];
-          return `<td>${game ? game.totalScore : '-'}</td>`;
+        const cells = Array.from({ length: Math.max(1, report.sessionCount) }).map((_, index) => {
+          const score = row.sessionScores[index];
+          return `<td>${score ?? '-'}</td>`;
         });
         return `
           <tr>
@@ -273,6 +296,11 @@ export default function WeeklyReport() {
         `;
       })
       .join('');
+
+    const allGamesTotalsRow = Array.from({ length: Math.max(1, report.sessionCount) }).map((_, index) => {
+      const total = report.sessionTotals[index];
+      return `<td>${typeof total === 'number' ? total : '-'}</td>`;
+    }).join('');
 
     const playerPercentRows = report.playerPercentages.length
       ? report.playerPercentages
@@ -436,6 +464,10 @@ export default function WeeklyReport() {
                     </thead>
                     <tbody>
                       ${allGamesTableRows}
+                      <tr>
+                        <td><strong>${escapeHtml(t('weeklyReport.teamTotal'))}</strong></td>
+                        ${allGamesTotalsRow}
+                      </tr>
                     </tbody>
                   </table>
                 `
@@ -466,17 +498,64 @@ export default function WeeklyReport() {
 
     const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent)
       || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-    const printWindow = window.open('', '_blank', 'width=980,height=720');
-    if (!printWindow) return;
+
     if (isIOS) {
+      const printWindow = window.open('', '_blank', 'width=980,height=720');
+      if (!printWindow) return;
       printWindow.addEventListener('load', () => {
         printWindow.print();
       }, { once: true });
+      printWindow.document.open();
+      printWindow.document.write(html);
+      printWindow.document.close();
+      printWindow.focus();
+      return;
     }
-    printWindow.document.open();
-    printWindow.document.write(html);
-    printWindow.document.close();
-    printWindow.focus();
+
+    // Desktop: print/download dialog directly, without opening a visible preview tab.
+    const iframe = document.createElement('iframe');
+    iframe.style.position = 'fixed';
+    iframe.style.right = '0';
+    iframe.style.bottom = '0';
+    iframe.style.width = '0';
+    iframe.style.height = '0';
+    iframe.style.border = '0';
+    iframe.setAttribute('aria-hidden', 'true');
+    document.body.appendChild(iframe);
+
+    const frameDoc = iframe.contentDocument || iframe.contentWindow?.document;
+    if (!frameDoc) {
+      document.body.removeChild(iframe);
+      return;
+    }
+
+    frameDoc.open();
+    frameDoc.write(html);
+    frameDoc.close();
+
+    const runPrint = () => {
+      const frameWindow = iframe.contentWindow;
+      if (!frameWindow) {
+        if (document.body.contains(iframe)) document.body.removeChild(iframe);
+        return;
+      }
+
+      frameWindow.focus();
+      frameWindow.print();
+
+      // Cleanup after dialog is opened/closed.
+      window.setTimeout(() => {
+        if (document.body.contains(iframe)) {
+          document.body.removeChild(iframe);
+        }
+      }, 1500);
+    };
+
+    if (iframe.contentWindow?.document.readyState === 'complete') {
+      runPrint();
+    } else {
+      iframe.onload = runPrint;
+    }
   };
 
   if (isLoading) {
@@ -494,15 +573,25 @@ export default function WeeklyReport() {
     <div className="min-h-screen bg-orange-50 pb-20 lg:pb-6 safe-top relative">
       <div className="max-w-5xl mx-auto px-4 py-4 md:py-6">
         <div className="bg-white border-4 border-black p-4 sm:p-6 mb-4">
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-            <div>
-              <h1 className="text-3xl sm:text-4xl md:text-5xl font-black text-black uppercase">{t('weeklyReport.title')}</h1>
-              <p className="text-sm sm:text-base text-black font-bold">
-                {formatDateLabel(report.week.start)} - {formatDateLabel(report.week.end)}
-              </p>
+          <div className="flex flex-col gap-4">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <h1 className="text-3xl sm:text-4xl md:text-5xl font-black text-black uppercase">{t('weeklyReport.title')}</h1>
+                <p className="text-sm sm:text-base text-black font-bold">
+                  {formatDateLabel(report.week.start)} - {formatDateLabel(report.week.end)}
+                </p>
+              </div>
+              <button
+                onClick={handleDownloadPdf}
+                className="bg-white border-4 border-black text-black p-2 md:px-3 md:py-2 font-black hover:bg-gray-100 transition-all flex items-center justify-center gap-2"
+                aria-label={t('weeklyReport.downloadPdf')}
+              >
+                <Download className="w-5 h-5" />
+                <span className="hidden md:inline text-sm">{t('weeklyReport.downloadPdf')}</span>
+              </button>
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="flex items-center justify-end gap-2">
               <button
                 onClick={() => setWeekOffset((prev) => prev - 1)}
                 className="bg-amber-400 border-4 border-black text-black p-2 font-black hover:bg-amber-500 transition-all"
@@ -618,7 +707,7 @@ export default function WeeklyReport() {
                 <thead>
                   <tr className="bg-amber-200 border-b-2 border-black">
                     <th className="text-left px-3 py-2 font-black text-black">{t('weeklyReport.player')}</th>
-                    {Array.from({ length: Math.max(1, report.maxGamesPerPlayer) }).map((_, index) => (
+                    {Array.from({ length: Math.max(1, report.sessionCount) }).map((_, index) => (
                       <th key={index} className="text-center px-3 py-2 font-black text-black">
                         {t('weeklyReport.game')} {index + 1}
                       </th>
@@ -629,13 +718,21 @@ export default function WeeklyReport() {
                   {report.allGamesByPlayer.map((row, rowIndex) => (
                     <tr key={row.id} className={`${rowIndex % 2 === 0 ? 'bg-white' : 'bg-orange-50'} border-b border-black`}>
                       <td className="px-3 py-3 font-black text-black">{row.name}</td>
-                      {Array.from({ length: Math.max(1, report.maxGamesPerPlayer) }).map((_, gameIndex) => (
+                      {Array.from({ length: Math.max(1, report.sessionCount) }).map((_, gameIndex) => (
                         <td key={`${row.id}-${gameIndex}`} className="px-3 py-3 text-center font-black text-black">
-                          {row.games[gameIndex]?.totalScore ?? '-'}
+                          {row.sessionScores[gameIndex] ?? '-'}
                         </td>
                       ))}
                     </tr>
                   ))}
+                  <tr className="bg-amber-200 border-t-2 border-black">
+                    <td className="px-3 py-3 font-black text-black">{t('weeklyReport.teamTotal')}</td>
+                    {Array.from({ length: Math.max(1, report.sessionCount) }).map((_, gameIndex) => (
+                      <td key={`total-${gameIndex}`} className="px-3 py-3 text-center font-black text-black">
+                        {report.sessionTotals[gameIndex] ?? '-'}
+                      </td>
+                    ))}
+                  </tr>
                 </tbody>
               </table>
             </div>
