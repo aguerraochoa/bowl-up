@@ -9,6 +9,7 @@ export const translations = {
     'nav.betTracker': 'Bet Tracker',
     'nav.headToHead': 'Head to Head',
     'nav.weeklyReport': 'Weekly Report',
+    'nav.gameHistory': 'Game History',
     'nav.profile': 'Profile',
     'nav.signOut': 'Sign Out',
     'nav.more': 'More',
@@ -270,6 +271,7 @@ export const translations = {
     'weeklyReport.strikeLeader': 'Strike % Leader',
     'weeklyReport.spareLeader': 'Spare % Leader',
     'weeklyReport.strikeSpareByPlayer': 'Strike % Ranking (with Spare %)',
+    'weeklyReport.opens': 'Opens',
     'weeklyReport.vsLastWeek': 'Vs Last Week',
     'weeklyReport.strikeDelta': 'Strike % Delta',
     'weeklyReport.spareDelta': 'Spare % Delta',
@@ -284,6 +286,19 @@ export const translations = {
     'weeklyReport.copied': 'Copied!',
     'weeklyReport.shareWhatsapp': 'Send to WhatsApp',
     'weeklyReport.share': 'Share',
+
+    // Game History
+    'gameHistory.title': 'Game History',
+    'gameHistory.subtitle': 'Review and manage your saved games',
+    'gameHistory.filterByPlayer': 'Filter by Player',
+    'gameHistory.allPlayers': 'All Players',
+    'gameHistory.loading': 'Loading history...',
+    'gameHistory.noGames': 'No games found for this filter.',
+    'gameHistory.unknownPlayer': 'Unknown Player',
+    'gameHistory.confirmDeleteSession': 'Are you sure you want to delete this team game? This will delete all player games in this session. This action cannot be undone.',
+    'gameHistory.confirmDeleteGame': 'Are you sure you want to delete this game? This action cannot be undone.',
+    'gameHistory.errorDeleteSession': 'Error deleting team game. Please try again.',
+    'gameHistory.errorDeleteGame': 'Error deleting game. Please try again.',
 
     // Head to Head
     'headToHead.title': 'Head to Head',
@@ -415,12 +430,13 @@ export const translations = {
   es: {
     // Navigation
     'nav.dashboard': 'Tablero',
-    'nav.addGame': 'Agregar Juego',
+    'nav.addGame': 'Juego',
     'nav.players': 'Jugadores',
     'nav.debts': 'Deudas',
     'nav.betTracker': 'Apuestas',
     'nav.headToHead': 'Cara a Cara',
     'nav.weeklyReport': 'Reporte Semanal',
+    'nav.gameHistory': 'Historial Juegos',
     'nav.profile': 'Perfil',
     'nav.signOut': 'Cerrar Sesión',
     'nav.more': 'Más',
@@ -682,6 +698,7 @@ export const translations = {
     'weeklyReport.strikeLeader': 'Líder de % Strike',
     'weeklyReport.spareLeader': 'Líder de % Spare',
     'weeklyReport.strikeSpareByPlayer': 'Ranking por % Strike (con % Spare)',
+    'weeklyReport.opens': 'Abiertos',
     'weeklyReport.vsLastWeek': 'Vs Semana Pasada',
     'weeklyReport.strikeDelta': 'Cambio % Strike',
     'weeklyReport.spareDelta': 'Cambio % Spare',
@@ -696,6 +713,19 @@ export const translations = {
     'weeklyReport.copied': 'Copiado!',
     'weeklyReport.shareWhatsapp': 'Enviar a WhatsApp',
     'weeklyReport.share': 'Compartir',
+
+    // Game History
+    'gameHistory.title': 'Historial de Juegos',
+    'gameHistory.subtitle': 'Revisa y administra tus juegos guardados',
+    'gameHistory.filterByPlayer': 'Filtrar por Jugador',
+    'gameHistory.allPlayers': 'Todos los Jugadores',
+    'gameHistory.loading': 'Cargando historial...',
+    'gameHistory.noGames': 'No hay juegos para este filtro.',
+    'gameHistory.unknownPlayer': 'Jugador Desconocido',
+    'gameHistory.confirmDeleteSession': '¿Seguro que quieres eliminar este juego de equipo? Esto eliminará todos los juegos de jugadores en esta sesión. Esta acción no se puede deshacer.',
+    'gameHistory.confirmDeleteGame': '¿Seguro que quieres eliminar este juego? Esta acción no se puede deshacer.',
+    'gameHistory.errorDeleteSession': 'Error al eliminar el juego de equipo. Inténtalo de nuevo.',
+    'gameHistory.errorDeleteGame': 'Error al eliminar el juego. Inténtalo de nuevo.',
 
     // Head to Head
     'headToHead.title': 'Cara a Cara',

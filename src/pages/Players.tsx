@@ -798,6 +798,7 @@ export default function Players() {
                     {t('players.overallAverage')}: {playerStats.averageScore.toFixed(1)}
                   </p>
                 </div>
+
               </div>
             </div>
           </div>

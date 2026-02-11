@@ -1,6 +1,10 @@
 import type { Game, Player, Stats } from '../types';
 import { getGames, getPlayers } from './storage';
-import { calculateStrikePercentage, calculateSparePercentage, parseTenthFrame } from './scoring';
+import {
+  calculateSpareSummary,
+  calculateStrikeSummary,
+  parseTenthFrame,
+} from './scoring';
 
 const TYPICAL_RANGE_WINDOW = 30;
 const MIN_GAMES_FOR_TYPICAL_RANGE = 10;
@@ -55,15 +59,33 @@ export const calculatePlayerStatsFromData = (playerId: string, games: Game[]): S
   const totalScore = scores.reduce((sum, score) => sum + score, 0);
   const averageScore = totalScore / playerGames.length;
   
-  // Calculate strike and spare percentages
-  let totalStrikePct = 0;
-  let totalSparePct = 0;
-  playerGames.forEach(game => {
-    totalStrikePct += calculateStrikePercentage(game);
-    totalSparePct += calculateSparePercentage(game);
-  });
-  const strikePercentage = playerGames.length > 0 ? totalStrikePct / playerGames.length : 0;
-  const sparePercentage = playerGames.length > 0 ? totalSparePct / playerGames.length : 0;
+  // Calculate strike and spare percentages from total opportunities
+  const strikeTotals = playerGames.reduce(
+    (acc, game) => {
+      const summary = calculateStrikeSummary(game);
+      acc.made += summary.strikes;
+      acc.opportunities += summary.opportunities;
+      return acc;
+    },
+    { made: 0, opportunities: 0 },
+  );
+
+  const spareTotals = playerGames.reduce(
+    (acc, game) => {
+      const summary = calculateSpareSummary(game);
+      acc.made += summary.spares;
+      acc.opportunities += summary.opportunities;
+      return acc;
+    },
+    { made: 0, opportunities: 0 },
+  );
+
+  const strikePercentage = strikeTotals.opportunities > 0
+    ? (strikeTotals.made / strikeTotals.opportunities) * 100
+    : 0;
+  const sparePercentage = spareTotals.opportunities > 0
+    ? (spareTotals.made / spareTotals.opportunities) * 100
+    : 0;
   
   // Personal extremes (all-time)
   const floor = Math.min(...scores);
@@ -143,15 +165,31 @@ export const calculateTeamStatsFromData = (games: Game[]) => {
   // Total individual games played (only active players)
   const totalGames = activePlayerGames.length;
   
-  // Overall strike and spare percentages
-  let totalStrikePct = 0;
-  let totalSparePct = 0;
-  activePlayerGames.forEach(game => {
-    totalStrikePct += calculateStrikePercentage(game);
-    totalSparePct += calculateSparePercentage(game);
-  });
-  const totalStrikePercentage = activePlayerGames.length > 0 ? totalStrikePct / activePlayerGames.length : 0;
-  const totalSparePercentage = activePlayerGames.length > 0 ? totalSparePct / activePlayerGames.length : 0;
+  // Overall strike and spare percentages from total opportunities
+  const strikeTotals = activePlayerGames.reduce(
+    (acc, game) => {
+      const summary = calculateStrikeSummary(game);
+      acc.made += summary.strikes;
+      acc.opportunities += summary.opportunities;
+      return acc;
+    },
+    { made: 0, opportunities: 0 },
+  );
+  const spareTotals = activePlayerGames.reduce(
+    (acc, game) => {
+      const summary = calculateSpareSummary(game);
+      acc.made += summary.spares;
+      acc.opportunities += summary.opportunities;
+      return acc;
+    },
+    { made: 0, opportunities: 0 },
+  );
+  const totalStrikePercentage = strikeTotals.opportunities > 0
+    ? (strikeTotals.made / strikeTotals.opportunities) * 100
+    : 0;
+  const totalSparePercentage = spareTotals.opportunities > 0
+    ? (spareTotals.made / spareTotals.opportunities) * 100
+    : 0;
   
   // Calculate average 10th frame score
   let totalTenthFramePins = 0;
@@ -313,11 +351,21 @@ export const getTopStrikePercentagesFromData = (
       const playerGames = activePlayerGames.filter((g) => g.playerId === player.id);
       if (playerGames.length === 0) return null;
 
-      const total = playerGames.reduce((sum, game) => sum + calculateStrikePercentage(game), 0);
+      const totals = playerGames.reduce(
+        (acc, game) => {
+          const summary = calculateStrikeSummary(game);
+          acc.made += summary.strikes;
+          acc.opportunities += summary.opportunities;
+          return acc;
+        },
+        { made: 0, opportunities: 0 },
+      );
       return {
         playerId: player.id,
         playerName: player.name,
-        percentage: Math.round((total / playerGames.length) * 10) / 10,
+        percentage: totals.opportunities > 0
+          ? Math.round(((totals.made / totals.opportunities) * 100) * 10) / 10
+          : 0,
         gamesPlayed: playerGames.length,
       };
     })
@@ -338,11 +386,21 @@ export const getTopSparePercentagesFromData = (
       const playerGames = activePlayerGames.filter((g) => g.playerId === player.id);
       if (playerGames.length === 0) return null;
 
-      const total = playerGames.reduce((sum, game) => sum + calculateSparePercentage(game), 0);
+      const totals = playerGames.reduce(
+        (acc, game) => {
+          const summary = calculateSpareSummary(game);
+          acc.made += summary.spares;
+          acc.opportunities += summary.opportunities;
+          return acc;
+        },
+        { made: 0, opportunities: 0 },
+      );
       return {
         playerId: player.id,
         playerName: player.name,
-        percentage: Math.round((total / playerGames.length) * 10) / 10,
+        percentage: totals.opportunities > 0
+          ? Math.round(((totals.made / totals.opportunities) * 100) * 10) / 10
+          : 0,
         gamesPlayed: playerGames.length,
       };
     })

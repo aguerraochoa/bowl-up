@@ -29,6 +29,7 @@ const AdminProfile = lazy(() => import('./pages/admin/AdminProfile'));
 const Designs = lazy(() => import('./pages/Designs'));
 const DebtsDesigns = lazy(() => import('./pages/DebtsDesigns'));
 const ColorPalettes = lazy(() => import('./pages/ColorPalettes'));
+const GameHistory = lazy(() => import('./pages/GameHistory'));
 
 function LoadingSpinner() {
   return (
@@ -177,6 +178,11 @@ function App() {
         setActiveTab('weekly-report');
       } else if (path === '/head-to-head') {
         setActiveTab('head-to-head');
+      } else if (path === '/game-history') {
+        setActiveTab('game-history');
+      } else if (path === '/reports') {
+        setActiveTab('dashboard');
+        window.history.replaceState({}, '', '/');
       } else if (path === '/' || path === '') {
         // Only set to dashboard if no saved tab exists
         const savedTab = sessionStorage.getItem('activeTab');
@@ -221,6 +227,8 @@ function App() {
       window.history.pushState({}, '', '/weekly-report');
     } else if (tab === 'head-to-head') {
       window.history.pushState({}, '', '/head-to-head');
+    } else if (tab === 'game-history') {
+      window.history.pushState({}, '', '/game-history');
     } else {
       window.history.pushState({}, '', '/');
     }
@@ -323,6 +331,8 @@ function App() {
         return <WeeklyReport />;
       case 'head-to-head':
         return <HeadToHead />;
+      case 'game-history':
+        return <Suspense fallback={<LoadingSpinner />}><GameHistory /></Suspense>;
       case 'designs':
         return <Suspense fallback={<LoadingSpinner />}><Designs /></Suspense>;
       case 'debts-designs':

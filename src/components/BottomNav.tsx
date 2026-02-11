@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Home, Plus, Users, DollarSign, Target, LogOut, MoreHorizontal, X, User, Swords, FileText } from 'lucide-react';
+import { Home, Plus, Users, DollarSign, Target, LogOut, MoreHorizontal, X, User, Swords, FileText, History } from 'lucide-react';
 import { t, getLanguage } from '../i18n';
 
 interface BottomNavProps {
@@ -74,6 +74,7 @@ export default function BottomNav({ activeTab, onTabChange, onSignOut }: BottomN
     { id: 'weekly-report', label: t('nav.weeklyReport'), icon: FileText, action: () => onTabChange('weekly-report') },
     { id: 'bet-tracker', label: t('nav.betTracker'), icon: Target, action: () => onTabChange('bet-tracker') },
     { id: 'head-to-head', label: t('nav.headToHead'), icon: Swords, action: () => onTabChange('head-to-head') },
+    { id: 'game-history', label: t('nav.gameHistory'), icon: History, action: () => onTabChange('game-history') },
     { id: 'profile', label: t('nav.profile'), icon: User, action: () => onTabChange('profile') },
   ];
 
@@ -88,6 +89,7 @@ export default function BottomNav({ activeTab, onTabChange, onSignOut }: BottomN
               { id: 'weekly-report', label: t('nav.weeklyReport'), icon: FileText },
               { id: 'bet-tracker', label: t('nav.betTracker'), icon: Target },
               { id: 'head-to-head', label: t('nav.headToHead'), icon: Swords },
+              { id: 'game-history', label: t('nav.gameHistory'), icon: History },
               { id: 'profile', label: t('nav.profile'), icon: User },
             ].map(({ id, label, icon: Icon }) => (
               <button

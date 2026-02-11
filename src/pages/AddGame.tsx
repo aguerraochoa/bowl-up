@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react';
-import { getPlayers, addGame, getGames, removeGame, removeGamesBySession } from '../utils/storage';
+import { getPlayers, addGame } from '../utils/storage';
 import { validateGame, validateTenthFrame } from '../utils/scoring';
 import { t, getLanguage } from '../i18n';
 import { useSeason } from '../contexts/useSeason';
 import type { Player, Game } from '../types';
-import { Check, X, ArrowRight, ArrowLeft, Loader2, Trash2, Clock, Eraser, ChevronDown, ChevronUp, Plus, Minus } from 'lucide-react';
+import { Check, X, ArrowRight, ArrowLeft, Loader2, Eraser, Plus, Minus } from 'lucide-react';
 
 const EMPTY_GAME: Partial<Game> = {
   totalScore: undefined,
@@ -38,13 +38,7 @@ export default function AddGame() {
   const [error, setError] = useState<string>('');
   const [tenthFrameError, setTenthFrameError] = useState<string>('');
   const [isSaving, setIsSaving] = useState(false);
-  const [games, setGames] = useState<Game[]>([]);
-  const [showHistory, setShowHistory] = useState(false);
-  const [isClosingHistory, setIsClosingHistory] = useState(false);
-  const [deletingSessionId, setDeletingSessionId] = useState<string | null>(null);
   const [isLoadingPlayers, setIsLoadingPlayers] = useState(true);
-  const [isLoadingGames, setIsLoadingGames] = useState(true);
-  const [expandedSessions, setExpandedSessions] = useState<Set<string>>(new Set());
   const [currentLang, setCurrentLang] = useState<'es' | 'en'>(() => getLanguage());
   const [hasInitializedDraft, setHasInitializedDraft] = useState(false);
 
@@ -92,18 +86,11 @@ export default function AddGame() {
   useEffect(() => {
     const loadData = async () => {
       setIsLoadingPlayers(true);
-      setIsLoadingGames(true);
-
-      // Load players and games in parallel
-      const [players, loadedGames] = await Promise.all([
-        getPlayers(),
-        getGames(),
-      ]);
+      const players = await getPlayers();
 
       // Filter out deleted players (only show active players for adding games)
       const activePlayers = players.filter(p => !p.deletedAt);
       setAllPlayers(activePlayers);
-      setGames(loadedGames);
 
       // Restore in-progress live draft after accidental refresh.
       try {
@@ -157,7 +144,6 @@ export default function AddGame() {
       }
 
       setIsLoadingPlayers(false);
-      setIsLoadingGames(false);
       setHasInitializedDraft(true);
     };
     loadData();
@@ -528,61 +514,12 @@ export default function AddGame() {
       // Reset
       resetDraftState();
       alert(t('common.success'));
-      // Reload games to show the new ones
-      const loadedGames = await getGames();
-      setGames(loadedGames);
     } catch (error) {
       console.error('Error saving games:', error);
       alert('Error saving games. Please try again.');
     } finally {
       setIsSaving(false);
     }
-  };
-
-  const handleDeleteSession = async (sessionId: string) => {
-    if (!confirm('Are you sure you want to delete this team game? This will delete all player games in this session. This action cannot be undone.')) {
-      return;
-    }
-
-    setDeletingSessionId(sessionId);
-    try {
-      await removeGamesBySession(sessionId);
-      // Reload games after deletion
-      const loadedGames = await getGames();
-      setGames(loadedGames);
-    } catch (error) {
-      console.error('Error deleting session:', error);
-      alert('Error deleting team game. Please try again.');
-    } finally {
-      setDeletingSessionId(null);
-    }
-  };
-
-  const handleDeleteGame = async (gameId: string) => {
-    if (!confirm('Are you sure you want to delete this game? This action cannot be undone.')) {
-      return;
-    }
-
-    setDeletingSessionId(gameId);
-    try {
-      await removeGame(gameId);
-      // Reload games after deletion
-      const loadedGames = await getGames();
-      setGames(loadedGames);
-    } catch (error) {
-      console.error('Error deleting game:', error);
-      alert('Error deleting game. Please try again.');
-    } finally {
-      setDeletingSessionId(null);
-    }
-  };
-
-  const handleCloseHistory = () => {
-    setIsClosingHistory(true);
-    setTimeout(() => {
-      setShowHistory(false);
-      setIsClosingHistory(false);
-    }, 300);
   };
 
   const selectedPlayersList = getSelectedPlayersList();
@@ -645,16 +582,6 @@ export default function AddGame() {
             </div>
             <div className="flex gap-2">
               <button
-                onClick={() => {
-                  setIsClosingHistory(false);
-                  setShowHistory(true);
-                }}
-                className="border-4 border-black text-black px-3 sm:px-3 md:px-2 py-2 sm:py-2 md:py-1.5 rounded-none font-black flex items-center gap-2 text-sm sm:text-sm md:text-xs bg-amber-400 hover:bg-amber-500"
-              >
-                <Clock className="w-4 h-4 sm:w-4 md:w-3.5" />
-                <span className="hidden sm:inline">{t('addGame.history')}</span>
-              </button>
-              <button
                 onClick={handleClearSelection}
                 disabled={selectedPlayers.length === 0}
                 className="bg-amber-400 border-4 border-black text-black px-3 sm:px-3 md:px-2 py-2 sm:py-2 md:py-1.5 rounded-none font-black flex items-center gap-2 text-sm sm:text-sm md:text-xs disabled:bg-gray-300 disabled:cursor-not-allowed disabled:opacity-70"
@@ -702,200 +629,6 @@ export default function AddGame() {
               })}
             </div>
           </div>
-
-          {/* Game History Modal */}
-          {showHistory && (
-            <div
-              className="fixed inset-0 z-[100] flex items-end justify-center safe-top"
-              onClick={(e) => {
-                if (e.target === e.currentTarget) {
-                  handleCloseHistory();
-                }
-              }}
-            >
-              {/* Backdrop */}
-              <div className="absolute inset-0 bg-orange-50/90" />
-
-              {/* Modal Content */}
-              <div
-                className={`relative bg-white rounded-none border-4 border-black border-b-0 w-full sm:max-w-2xl sm:mx-4 sm:rounded-none sm:border-b-4 max-h-[100vh] sm:max-h-[90vh] flex flex-col ${isClosingHistory ? 'animate-slide-down' : 'animate-slide-up'
-                  }`}
-                onClick={(e) => e.stopPropagation()}
-              >
-                {/* Header */}
-                <div className="flex items-center justify-between px-4 sm:px-6 pt-4 sm:pt-6 pb-3 sm:pb-4 border-b-4 border-black bg-amber-400 flex-shrink-0">
-                  <h2 className="text-lg sm:text-xl md:text-2xl font-black text-black uppercase flex-1">
-                    {t('addGame.history')}
-                  </h2>
-                  <button
-                    onClick={handleCloseHistory}
-                    className="p-2 bg-red-600 border-4 border-black text-black hover:bg-red-700 font-black flex-shrink-0 ml-2"
-                  >
-                    <X className="w-4 h-4 sm:w-5 sm:h-5" />
-                  </button>
-                </div>
-
-                {/* Content */}
-                <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-4 sm:py-6 bg-white min-h-0">
-                  {isLoadingGames ? (
-                    <div className="flex items-center justify-center py-8">
-                      <Loader2 className="w-8 h-8 animate-spin text-black mr-2" />
-                      <p className="text-black font-bold text-base">Loading games...</p>
-                    </div>
-                  ) : games.length === 0 ? (
-                    <p className="text-black font-bold text-sm sm:text-base">No games recorded yet.</p>
-                  ) : (
-                    <div className="space-y-4">
-                      {/* Group games by session */}
-                      {(() => {
-                        const gamesBySession = new Map<string, Game[]>();
-                        const gamesWithoutSession: Game[] = [];
-
-                        games.forEach(game => {
-                          if (game.gameSessionId) {
-                            const sessionGames = gamesBySession.get(game.gameSessionId) || [];
-                            sessionGames.push(game);
-                            gamesBySession.set(game.gameSessionId, sessionGames);
-                          } else {
-                            gamesWithoutSession.push(game);
-                          }
-                        });
-
-                        // Sort sessions by created_at (newest first) - use the most recent game's created_at in the session
-                        const sessions = Array.from(gamesBySession.entries()).sort(([, gamesA], [, gamesB]) => {
-                          // Get the most recent created_at from each session
-                          const createdA = gamesA.reduce((latest, game) => {
-                            const gameCreated = game.created_at || '';
-                            return gameCreated > latest ? gameCreated : latest;
-                          }, '');
-                          const createdB = gamesB.reduce((latest, game) => {
-                            const gameCreated = game.created_at || '';
-                            return gameCreated > latest ? gameCreated : latest;
-                          }, '');
-                          return new Date(createdB).getTime() - new Date(createdA).getTime();
-                        });
-
-                        // Sort individual games without session by created_at (newest first)
-                        const sortedGamesWithoutSession = gamesWithoutSession.sort((a, b) => {
-                          const createdA = a.created_at || a.date;
-                          const createdB = b.created_at || b.date;
-                          return new Date(createdB).getTime() - new Date(createdA).getTime();
-                        });
-
-                        return (
-                          <>
-                            {/* Team games (with session) */}
-                            {sessions.map(([sessionId, sessionGames]) => {
-                              const totalSum = sessionGames.reduce((sum, g) => sum + g.totalScore, 0);
-                              const date = sessionGames[0]?.date || '';
-                              const isExpanded = expandedSessions.has(sessionId);
-                              return (
-                                <div key={sessionId} className="bg-amber-400 border-4 border-black p-3 sm:p-4">
-                                  <div className="flex items-center justify-between mb-2">
-                                    <div className="flex-1 flex items-center gap-2">
-                                      <button
-                                        onClick={() => {
-                                          const newExpanded = new Set(expandedSessions);
-                                          if (isExpanded) {
-                                            newExpanded.delete(sessionId);
-                                          } else {
-                                            newExpanded.add(sessionId);
-                                          }
-                                          setExpandedSessions(newExpanded);
-                                        }}
-                                        className="p-1 hover:bg-amber-500 transition-all"
-                                        aria-label={isExpanded ? "Collapse" : "Expand"}
-                                      >
-                                        {isExpanded ? (
-                                          <ChevronUp className="w-5 h-5 text-black" />
-                                        ) : (
-                                          <ChevronDown className="w-5 h-5 text-black" />
-                                        )}
-                                      </button>
-                                      <div className="flex-1">
-                                        <p className="font-black text-black text-sm sm:text-base">
-                                          {new Date(date).toLocaleDateString()}
-                                        </p>
-                                        <p className="text-xs sm:text-sm text-black font-bold">
-                                          {t('dashboard.total')}: {totalSum} | {sessionGames.length} {t('dashboard.players')}
-                                        </p>
-                                      </div>
-                                    </div>
-                                    <button
-                                      onClick={() => handleDeleteSession(sessionId)}
-                                      disabled={deletingSessionId === sessionId}
-                                      className="bg-red-600 border-4 border-black text-white px-3 sm:px-3 md:px-2 py-2 sm:py-2 md:py-1.5 hover:bg-red-700 font-black disabled:bg-gray-300 disabled:cursor-not-allowed disabled:opacity-70 flex items-center gap-2 text-sm sm:text-sm md:text-xs"
-                                      aria-label="Delete team game"
-                                    >
-                                      {deletingSessionId === sessionId ? (
-                                        <>
-                                          <Loader2 className="w-4 h-4 animate-spin" />
-                                          <span className="text-xs sm:text-sm">{t('addGame.deleting')}</span>
-                                        </>
-                                      ) : (
-                                        <>
-                                          <Trash2 className="w-4 h-4" />
-                                          <span className="text-xs sm:text-sm">{t('common.delete')}</span>
-                                        </>
-                                      )}
-                                    </button>
-                                  </div>
-                                  {isExpanded && (
-                                    <div className="space-y-2 mt-3">
-                                      {sessionGames.map(game => {
-                                        const player = allPlayers.find(p => p.id === game.playerId);
-                                        return (
-                                          <div key={game.id} className="bg-white border-2 border-black p-2">
-                                            <p className="font-black text-black text-sm sm:text-base">{player?.name || 'Unknown'}</p>
-                                            <p className="text-xs text-black font-bold">
-                                              {t('addGame.score')}: {game.totalScore} | {t('addGame.strikes')}: {game.strikesFrames1to9} | {t('addGame.spares')}: {game.sparesFrames1to9}
-                                            </p>
-                                          </div>
-                                        );
-                                      })}
-                                    </div>
-                                  )}
-                                </div>
-                              );
-                            })}
-
-                            {/* Individual games (without session) */}
-                            {sortedGamesWithoutSession.map(game => {
-                              const player = allPlayers.find(p => p.id === game.playerId);
-                              return (
-                                <div key={game.id} className="flex items-center justify-between bg-white border-4 border-black p-3 sm:p-4">
-                                  <div className="flex-1">
-                                    <p className="font-black text-black text-sm sm:text-base">
-                                      {player?.name || 'Unknown'} - {new Date(game.date).toLocaleDateString()}
-                                    </p>
-                                    <p className="text-xs sm:text-sm text-black font-bold">
-                                      {t('addGame.score')}: {game.totalScore} | {t('addGame.strikes')}: {game.strikesFrames1to9} | {t('addGame.spares')}: {game.sparesFrames1to9}
-                                    </p>
-                                  </div>
-                                  <button
-                                    onClick={() => handleDeleteGame(game.id)}
-                                    disabled={deletingSessionId === game.id}
-                                    className="bg-red-600 border-2 border-black text-white p-2 hover:bg-red-700 font-black disabled:bg-gray-300 disabled:cursor-not-allowed disabled:opacity-70"
-                                    aria-label="Delete game"
-                                  >
-                                    {deletingSessionId === game.id ? (
-                                      <Loader2 className="w-4 h-4 animate-spin" />
-                                    ) : (
-                                      <Trash2 className="w-4 h-4" />
-                                    )}
-                                  </button>
-                                </div>
-                              );
-                            })}
-                          </>
-                        );
-                      })()}
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-          )}
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <button

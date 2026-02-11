@@ -279,7 +279,8 @@ export default function HeadToHead() {
             --sky: #88b3dc;
             --violet: #6458f5;
           }
-          @page { size: A4; margin: 7mm; }
+           @page { size: A4; margin: 4mm; }
+          * { box-sizing: border-box; }
           body {
             font-family: "Avenir Next", "Segoe UI", Arial, sans-serif;
             margin: 0;
@@ -289,94 +290,111 @@ export default function HeadToHead() {
           }
           .wrap {
             width: 100%;
+            min-height: 100%;
             margin: 0;
             background: #fff;
-            border: 2px solid var(--ink);
-            border-radius: 0;
-            padding: 12px;
-            box-sizing: border-box;
+            padding: 2.4mm;
+            display: flex;
+            flex-direction: column;
+            gap: 2.4mm;
           }
           .accent {
-            height: 8px;
+            height: 3.2mm;
             border-radius: 999px;
             background: linear-gradient(90deg, var(--coral) 0 33%, var(--mint) 33% 66%, var(--sky) 66% 100%);
-            margin-bottom: 10px;
           }
           .head {
             display: flex;
             justify-content: flex-start;
             align-items: flex-start;
-            gap: 8px;
-            margin-bottom: 10px;
           }
           h1 {
-            font-size: 31px;
+            font-size: 46px;
             margin: 0;
-            line-height: 1;
-            letter-spacing: 0.4px;
+            line-height: 0.98;
+            letter-spacing: 0.2px;
             text-transform: uppercase;
+            font-weight: 900;
           }
           p {
-            margin: 5px 0 0 0;
-            font-size: 12px;
+            margin: 4px 0 0 0;
+            font-size: 18px;
             font-weight: 400;
             color: #202430;
           }
-          .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px; }
+          .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 2.4mm; }
           .card {
             border: 2px solid var(--ink);
-            border-radius: 10px;
-            padding: 9px;
+            border-radius: 8px;
+            padding: 2.8mm;
             background: var(--paper);
+            min-height: 46mm;
+            overflow: hidden;
           }
           .card-a { background: #e8f2ff; }
           .card-b { background: #ffe8ea; }
-          .name { font-size: 22px; line-height: 1; font-weight: 400; margin-bottom: 6px; text-transform: uppercase; }
-          .metric-line { font-size: 12px; font-weight: 400; margin: 4px 0; }
-          .metric-line span { font-weight: 400; font-size: 18px; }
+          .name {
+            font-size: 30px;
+            line-height: 1;
+            font-weight: 400;
+            margin-bottom: 2.2mm;
+            text-transform: uppercase;
+            overflow-wrap: anywhere;
+            word-break: break-word;
+          }
+          .metric-line { font-size: 16px; font-weight: 400; margin: 1.1mm 0; }
+          .metric-line span { font-weight: 400; font-size: 26px; }
           table {
             width: 100%;
             border-collapse: separate;
             border-spacing: 0;
-            font-size: 11px;
+            font-size: 13px;
             background: #fff;
             border: 2px solid var(--ink);
-            border-radius: 10px;
+            border-radius: 8px;
             overflow: hidden;
+            table-layout: fixed;
           }
           th, td {
             border-bottom: 1px solid #222a37;
-            padding: 6px 8px;
+            padding: 1.8mm 2mm;
             text-align: left;
             vertical-align: middle;
+            overflow-wrap: anywhere;
           }
           th {
             background: #1a2232;
             color: #fff;
             text-transform: uppercase;
-            font-size: 9px;
-            letter-spacing: 0.4px;
+            font-size: 10px;
+            letter-spacing: 0.25px;
             font-weight: 800;
+            white-space: nowrap;
           }
           tbody tr:nth-child(even) td { background: #f3f5fa; }
           tbody tr:last-child td { border-bottom: 0; }
           .cell-win-a, .cell-win-b { color: #0f7a2f; font-weight: 400; }
           .summary {
-            margin-top: 8px;
             border: 2px solid var(--ink);
-            border-radius: 10px;
-            padding: 8px;
+            border-radius: 8px;
+            padding: 2.4mm;
             background: #eef8dd;
-            font-size: 12px;
+            font-size: 16px;
             font-weight: 400;
             text-align: center;
-            letter-spacing: 0.25px;
+            letter-spacing: 0.2px;
+            margin-top: auto;
+            overflow-wrap: anywhere;
           }
           @media screen and (max-width: 760px) {
-            body { padding: 6px; }
             .head { flex-direction: column; }
             .grid { grid-template-columns: 1fr; }
-            h1 { font-size: 22px; }
+            h1 { font-size: 26px; }
+            p { font-size: 14px; }
+            .name { font-size: 24px; }
+            .metric-line { font-size: 14px; }
+            .metric-line span { font-size: 22px; }
+            .summary { font-size: 14px; margin-top: 2mm; }
           }
         </style>
       </head>
@@ -427,6 +445,7 @@ export default function HeadToHead() {
         selector: '.wrap',
         orientation: 'p',
         format: 'a4',
+        marginMm: 0,
       });
 
       const sanitizeName = (value: string) =>

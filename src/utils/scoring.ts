@@ -1,11 +1,88 @@
 import type { Game } from '../types';
 
+type StrikeSummary = {
+  strikes: number;
+  opportunities: number;
+  percentage: number;
+};
+
+type SpareSummary = {
+  spares: number;
+  opportunities: number;
+  opens: number;
+  percentage: number;
+};
+
+export const getTenthFrameStrikeSummary = (notation: string): { strikes: number; opportunities: number } => {
+  const normalized = notation.toUpperCase().trim();
+  if (!normalized) {
+    return { strikes: 0, opportunities: 0 };
+  }
+
+  const shot1 = normalized[0] || '';
+  const shot2 = normalized[1] || '';
+  const shot3 = normalized[2] || '';
+
+  let strikes = 0;
+  let opportunities = 0;
+
+  // First shot is always a strike opportunity
+  opportunities += 1;
+  if (shot1 === 'X') {
+    strikes += 1;
+  }
+
+  if (shot1 === 'X') {
+    // After a first-ball strike in 10th, second shot is another strike opportunity
+    if (shot2) {
+      opportunities += 1;
+      if (shot2 === 'X') {
+        strikes += 1;
+        // After two consecutive strikes, third shot is also a strike opportunity
+        if (shot3) {
+          opportunities += 1;
+          if (shot3 === 'X') {
+            strikes += 1;
+          }
+        }
+      }
+    }
+  } else if (shot2 === '/') {
+    // Spare grants bonus ball with fresh rack (strike opportunity)
+    opportunities += 1;
+    if (shot3 === 'X') {
+      strikes += 1;
+    }
+  }
+
+  return { strikes, opportunities };
+};
+
+const getTenthFrameSpareOpportunities = (notation: string): number => {
+  const normalized = notation.toUpperCase().trim();
+  if (!normalized) {
+    return 0;
+  }
+
+  const shot1 = normalized[0] || '';
+  const shot2 = normalized[1] || '';
+
+  if (!shot2) {
+    return 0;
+  }
+
+  if (shot1 === 'X') {
+    return shot2 === 'X' ? 0 : 1;
+  }
+
+  return 1;
+};
+
 /**
  * Parse 10th frame notation (e.g., "X9/", "9/8", "72", "X-X")
  * Returns: { strikes, spares, totalPins }
  */
 export const parseTenthFrame = (notation: string): { strikes: number; spares: number; totalPins: number } => {
-  let strikes = 0;
   let spares = 0;
   let totalPins = 0;
   
@@ -13,7 +90,6 @@ export const parseTenthFrame = (notation: string): { strikes: number; spares: nu
   
   // Check if first shot is a strike
   if (normalized[0] === 'X') {
-    strikes = 1;
     totalPins += 10;
     
     // Parse remaining shots
@@ -95,6 +171,7 @@ export const parseTenthFrame = (notation: string): { strikes: number; spares: nu
     }
   }
   
+  const { strikes } = getTenthFrameStrikeSummary(normalized);
   return { strikes, spares, totalPins };
 };
 
@@ -102,26 +179,37 @@ export const parseTenthFrame = (notation: string): { strikes: number; spares: nu
  * Calculate strike percentage for a game
  */
 export const calculateStrikePercentage = (game: Game): number => {
-  const tenthFrame = parseTenthFrame(game.tenthFrame);
-  const totalStrikes = game.strikesFrames1to9 + tenthFrame.strikes;
-  return (totalStrikes / 10) * 100;
+  return calculateStrikeSummary(game).percentage;
 };
 
 /**
  * Calculate spare percentage for a game
  */
 export const calculateSparePercentage = (game: Game): number => {
+  return calculateSpareSummary(game).percentage;
+};
+
+export const calculateStrikeSummary = (game: Game): StrikeSummary => {
+  const tenthFrame = getTenthFrameStrikeSummary(game.tenthFrame);
+  const strikes = game.strikesFrames1to9 + tenthFrame.strikes;
+  const opportunities = 9 + tenthFrame.opportunities;
+  const percentage = opportunities > 0 ? (strikes / opportunities) * 100 : 0;
+  return { strikes, opportunities, percentage };
+};
+
+export const calculateSpareSummary = (game: Game): SpareSummary => {
   const tenthFrame = parseTenthFrame(game.tenthFrame);
-  const totalSpares = game.sparesFrames1to9 + tenthFrame.spares;
+  const spares = game.sparesFrames1to9 + tenthFrame.spares;
   
   // Calculate spare opportunities
   // Frames 1-9: opportunities = 9 - strikes in frames 1-9
-  const spareOpportunities1to9 = 9 - game.strikesFrames1to9;
-  
-  // 10th frame: always 1 opportunity (either shots 1+2 or shots 2+3)
-  const totalSpareOpportunities = spareOpportunities1to9 + 1;
-  
-  return totalSpareOpportunities > 0 ? (totalSpares / totalSpareOpportunities) * 100 : 0;
+  const spareOpportunities1to9 = Math.max(0, 9 - game.strikesFrames1to9);
+  const tenthFrameOpportunities = getTenthFrameSpareOpportunities(game.tenthFrame);
+  const opportunities = spareOpportunities1to9 + tenthFrameOpportunities;
+  const opens = Math.max(0, opportunities - spares);
+  const percentage = opportunities > 0 ? (spares / opportunities) * 100 : 0;
+
+  return { spares, opportunities, opens, percentage };
 };
 
 /**

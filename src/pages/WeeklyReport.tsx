@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { ArrowLeft, ArrowRight, Clipboard, Download, Loader2, MessageCircle, Share2, Trophy } from 'lucide-react';
 import { getGames, getPlayers } from '../utils/storage';
 import { calculateTeamStatsFromData } from '../utils/stats';
-import { calculateStrikePercentage, calculateSparePercentage } from '../utils/scoring';
+import { calculateSpareSummary, calculateStrikeSummary } from '../utils/scoring';
 import { downloadOrSharePdf, renderPdfBlobFromHtml } from '../utils/pdfExport';
 import type { Game, Player } from '../types';
 import { t, getLanguage } from '../i18n';
@@ -138,8 +138,27 @@ export default function WeeklyReport() {
         const total = playerGames.reduce((sum, g) => sum + g.totalScore, 0);
         const avg = total / playerGames.length;
         const best = Math.max(...playerGames.map((g) => g.totalScore));
-        const strike = playerGames.reduce((sum, g) => sum + calculateStrikePercentage(g), 0) / playerGames.length;
-        const spare = playerGames.reduce((sum, g) => sum + calculateSparePercentage(g), 0) / playerGames.length;
+        const strikeTotals = playerGames.reduce(
+          (acc, game) => {
+            const summary = calculateStrikeSummary(game);
+            acc.made += summary.strikes;
+            acc.opportunities += summary.opportunities;
+            return acc;
+          },
+          { made: 0, opportunities: 0 },
+        );
+        const spareTotals = playerGames.reduce(
+          (acc, game) => {
+            const summary = calculateSpareSummary(game);
+            acc.made += summary.spares;
+            acc.opportunities += summary.opportunities;
+            acc.opens += summary.opens;
+            return acc;
+          },
+          { made: 0, opportunities: 0, opens: 0 },
+        );
+        const strike = strikeTotals.opportunities > 0 ? (strikeTotals.made / strikeTotals.opportunities) * 100 : 0;
+        const spare = spareTotals.opportunities > 0 ? (spareTotals.made / spareTotals.opportunities) * 100 : 0;
 
         return {
           id: player.id,
@@ -149,9 +168,27 @@ export default function WeeklyReport() {
           best,
           strike,
           spare,
+          strikes: strikeTotals.made,
+          strikeOpportunities: strikeTotals.opportunities,
+          spares: spareTotals.made,
+          spareOpportunities: spareTotals.opportunities,
+          opens: spareTotals.opens,
         };
       })
-      .filter((row): row is { id: string; name: string; games: number; average: number; best: number; strike: number; spare: number } => row !== null)
+      .filter((row): row is {
+        id: string;
+        name: string;
+        games: number;
+        average: number;
+        best: number;
+        strike: number;
+        spare: number;
+        strikes: number;
+        strikeOpportunities: number;
+        spares: number;
+        spareOpportunities: number;
+        opens: number;
+      } => row !== null)
       .sort((a, b) => b.average - a.average);
 
     const strikeLeader = [...playerRows].sort((a, b) => b.strike - a.strike)[0] || null;
@@ -311,11 +348,14 @@ export default function WeeklyReport() {
                 <td>${escapeHtml(player.name)}</td>
                 <td>${player.strike.toFixed(1)}%</td>
                 <td>${player.spare.toFixed(1)}%</td>
+                <td>${player.strikes}/${player.strikeOpportunities}</td>
+                <td>${player.spares}/${player.spareOpportunities}</td>
+                <td>${player.opens}</td>
               </tr>
             `,
           )
           .join('')
-      : `<tr><td colspan="3">${escapeHtml(t('weeklyReport.noGamesThisWeek'))}</td></tr>`;
+      : `<tr><td colspan="6">${escapeHtml(t('weeklyReport.noGamesThisWeek'))}</td></tr>`;
 
     const html = `
       <!doctype html>
@@ -332,7 +372,8 @@ export default function WeeklyReport() {
             --sky: #88b3dc;
             --violet: #6458f5;
           }
-          @page { size: A4; margin: 7mm; }
+           @page { size: A4; margin: 4mm; }
+          * { box-sizing: border-box; }
           body {
             font-family: "Avenir Next", "Segoe UI", Arial, sans-serif;
             color: var(--ink);
@@ -342,100 +383,99 @@ export default function WeeklyReport() {
           }
           .wrap {
             width: 100%;
+            min-height: 100%;
             margin: 0;
-            box-sizing: border-box;
             background: #fff;
-            border: 2px solid var(--ink);
-            border-radius: 0;
-            padding: 12px;
+            padding: 2.4mm;
+            display: flex;
+            flex-direction: column;
+            gap: 2.4mm;
           }
           .accent {
-            height: 8px;
+            height: 3.2mm;
             border-radius: 999px;
             background: linear-gradient(90deg, var(--coral) 0 33%, var(--mint) 33% 66%, var(--sky) 66% 100%);
-            margin-bottom: 10px;
           }
           .header {
             display: flex;
             justify-content: flex-start;
             align-items: flex-start;
-            gap: 8px;
-            margin-bottom: 10px;
           }
           .title {
             margin: 0;
-            font-size: 31px;
-            line-height: 1;
-            letter-spacing: 0.4px;
+            font-size: 46px;
+            line-height: 0.98;
+            letter-spacing: 0.2px;
             text-transform: uppercase;
+            font-weight: 900;
           }
           .subtitle {
-            margin: 5px 0 0 0;
-            font-size: 13px;
+            margin: 4px 0 0 0;
+            font-size: 18px;
             font-weight: 400;
             color: #202430;
           }
           .stats {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
-            gap: 7px;
-            margin-bottom: 8px;
+            gap: 2.4mm;
           }
           .stat {
             border: 2px solid var(--ink);
-            border-radius: 10px;
-            padding: 8px 9px;
-            min-height: 72px;
+            border-radius: 8px;
+            padding: 2.8mm 3mm;
+            min-height: 23mm;
           }
           .stat:nth-child(1) { background: #ffe8ea; }
           .stat:nth-child(2) { background: #eef8dd; }
           .stat:nth-child(3) { background: #e8f2ff; }
           .stat .label {
-            font-size: 9px;
+            font-size: 11px;
             font-weight: 400;
             text-transform: uppercase;
-            letter-spacing: 0.4px;
+            letter-spacing: 0.35px;
           }
           .stat .value {
-            font-size: 31px;
+            font-size: 46px;
             font-weight: 400;
-            margin-top: 4px;
+            margin-top: 3px;
             line-height: 1;
           }
           .two-col {
             display: grid;
-            grid-template-columns: 1fr;
-            gap: 7px;
-            margin-bottom: 8px;
+            grid-template-columns: 1.45fr 1fr;
+            gap: 2.4mm;
           }
           .card {
             border: 2px solid var(--ink);
-            border-radius: 10px;
+            border-radius: 8px;
             background: var(--paper);
-            padding: 7px;
+            padding: 2.6mm;
+            min-height: 52mm;
+            overflow: hidden;
           }
           .card h2 {
-            margin: 0 0 10px 0;
-            font-size: 14px;
+            margin: 0 0 2.2mm 0;
+            font-size: 16px;
             line-height: 1;
             text-transform: uppercase;
-            letter-spacing: 0.35px;
-          }
-          .card table {
-            margin-top: 2px;
+            letter-spacing: 0.25px;
+            font-weight: 900;
           }
           table {
             width: 100%;
             border-collapse: separate;
             border-spacing: 0;
-            font-size: 10px;
+            font-size: 12px;
+            table-layout: fixed;
           }
           th, td {
             border: 1px solid #202530;
             border-right: 0;
             border-bottom: 0;
-            padding: 4px 5px;
+            padding: 1.7mm 1.9mm;
             text-align: left;
+            overflow-wrap: anywhere;
           }
           tr > *:last-child { border-right: 1px solid #202530; }
           tbody tr:last-child td { border-bottom: 1px solid #202530; }
@@ -443,94 +483,128 @@ export default function WeeklyReport() {
             background: #1a2232;
             color: #fff;
             text-transform: uppercase;
-            font-size: 9px;
+            font-size: 10px;
             font-weight: 800;
-            letter-spacing: 0.35px;
+            letter-spacing: 0.25px;
+            white-space: nowrap;
           }
           tbody tr:nth-child(even) td { background: #f3f5fa; }
+
+          .top-players-table col.col-rank { width: 8%; }
+          .top-players-table col.col-games { width: 17%; }
+          .top-players-table col.col-avg { width: 19%; }
+          .top-players-table col.col-high { width: 17%; }
+          .top-players-table th:nth-child(1),
+          .top-players-table td:nth-child(1),
+          .top-players-table th:nth-child(3),
+          .top-players-table td:nth-child(3),
+          .top-players-table th:nth-child(4),
+          .top-players-table td:nth-child(4),
+          .top-players-table th:nth-child(5),
+          .top-players-table td:nth-child(5) {
+            text-align: center;
+            white-space: nowrap;
+          }
+
           .leader {
             border: 2px solid var(--ink);
-            border-radius: 10px;
-            padding: 8px;
-            margin-bottom: 6px;
+            border-radius: 8px;
+            padding: 2.6mm;
+            margin-bottom: 2.4mm;
             background: #fff;
           }
+          .leader:last-child { margin-bottom: 0; }
           .leader:first-child { background: #e8f2ff; }
           .leader:last-child { background: #eef8dd; }
           .leader .k {
-            font-size: 9px;
+            font-size: 10px;
             text-transform: uppercase;
             font-weight: 400;
-            letter-spacing: 0.4px;
+            letter-spacing: 0.3px;
           }
           .leader .v {
-            font-size: 18px;
+            font-size: 31px;
             font-weight: 400;
-            margin-top: 3px;
-            line-height: 1.1;
+            margin-top: 1.2mm;
+            line-height: 1.06;
+            overflow-wrap: anywhere;
+            word-break: break-word;
           }
+
           .deltas {
             display: grid;
-            grid-template-columns: 1fr;
-            gap: 7px;
-            margin-bottom: 8px;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 2.4mm;
           }
           .delta {
             border: 2px solid var(--ink);
-            border-radius: 10px;
-            padding: 7px 8px;
+            border-radius: 8px;
+            padding: 2.5mm;
             background: #fff;
+            min-height: 20mm;
           }
           .delta .k {
-            font-size: 9px;
+            font-size: 10px;
             text-transform: uppercase;
             font-weight: 400;
-            letter-spacing: 0.35px;
+            letter-spacing: 0.25px;
           }
           .delta .v {
-            font-size: 16px;
+            font-size: 30px;
             font-weight: 400;
-            margin-top: 3px;
+            margin-top: 1.4mm;
+            line-height: 1;
           }
+
           .games-by-player {
             border: 2px solid var(--ink);
-            border-radius: 10px;
-            padding: 7px;
-            margin-bottom: 7px;
+            border-radius: 8px;
+            padding: 2.6mm;
             background: var(--paper);
+            min-height: 52mm;
+            overflow: hidden;
           }
           .games-by-player h2 {
-            margin: 0 0 10px 0;
-            font-size: 13px;
+            margin: 0 0 2.2mm 0;
+            font-size: 16px;
             line-height: 1;
             text-transform: uppercase;
-            letter-spacing: 0.35px;
+            letter-spacing: 0.25px;
+            font-weight: 900;
           }
           .games-table th, .games-table td {
             text-align: center;
-            font-size: 9px;
-            padding: 4px 4px;
+            font-size: 11px;
+            padding: 1.35mm 1.7mm;
           }
           .games-table td:first-child {
             text-align: left;
             font-weight: 400;
-            width: 36%;
+            width: 34%;
+            white-space: nowrap;
           }
-          .line { font-size: 11px; font-weight: 400; margin: 4px 0; }
+
+          .line { font-size: 13px; font-weight: 400; margin: 0.8mm 0; }
           .footer {
             text-align: center;
-            font-size: 9px;
+            font-size: 10px;
             font-weight: 400;
             text-transform: uppercase;
-            letter-spacing: 0.4px;
-            margin-top: 7px;
+            letter-spacing: 0.35px;
+            margin-top: auto;
             color: #222a3b;
+            padding-top: 1.5mm;
           }
           @media screen and (max-width: 820px) {
-            body { padding: 6px; }
             .header { flex-direction: column; }
-            .title { font-size: 20px; }
+            .title { font-size: 24px; }
+            .subtitle { font-size: 14px; }
             .stats, .two-col, .deltas { grid-template-columns: 1fr; }
+            .stat .value,
+            .leader .v,
+            .delta .v { font-size: 28px; }
+            .card h2,
+            .games-by-player h2 { font-size: 18px; }
           }
         </style>
       </head>
@@ -562,7 +636,14 @@ export default function WeeklyReport() {
           <div class="two-col">
             <div class="card">
               <h2>${escapeHtml(t('weeklyReport.topPerformers'))}</h2>
-              <table>
+              <table class="top-players-table">
+                <colgroup>
+                  <col class="col-rank" />
+                  <col />
+                  <col class="col-games" />
+                  <col class="col-avg" />
+                  <col class="col-high" />
+                </colgroup>
                 <thead>
                   <tr>
                     <th>#</th>
@@ -642,6 +723,9 @@ export default function WeeklyReport() {
                   <th>${escapeHtml(t('weeklyReport.player'))}</th>
                   <th>${escapeHtml(t('headToHead.strike'))}</th>
                   <th>${escapeHtml(t('headToHead.spare'))}</th>
+                  <th>${escapeHtml(t('players.strikes'))}</th>
+                  <th>${escapeHtml(t('players.spares'))}</th>
+                  <th>${escapeHtml(t('weeklyReport.opens'))}</th>
                 </tr>
               </thead>
               <tbody>
@@ -662,6 +746,7 @@ export default function WeeklyReport() {
         selector: '.wrap',
         orientation: 'p',
         format: 'a4',
+        marginMm: 0,
       });
 
       const startLabel = report.week.start.toISOString().slice(0, 10);
@@ -864,12 +949,15 @@ export default function WeeklyReport() {
             <p className="text-black font-bold">{t('weeklyReport.noGamesThisWeek')}</p>
           ) : (
             <div className="border-2 border-black overflow-x-auto">
-              <table className="w-full min-w-[520px] border-collapse">
+              <table className="w-full min-w-[760px] border-collapse">
                 <thead>
                   <tr className="bg-amber-200 border-b-2 border-black">
                     <th className="text-left px-3 py-2 font-black text-black">{t('weeklyReport.player')}</th>
                     <th className="text-center px-3 py-2 font-black text-black">{t('headToHead.strike')}</th>
                     <th className="text-center px-3 py-2 font-black text-black">{t('headToHead.spare')}</th>
+                    <th className="text-center px-3 py-2 font-black text-black">{t('players.strikes')}</th>
+                    <th className="text-center px-3 py-2 font-black text-black">{t('players.spares')}</th>
+                    <th className="text-center px-3 py-2 font-black text-black">{t('weeklyReport.opens')}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -878,6 +966,9 @@ export default function WeeklyReport() {
                       <td className="px-3 py-3 font-black text-black">{player.name}</td>
                       <td className="px-3 py-3 text-center font-black text-black">{player.strike.toFixed(1)}%</td>
                       <td className="px-3 py-3 text-center font-black text-black">{player.spare.toFixed(1)}%</td>
+                      <td className="px-3 py-3 text-center font-black text-black">{player.strikes}/{player.strikeOpportunities}</td>
+                      <td className="px-3 py-3 text-center font-black text-black">{player.spares}/{player.spareOpportunities}</td>
+                      <td className="px-3 py-3 text-center font-black text-black">{player.opens}</td>
                     </tr>
                   ))}
                 </tbody>
