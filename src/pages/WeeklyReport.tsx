@@ -287,6 +287,22 @@ export default function WeeklyReport() {
   const weekSelectorLabel = weekOffset === 0
     ? t('weeklyReport.thisWeek')
     : `${formatDateLabel(report.week.start)} - ${formatDateLabel(report.week.end)}`;
+  const playerStatsTotals = report.playerPercentages.reduce(
+    (totals, player) => ({
+      strikes: totals.strikes + player.strikes,
+      strikeOpportunities: totals.strikeOpportunities + player.strikeOpportunities,
+      spares: totals.spares + player.spares,
+      spareOpportunities: totals.spareOpportunities + player.spareOpportunities,
+      opens: totals.opens + player.opens,
+    }),
+    { strikes: 0, strikeOpportunities: 0, spares: 0, spareOpportunities: 0, opens: 0 },
+  );
+  const totalStrikePct = playerStatsTotals.strikeOpportunities > 0
+    ? (playerStatsTotals.strikes / playerStatsTotals.strikeOpportunities) * 100
+    : 0;
+  const totalSparePct = playerStatsTotals.spareOpportunities > 0
+    ? (playerStatsTotals.spares / playerStatsTotals.spareOpportunities) * 100
+    : 0;
 
   const handleCopy = async () => {
     await navigator.clipboard.writeText(whatsappText);
@@ -339,6 +355,22 @@ export default function WeeklyReport() {
       const total = report.sessionTotals[index];
       return `<td>${typeof total === 'number' ? total : '-'}</td>`;
     }).join('');
+    const playerStatsTotals = report.playerPercentages.reduce(
+      (totals, player) => ({
+        strikes: totals.strikes + player.strikes,
+        strikeOpportunities: totals.strikeOpportunities + player.strikeOpportunities,
+        spares: totals.spares + player.spares,
+        spareOpportunities: totals.spareOpportunities + player.spareOpportunities,
+        opens: totals.opens + player.opens,
+      }),
+      { strikes: 0, strikeOpportunities: 0, spares: 0, spareOpportunities: 0, opens: 0 },
+    );
+    const totalStrikePct = playerStatsTotals.strikeOpportunities > 0
+      ? (playerStatsTotals.strikes / playerStatsTotals.strikeOpportunities) * 100
+      : 0;
+    const totalSparePct = playerStatsTotals.spareOpportunities > 0
+      ? (playerStatsTotals.spares / playerStatsTotals.spareOpportunities) * 100
+      : 0;
 
     const playerPercentRows = report.playerPercentages.length
       ? report.playerPercentages
@@ -346,16 +378,28 @@ export default function WeeklyReport() {
             (player) => `
               <tr>
                 <td>${escapeHtml(player.name)}</td>
-                <td>${player.strike.toFixed(1)}%</td>
-                <td>${player.spare.toFixed(1)}%</td>
                 <td>${player.strikes}/${player.strikeOpportunities}</td>
+                <td>${player.strike.toFixed(1)}%</td>
                 <td>${player.spares}/${player.spareOpportunities}</td>
+                <td>${player.spare.toFixed(1)}%</td>
                 <td>${player.opens}</td>
               </tr>
             `,
           )
           .join('')
       : `<tr><td colspan="6">${escapeHtml(t('weeklyReport.noGamesThisWeek'))}</td></tr>`;
+    const playerPercentTotalsRow = report.playerPercentages.length
+      ? `
+          <tr class="total-row">
+            <td>${escapeHtml(t('weeklyReport.teamTotal'))}</td>
+            <td>${playerStatsTotals.strikes}/${playerStatsTotals.strikeOpportunities}</td>
+            <td>${totalStrikePct.toFixed(1)}%</td>
+            <td>${playerStatsTotals.spares}/${playerStatsTotals.spareOpportunities}</td>
+            <td>${totalSparePct.toFixed(1)}%</td>
+            <td>${playerStatsTotals.opens}</td>
+          </tr>
+        `
+      : '';
 
     const html = `
       <!doctype html>
@@ -386,10 +430,10 @@ export default function WeeklyReport() {
             min-height: 100%;
             margin: 0;
             background: #fff;
-            padding: 2.4mm;
+            padding: 3.2mm;
             display: flex;
             flex-direction: column;
-            gap: 2.4mm;
+            gap: 3.2mm;
           }
           .accent {
             height: 3.2mm;
@@ -400,6 +444,9 @@ export default function WeeklyReport() {
             display: flex;
             justify-content: flex-start;
             align-items: flex-start;
+            margin-top: -0.8mm;
+            padding-top: 0;
+            padding-bottom: 1.1mm;
           }
           .title {
             margin: 0;
@@ -410,7 +457,7 @@ export default function WeeklyReport() {
             font-weight: 900;
           }
           .subtitle {
-            margin: 4px 0 0 0;
+            margin: 2.3mm 0 0 0;
             font-size: 18px;
             font-weight: 400;
             color: #202430;
@@ -418,13 +465,17 @@ export default function WeeklyReport() {
           .stats {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
-            gap: 2.4mm;
+            gap: 2.8mm;
           }
           .stat {
             border: 2px solid var(--ink);
             border-radius: 8px;
-            padding: 2.8mm 3mm;
-            min-height: 23mm;
+            padding: 3mm 3.2mm 4.1mm;
+            min-height: 25mm;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-start;
+            overflow: hidden;
           }
           .stat:nth-child(1) { background: #ffe8ea; }
           .stat:nth-child(2) { background: #eef8dd; }
@@ -436,10 +487,11 @@ export default function WeeklyReport() {
             letter-spacing: 0.35px;
           }
           .stat .value {
-            font-size: 46px;
+            font-size: 40px;
             font-weight: 400;
-            margin-top: 3px;
+            margin-top: 0.7mm;
             line-height: 1;
+            overflow-wrap: anywhere;
           }
           .two-col {
             display: grid;
@@ -450,12 +502,12 @@ export default function WeeklyReport() {
             border: 2px solid var(--ink);
             border-radius: 8px;
             background: var(--paper);
-            padding: 2.6mm;
+            padding: 2.8mm;
             min-height: 52mm;
             overflow: hidden;
           }
           .card h2 {
-            margin: 0 0 2.2mm 0;
+            margin: 0 0 3.6mm 0;
             font-size: 16px;
             line-height: 1;
             text-transform: uppercase;
@@ -473,9 +525,10 @@ export default function WeeklyReport() {
             border: 1px solid #202530;
             border-right: 0;
             border-bottom: 0;
-            padding: 1.7mm 1.9mm;
+            padding: 1.55mm 1.8mm;
             text-align: left;
             overflow-wrap: anywhere;
+            word-break: break-word;
           }
           tr > *:last-child { border-right: 1px solid #202530; }
           tbody tr:last-child td { border-bottom: 1px solid #202530; }
@@ -486,7 +539,8 @@ export default function WeeklyReport() {
             font-size: 10px;
             font-weight: 800;
             letter-spacing: 0.25px;
-            white-space: nowrap;
+            line-height: 1.15;
+            white-space: normal;
           }
           tbody tr:nth-child(even) td { background: #f3f5fa; }
 
@@ -509,9 +563,13 @@ export default function WeeklyReport() {
           .leader {
             border: 2px solid var(--ink);
             border-radius: 8px;
-            padding: 2.6mm;
+            padding: 2.9mm;
             margin-bottom: 2.4mm;
             background: #fff;
+            min-height: 22mm;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
           }
           .leader:last-child { margin-bottom: 0; }
           .leader:first-child { background: #e8f2ff; }
@@ -523,14 +581,31 @@ export default function WeeklyReport() {
             letter-spacing: 0.3px;
           }
           .leader .v {
-            font-size: 31px;
+            font-size: 28px;
             font-weight: 400;
-            margin-top: 1.2mm;
-            line-height: 1.06;
+            margin-top: 0.8mm;
+            line-height: 1.1;
             overflow-wrap: anywhere;
             word-break: break-word;
           }
 
+          .deltas-section {
+            border: 2px solid var(--ink);
+            border-radius: 8px;
+            padding: 2.8mm;
+            background: var(--paper);
+            display: flex;
+            flex-direction: column;
+            gap: 3.6mm;
+          }
+          .deltas-title {
+            margin: 0;
+            font-size: 15px;
+            font-weight: 900;
+            text-transform: uppercase;
+            letter-spacing: 0.25px;
+            line-height: 1;
+          }
           .deltas {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
@@ -550,22 +625,23 @@ export default function WeeklyReport() {
             letter-spacing: 0.25px;
           }
           .delta .v {
-            font-size: 30px;
+            font-size: 28px;
             font-weight: 400;
-            margin-top: 1.4mm;
-            line-height: 1;
+            margin-top: 1.1mm;
+            line-height: 1.05;
+            overflow-wrap: anywhere;
           }
 
           .games-by-player {
             border: 2px solid var(--ink);
             border-radius: 8px;
-            padding: 2.6mm;
+            padding: 2.8mm;
             background: var(--paper);
             min-height: 52mm;
             overflow: hidden;
           }
           .games-by-player h2 {
-            margin: 0 0 2.2mm 0;
+            margin: 0 0 3.6mm 0;
             font-size: 16px;
             line-height: 1;
             text-transform: uppercase;
@@ -576,12 +652,23 @@ export default function WeeklyReport() {
             text-align: center;
             font-size: 11px;
             padding: 1.35mm 1.7mm;
+            overflow-wrap: anywhere;
+            word-break: break-word;
+          }
+          .games-table tr.total-row td {
+            background: #ecf4d9 !important;
+            font-weight: 700;
+            border-top: 2px solid #202530;
           }
           .games-table td:first-child {
             text-align: left;
             font-weight: 400;
             width: 34%;
-            white-space: nowrap;
+            white-space: normal;
+          }
+          .games-table tr.total-row td:first-child {
+            text-transform: uppercase;
+            letter-spacing: 0.25px;
           }
 
           .line { font-size: 13px; font-weight: 400; margin: 0.8mm 0; }
@@ -603,6 +690,7 @@ export default function WeeklyReport() {
             .stat .value,
             .leader .v,
             .delta .v { font-size: 28px; }
+            .deltas-title { font-size: 16px; }
             .card h2,
             .games-by-player h2 { font-size: 18px; }
           }
@@ -672,18 +760,21 @@ export default function WeeklyReport() {
           ${
             report.hasPreviousWeekStats
               ? `
-              <div class="deltas">
-                <div class="delta">
-                  <div class="k">${escapeHtml(t('weeklyReport.teamAverage'))}</div>
-                  <div class="v">${formatSigned(report.avgDelta)}</div>
-                </div>
-                <div class="delta">
-                  <div class="k">${escapeHtml(t('weeklyReport.strikeDelta'))}</div>
-                  <div class="v">${formatSigned(report.strikeDelta, '%')}</div>
-                </div>
-                <div class="delta">
-                  <div class="k">${escapeHtml(t('weeklyReport.spareDelta'))}</div>
-                  <div class="v">${formatSigned(report.spareDelta, '%')}</div>
+              <div class="deltas-section">
+                <h2 class="deltas-title">${escapeHtml(t('weeklyReport.vsLastWeek'))}</h2>
+                <div class="deltas">
+                  <div class="delta">
+                    <div class="k">${escapeHtml(t('weeklyReport.teamAverage'))}</div>
+                    <div class="v">${formatSigned(report.avgDelta)}</div>
+                  </div>
+                  <div class="delta">
+                    <div class="k">${escapeHtml(t('weeklyReport.strikeDelta'))}</div>
+                    <div class="v">${formatSigned(report.strikeDelta, '%')}</div>
+                  </div>
+                  <div class="delta">
+                    <div class="k">${escapeHtml(t('weeklyReport.spareDelta'))}</div>
+                    <div class="v">${formatSigned(report.spareDelta, '%')}</div>
+                  </div>
                 </div>
               </div>
               `
@@ -705,7 +796,7 @@ export default function WeeklyReport() {
                     </thead>
                     <tbody>
                       ${allGamesTableRows}
-                      <tr>
+                      <tr class="total-row">
                         <td>${escapeHtml(t('weeklyReport.teamTotal'))}</td>
                         ${allGamesTotalsRow}
                       </tr>
@@ -721,15 +812,16 @@ export default function WeeklyReport() {
               <thead>
                 <tr>
                   <th>${escapeHtml(t('weeklyReport.player'))}</th>
-                  <th>${escapeHtml(t('headToHead.strike'))}</th>
-                  <th>${escapeHtml(t('headToHead.spare'))}</th>
                   <th>${escapeHtml(t('players.strikes'))}</th>
+                  <th>${escapeHtml(t('headToHead.strike'))}</th>
                   <th>${escapeHtml(t('players.spares'))}</th>
+                  <th>${escapeHtml(t('headToHead.spare'))}</th>
                   <th>${escapeHtml(t('weeklyReport.opens'))}</th>
                 </tr>
               </thead>
               <tbody>
                 ${playerPercentRows}
+                ${playerPercentTotalsRow}
               </tbody>
             </table>
           </div>
@@ -795,7 +887,7 @@ export default function WeeklyReport() {
               </button>
             </div>
 
-            <div className="flex items-center justify-end gap-2">
+            <div className="flex items-center justify-between sm:justify-end gap-2">
               <button
                 onClick={() => setWeekOffset((prev) => prev - 1)}
                 className="bg-amber-400 border-4 border-black text-black p-2 font-black hover:bg-amber-500 transition-all"
@@ -805,7 +897,7 @@ export default function WeeklyReport() {
               </button>
               <button
                 onClick={() => setWeekOffset(0)}
-                className="bg-white border-4 border-black text-black w-[272px] py-2 font-black hover:bg-gray-100 transition-all text-sm text-center whitespace-nowrap"
+                className="bg-white border-4 border-black text-black flex-1 min-w-0 sm:flex-none sm:w-[272px] px-3 py-2 font-black hover:bg-gray-100 transition-all text-sm text-center whitespace-nowrap truncate"
               >
                 {weekSelectorLabel}
               </button>
@@ -953,10 +1045,10 @@ export default function WeeklyReport() {
                 <thead>
                   <tr className="bg-amber-200 border-b-2 border-black">
                     <th className="text-left px-3 py-2 font-black text-black">{t('weeklyReport.player')}</th>
-                    <th className="text-center px-3 py-2 font-black text-black">{t('headToHead.strike')}</th>
-                    <th className="text-center px-3 py-2 font-black text-black">{t('headToHead.spare')}</th>
                     <th className="text-center px-3 py-2 font-black text-black">{t('players.strikes')}</th>
+                    <th className="text-center px-3 py-2 font-black text-black">{t('headToHead.strike')}</th>
                     <th className="text-center px-3 py-2 font-black text-black">{t('players.spares')}</th>
+                    <th className="text-center px-3 py-2 font-black text-black">{t('headToHead.spare')}</th>
                     <th className="text-center px-3 py-2 font-black text-black">{t('weeklyReport.opens')}</th>
                   </tr>
                 </thead>
@@ -964,13 +1056,21 @@ export default function WeeklyReport() {
                   {report.playerPercentages.map((player, rowIndex) => (
                     <tr key={player.id} className={`${rowIndex % 2 === 0 ? 'bg-white' : 'bg-orange-50'} border-b border-black`}>
                       <td className="px-3 py-3 font-black text-black">{player.name}</td>
-                      <td className="px-3 py-3 text-center font-black text-black">{player.strike.toFixed(1)}%</td>
-                      <td className="px-3 py-3 text-center font-black text-black">{player.spare.toFixed(1)}%</td>
                       <td className="px-3 py-3 text-center font-black text-black">{player.strikes}/{player.strikeOpportunities}</td>
+                      <td className="px-3 py-3 text-center font-black text-black">{player.strike.toFixed(1)}%</td>
                       <td className="px-3 py-3 text-center font-black text-black">{player.spares}/{player.spareOpportunities}</td>
+                      <td className="px-3 py-3 text-center font-black text-black">{player.spare.toFixed(1)}%</td>
                       <td className="px-3 py-3 text-center font-black text-black">{player.opens}</td>
                     </tr>
                   ))}
+                  <tr className="bg-amber-200 border-t-2 border-black">
+                    <td className="px-3 py-3 font-black text-black">{t('weeklyReport.teamTotal')}</td>
+                    <td className="px-3 py-3 text-center font-black text-black">{playerStatsTotals.strikes}/{playerStatsTotals.strikeOpportunities}</td>
+                    <td className="px-3 py-3 text-center font-black text-black">{totalStrikePct.toFixed(1)}%</td>
+                    <td className="px-3 py-3 text-center font-black text-black">{playerStatsTotals.spares}/{playerStatsTotals.spareOpportunities}</td>
+                    <td className="px-3 py-3 text-center font-black text-black">{totalSparePct.toFixed(1)}%</td>
+                    <td className="px-3 py-3 text-center font-black text-black">{playerStatsTotals.opens}</td>
+                  </tr>
                 </tbody>
               </table>
             </div>

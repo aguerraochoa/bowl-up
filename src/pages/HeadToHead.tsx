@@ -293,10 +293,10 @@ export default function HeadToHead() {
             min-height: 100%;
             margin: 0;
             background: #fff;
-            padding: 2.4mm;
+            padding: 3.2mm;
             display: flex;
             flex-direction: column;
-            gap: 2.4mm;
+            gap: 3.2mm;
           }
           .accent {
             height: 3.2mm;
@@ -307,6 +307,9 @@ export default function HeadToHead() {
             display: flex;
             justify-content: flex-start;
             align-items: flex-start;
+            margin-top: -0.8mm;
+            padding-top: 0;
+            padding-bottom: 1.1mm;
           }
           h1 {
             font-size: 46px;
@@ -317,16 +320,18 @@ export default function HeadToHead() {
             font-weight: 900;
           }
           p {
-            margin: 4px 0 0 0;
+            margin: 2.2mm 0 0 0;
             font-size: 18px;
             font-weight: 400;
             color: #202430;
+            line-height: 1.2;
+            overflow-wrap: anywhere;
           }
-          .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 2.4mm; }
+          .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 2.8mm; }
           .card {
             border: 2px solid var(--ink);
             border-radius: 8px;
-            padding: 2.8mm;
+            padding: 2.9mm;
             background: var(--paper);
             min-height: 46mm;
             overflow: hidden;
@@ -334,10 +339,10 @@ export default function HeadToHead() {
           .card-a { background: #e8f2ff; }
           .card-b { background: #ffe8ea; }
           .name {
-            font-size: 30px;
-            line-height: 1;
+            font-size: 28px;
+            line-height: 1.05;
             font-weight: 400;
-            margin-bottom: 2.2mm;
+            margin-bottom: 2.4mm;
             text-transform: uppercase;
             overflow-wrap: anywhere;
             word-break: break-word;
@@ -369,7 +374,8 @@ export default function HeadToHead() {
             font-size: 10px;
             letter-spacing: 0.25px;
             font-weight: 800;
-            white-space: nowrap;
+            white-space: normal;
+            line-height: 1.15;
           }
           tbody tr:nth-child(even) td { background: #f3f5fa; }
           tbody tr:last-child td { border-bottom: 0; }
@@ -491,7 +497,7 @@ export default function HeadToHead() {
   return (
     <div className="min-h-screen bg-orange-50 pb-20 lg:pb-6 safe-top relative">
       <div className="max-w-5xl mx-auto px-4 py-4 md:py-6">
-        <div className="bg-white border-4 border-black p-4 sm:p-6 mb-4">
+        <div className="bg-white border-4 border-black p-4 sm:p-6 mb-4 overflow-hidden">
           <div className="flex items-center justify-between gap-4 flex-wrap">
             <div>
               <h1 className="text-3xl sm:text-4xl md:text-5xl font-black text-black uppercase">{t('headToHead.title')}</h1>
@@ -503,7 +509,7 @@ export default function HeadToHead() {
             <button
               onClick={handleDownloadPdf}
               disabled={!playerA || !playerB || playerA.id === playerB.id}
-              className="bg-amber-400 border-4 border-black text-black px-4 py-2 font-black hover:bg-amber-500 transition-all disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center gap-2"
+              className="bg-amber-400 border-4 border-black text-black px-4 py-2 font-black hover:bg-amber-500 transition-all disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center justify-center gap-2 w-full sm:w-auto"
             >
               <Download className="w-5 h-5" />
               {t('headToHead.downloadPdf')}
@@ -511,16 +517,16 @@ export default function HeadToHead() {
           </div>
         </div>
 
-        <div className="bg-white border-4 border-black p-4 sm:p-6 mb-4">
+        <div className="bg-white border-4 border-black p-4 sm:p-6 mb-4 overflow-hidden">
           <p className="text-xs uppercase font-black text-black mb-3">{t('headToHead.dateRange')}</p>
-          <div className="grid grid-cols-1 md:grid-cols-[1fr_1fr_auto] gap-3">
+          <div className="grid grid-cols-1 md:grid-cols-[1fr_1fr_auto] gap-3 min-w-0">
             <div className="min-w-0">
               <label className="block text-xs uppercase font-black text-black mb-2">{t('headToHead.startDate')}</label>
               <input
                 type="date"
                 value={dateFrom}
                 onChange={(e) => handleDateFromChange(e.target.value)}
-                className="block w-full max-w-full min-w-0 box-border px-4 py-3 border-4 border-black focus:outline-none font-bold bg-white"
+                className="block w-full max-w-full min-w-0 box-border px-4 py-3 border-4 border-black focus:outline-none font-bold bg-white appearance-none text-sm sm:text-base"
               />
             </div>
             <div className="min-w-0">
@@ -529,17 +535,17 @@ export default function HeadToHead() {
                 type="date"
                 value={dateTo}
                 onChange={(e) => handleDateToChange(e.target.value)}
-                className="block w-full max-w-full min-w-0 box-border px-4 py-3 border-4 border-black focus:outline-none font-bold bg-white"
+                className="block w-full max-w-full min-w-0 box-border px-4 py-3 border-4 border-black focus:outline-none font-bold bg-white appearance-none text-sm sm:text-base"
               />
             </div>
             <button
               onClick={resetDateRange}
-              className="h-fit self-end bg-white border-4 border-black text-black px-4 py-3 font-black hover:bg-gray-100 transition-all"
+              className="h-fit self-end bg-white border-4 border-black text-black px-4 py-3 font-black hover:bg-gray-100 transition-all w-full md:w-auto"
             >
               {t('headToHead.allDates')}
             </button>
           </div>
-          <p className="text-xs sm:text-sm text-black font-bold mt-3">
+          <p className="text-xs sm:text-sm text-black font-bold mt-3 break-words leading-snug">
             {rangeLabel} · {t('headToHead.gamesInRange')}: {gamesInRange.length}
           </p>
         </div>

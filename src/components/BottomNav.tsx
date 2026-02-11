@@ -123,9 +123,9 @@ export default function BottomNav({ activeTab, onTabChange, onSignOut }: BottomN
       <nav
         className="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t-4 border-black z-50"
         style={{
-          paddingBottom: 'max(env(safe-area-inset-bottom, 0px), 12px)',
-          paddingLeft: 'max(env(safe-area-inset-left, 0px), 8px)',
-          paddingRight: 'max(env(safe-area-inset-right, 0px), 8px)',
+          paddingBottom: 'env(safe-area-inset-bottom, 0px)',
+          paddingLeft: 'env(safe-area-inset-left, 0px)',
+          paddingRight: 'env(safe-area-inset-right, 0px)',
         }}
       >
         <div className="flex justify-around items-center h-16">
@@ -140,7 +140,7 @@ export default function BottomNav({ activeTab, onTabChange, onSignOut }: BottomN
               }`}
             >
               <Icon className={`w-6 h-6 ${activeTab === id ? 'scale-110' : ''} transition-transform`} />
-              <span className="text-[11px] mt-1 uppercase leading-tight whitespace-nowrap">{label}</span>
+              <span className="text-[10px] sm:text-[11px] mt-0.5 uppercase leading-tight whitespace-nowrap">{label}</span>
             </button>
           ))}
           <button
@@ -148,7 +148,7 @@ export default function BottomNav({ activeTab, onTabChange, onSignOut }: BottomN
             className="flex flex-col items-center justify-center flex-1 min-w-0 h-full px-1 transition-all text-black hover:bg-amber-400 font-bold"
           >
             <MoreHorizontal className="w-6 h-6 transition-transform" />
-            <span className="text-[11px] mt-1 uppercase leading-tight whitespace-nowrap">{t('nav.more')}</span>
+            <span className="text-[10px] sm:text-[11px] mt-0.5 uppercase leading-tight whitespace-nowrap">{t('nav.more')}</span>
           </button>
         </div>
       </nav>
