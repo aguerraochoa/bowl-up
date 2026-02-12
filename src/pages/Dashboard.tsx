@@ -482,7 +482,7 @@ export default function Dashboard() {
             
             {/* Modal Content */}
             <div 
-              className={`relative bg-white rounded-none border-4 border-black border-b-0 w-full sm:max-w-md sm:mx-4 sm:rounded-none sm:border-b-4 max-h-[100vh] sm:max-h-[90vh] flex flex-col ${
+              className={`relative bg-white rounded-none border-4 border-black border-b-0 w-full sm:max-w-md sm:mx-4 sm:rounded-none sm:border-b-4 max-h-[calc(100dvh-env(safe-area-inset-top,0px))] sm:max-h-[90vh] flex flex-col ${
                 isClosingModal ? 'animate-slide-down' : 'animate-slide-up'
               }`}
               onClick={(e) => e.stopPropagation()}
