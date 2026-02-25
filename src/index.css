@@ -51,6 +51,17 @@
 }
 
 @layer base {
+  :root {
+    --app-top-safe-space: env(safe-area-inset-top, 0px);
+  }
+
+  @media screen and (max-width: 1023px) {
+    :root {
+      /* Fallback spacer for iPhone status bar when safe-area env resolves to 0 */
+      --app-top-safe-space: max(env(safe-area-inset-top, 0px), 44px);
+    }
+  }
+
   body {
     margin: 0;
     min-height: 100vh;
@@ -64,7 +75,7 @@
   #root {
     position: relative;
     min-height: 100vh;
-    padding-top: env(safe-area-inset-top, 0px);
+    padding-top: var(--app-top-safe-space);
     box-sizing: border-box;
   }
 
@@ -74,7 +85,7 @@
     top: 0;
     left: 0;
     right: 0;
-    height: env(safe-area-inset-top, 0px);
+    height: var(--app-top-safe-space);
     background-color: #F5F9EB;
     z-index: 60;
     pointer-events: none;
