@@ -62,7 +62,22 @@
   }
   
   #root {
+    position: relative;
     min-height: 100vh;
+    padding-top: env(safe-area-inset-top, 0px);
+    box-sizing: border-box;
+  }
+
+  #root::before {
+    content: "";
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: env(safe-area-inset-top, 0px);
+    background-color: #F5F9EB;
+    z-index: 60;
+    pointer-events: none;
   }
 
   /* Prevent iOS auto-zoom on input focus */

@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
-import { ChevronDown, ChevronUp, Loader2, Trash2 } from 'lucide-react';
-import { getGames, getPlayers, removeGame, removeGamesBySession } from '../utils/storage';
+import { ChevronDown, ChevronUp, Loader2, Trash2, Pencil, Check, X } from 'lucide-react';
+import { getGames, getPlayers, removeGame, removeGamesBySession, updateGameDate, updateGamesDateBySession } from '../utils/storage';
 import { calculateSpareSummary, calculateStrikeSummary } from '../utils/scoring';
+import { formatAppDate, getTodayDateInAppTimeZone } from '../utils/date';
 import { t, getLanguage } from '../i18n';
 import type { Game, Player } from '../types';
 import { useSeason } from '../contexts/useSeason';
@@ -15,6 +16,12 @@ export default function GameHistory() {
   const [expandedSessions, setExpandedSessions] = useState<Set<string>>(new Set());
   const [selectedPlayerId, setSelectedPlayerId] = useState('all');
   const [currentLang, setCurrentLang] = useState<'es' | 'en'>(() => getLanguage());
+  const [editingDateTarget, setEditingDateTarget] = useState<{ type: 'game' | 'session'; id: string } | null>(null);
+  const [editingDateValue, setEditingDateValue] = useState('');
+  const [savingDateTargetId, setSavingDateTargetId] = useState<string | null>(null);
+
+  const getLocalTodayDateString = () => getTodayDateInAppTimeZone();
+  const formatGameDate = (dateValue: string) => formatAppDate(dateValue);
 
   useEffect(() => {
     const handleLanguageChange = (e: CustomEvent) => {
@@ -54,6 +61,14 @@ export default function GameHistory() {
   }, [players, games]);
 
   const sessions = useMemo(() => {
+    const compareGamesByPlayedDate = (a: Game, b: Game) => {
+      const dateCompare = b.date.localeCompare(a.date);
+      if (dateCompare !== 0) return dateCompare;
+      const createdA = a.created_at || a.date;
+      const createdB = b.created_at || b.date;
+      return new Date(createdB).getTime() - new Date(createdA).getTime();
+    };
+
     const gamesBySession = new Map<string, Game[]>();
     const gamesWithoutSession: Game[] = [];
 
@@ -68,22 +83,12 @@ export default function GameHistory() {
     });
 
     const groupedSessions = Array.from(gamesBySession.entries()).sort(([, gamesA], [, gamesB]) => {
-      const createdA = gamesA.reduce((latest, game) => {
-        const value = game.created_at || '';
-        return value > latest ? value : latest;
-      }, '');
-      const createdB = gamesB.reduce((latest, game) => {
-        const value = game.created_at || '';
-        return value > latest ? value : latest;
-      }, '');
-      return new Date(createdB).getTime() - new Date(createdA).getTime();
+      const representativeA = [...gamesA].sort(compareGamesByPlayedDate)[0];
+      const representativeB = [...gamesB].sort(compareGamesByPlayedDate)[0];
+      return compareGamesByPlayedDate(representativeA, representativeB);
     });
 
-    const individualGames = [...gamesWithoutSession].sort((a, b) => {
-      const createdA = a.created_at || a.date;
-      const createdB = b.created_at || b.date;
-      return new Date(createdB).getTime() - new Date(createdA).getTime();
-    });
+    const individualGames = [...gamesWithoutSession].sort(compareGamesByPlayedDate);
 
     return { groupedSessions, individualGames };
   }, [filteredGames]);
@@ -91,6 +96,8 @@ export default function GameHistory() {
   const singlePlayerGames = useMemo(() => {
     if (selectedPlayerId === 'all') return [];
     return [...filteredGames].sort((a, b) => {
+      const dateCompare = b.date.localeCompare(a.date);
+      if (dateCompare !== 0) return dateCompare;
       const createdA = a.created_at || a.date;
       const createdB = b.created_at || b.date;
       return new Date(createdB).getTime() - new Date(createdA).getTime();
@@ -111,6 +118,56 @@ export default function GameHistory() {
       strikes: `${strikeSummary.strikes}/${strikeSummary.opportunities}`,
       spares: `${spareSummary.spares}/${spareSummary.opportunities}`,
     };
+  };
+
+  const renderGameStatsGrid = (game: Game, fractions: { strikes: string; spares: string }) => (
+    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-2">
+      <div className="border-2 border-black bg-orange-100 px-2 py-2">
+        <p className="text-[10px] uppercase font-black text-black leading-tight">{t('addGame.score')}</p>
+        <p className="text-sm sm:text-base font-black text-black leading-tight">{game.totalScore}</p>
+      </div>
+      <div className="border-2 border-black bg-blue-100 px-2 py-2">
+        <p className="text-[10px] uppercase font-black text-black leading-tight">{t('players.strikes')}</p>
+        <p className="text-sm sm:text-base font-black text-black leading-tight">{fractions.strikes}</p>
+      </div>
+      <div className="border-2 border-black bg-lime-100 px-2 py-2">
+        <p className="text-[10px] uppercase font-black text-black leading-tight">{t('players.spares')}</p>
+        <p className="text-sm sm:text-base font-black text-black leading-tight">{fractions.spares}</p>
+      </div>
+      <div className="border-2 border-black bg-yellow-100 px-2 py-2">
+        <p className="text-[10px] uppercase font-black text-black leading-tight">{t('addGame.tenthFrame')}</p>
+        <p className="text-sm sm:text-base font-black text-black leading-tight font-mono">{game.tenthFrame || '-'}</p>
+      </div>
+    </div>
+  );
+
+  const beginEditDate = (type: 'game' | 'session', id: string, date: string) => {
+    setEditingDateTarget({ type, id });
+    setEditingDateValue(date);
+  };
+
+  const cancelEditDate = () => {
+    setEditingDateTarget(null);
+    setEditingDateValue('');
+  };
+
+  const saveEditedDate = async () => {
+    if (!editingDateTarget || !editingDateValue) return;
+    setSavingDateTargetId(editingDateTarget.id);
+    try {
+      if (editingDateTarget.type === 'session') {
+        await updateGamesDateBySession(editingDateTarget.id, editingDateValue);
+      } else {
+        await updateGameDate(editingDateTarget.id, editingDateValue);
+      }
+      cancelEditDate();
+      await loadData();
+    } catch (error) {
+      console.error('Error updating game date:', error);
+      alert('Error updating game date. Please try again.');
+    } finally {
+      setSavingDateTargetId(null);
+    }
   };
 
   const handleDeleteSession = async (sessionId: string) => {
@@ -179,13 +236,48 @@ export default function GameHistory() {
             {isSinglePlayerView ? (
               singlePlayerGames.map((game) => {
                 const fractions = formatGameFractions(game);
+                const isEditingGameDate = editingDateTarget?.type === 'game' && editingDateTarget.id === game.id;
                 return (
-                  <div key={game.id} className="flex items-center justify-between bg-white border-4 border-black p-3 sm:p-4">
+                  <div key={game.id} className="flex items-start justify-between gap-3 bg-white border-4 border-black p-3 sm:p-4">
                     <div className="flex-1">
-                      <p className="font-black text-black text-sm sm:text-base">{new Date(game.date).toLocaleDateString()}</p>
-                      <p className="text-xs sm:text-sm font-bold text-black">
-                        {t('addGame.score')}: {game.totalScore} | {t('players.strikes')}: {fractions.strikes} | {t('players.spares')}: {fractions.spares} | {t('addGame.tenthFrame')}: {game.tenthFrame || '-'}
-                      </p>
+                      {isEditingGameDate ? (
+                        <div className="flex flex-wrap items-center gap-2 mb-1">
+                          <input
+                            type="date"
+                            value={editingDateValue}
+                            max={getLocalTodayDateString()}
+                            onChange={(e) => setEditingDateValue(e.target.value)}
+                            className="bg-white border-2 border-black text-black font-black px-2 py-1 rounded-none text-sm"
+                          />
+                          <button
+                            onClick={saveEditedDate}
+                            disabled={!editingDateValue || savingDateTargetId === game.id}
+                            className="bg-lime-400 border-2 border-black text-black p-1 disabled:bg-gray-300"
+                            aria-label={t('common.save')}
+                          >
+                            {savingDateTargetId === game.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
+                          </button>
+                          <button
+                            onClick={cancelEditDate}
+                            className="bg-amber-400 border-2 border-black text-black p-1"
+                            aria-label={t('common.cancel')}
+                          >
+                            <X className="w-4 h-4" />
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-2 mb-1">
+                          <p className="font-black text-black text-sm sm:text-base">{formatGameDate(game.date)}</p>
+                          <button
+                            onClick={() => beginEditDate('game', game.id, game.date)}
+                            className="bg-amber-400 border-2 border-black text-black p-1"
+                            aria-label={t('common.edit')}
+                          >
+                            <Pencil className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      )}
+                      {renderGameStatsGrid(game, fractions)}
                     </div>
                     <button
                       onClick={() => handleDeleteGame(game.id)}
@@ -204,6 +296,7 @@ export default function GameHistory() {
                   const date = sessionGames[0]?.date || '';
                   const uniquePlayers = new Set(sessionGames.map((game) => game.playerId).filter((id): id is string => Boolean(id)));
                   const isExpanded = expandedSessions.has(sessionId);
+                  const isEditingSessionDate = editingDateTarget?.type === 'session' && editingDateTarget.id === sessionId;
                   return (
                     <div key={sessionId} className="bg-amber-400 border-4 border-black p-3 sm:p-4">
                       <div className="flex items-center justify-between mb-2">
@@ -221,7 +314,43 @@ export default function GameHistory() {
                             {isExpanded ? <ChevronUp className="w-5 h-5 text-black" /> : <ChevronDown className="w-5 h-5 text-black" />}
                           </button>
                           <div className="flex-1">
-                            <p className="font-black text-black text-sm sm:text-base">{new Date(date).toLocaleDateString()}</p>
+                            {isEditingSessionDate ? (
+                              <div className="flex flex-wrap items-center gap-2 mb-1">
+                                <input
+                                  type="date"
+                                  value={editingDateValue}
+                                  max={getLocalTodayDateString()}
+                                  onChange={(e) => setEditingDateValue(e.target.value)}
+                                  className="bg-white border-2 border-black text-black font-black px-2 py-1 rounded-none text-sm"
+                                />
+                                <button
+                                  onClick={saveEditedDate}
+                                  disabled={!editingDateValue || savingDateTargetId === sessionId}
+                                  className="bg-lime-400 border-2 border-black text-black p-1 disabled:bg-gray-300"
+                                  aria-label={t('common.save')}
+                                >
+                                  {savingDateTargetId === sessionId ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
+                                </button>
+                                <button
+                                  onClick={cancelEditDate}
+                                  className="bg-white border-2 border-black text-black p-1"
+                                  aria-label={t('common.cancel')}
+                                >
+                                  <X className="w-4 h-4" />
+                                </button>
+                              </div>
+                            ) : (
+                              <div className="flex items-center gap-2 mb-1">
+                                <p className="font-black text-black text-sm sm:text-base">{formatGameDate(date)}</p>
+                                <button
+                                  onClick={() => beginEditDate('session', sessionId, date)}
+                                  className="bg-white border-2 border-black text-black p-1"
+                                  aria-label={t('common.edit')}
+                                >
+                                  <Pencil className="w-3.5 h-3.5" />
+                                </button>
+                              </div>
+                            )}
                             <p className="text-xs sm:text-sm font-bold text-black">
                               {t('dashboard.total')}: {totalSum} | {uniquePlayers.size} {t('dashboard.players')}
                             </p>
@@ -251,11 +380,14 @@ export default function GameHistory() {
                           {sessionGames.map((game) => {
                             const fractions = formatGameFractions(game);
                             return (
-                              <div key={game.id} className="bg-white border-2 border-black p-2">
-                                <p className="font-black text-black text-sm sm:text-base">{getPlayerName(game.playerId)}</p>
-                                <p className="text-xs sm:text-sm font-bold text-black">
-                                  {t('addGame.score')}: {game.totalScore} | {t('players.strikes')}: {fractions.strikes} | {t('players.spares')}: {fractions.spares} | {t('addGame.tenthFrame')}: {game.tenthFrame || '-'}
-                                </p>
+                              <div key={game.id} className="bg-white border-2 sm:border-4 border-black p-3 sm:p-4">
+                                <div className="flex items-center justify-between gap-2">
+                                  <p className="font-black text-black text-sm sm:text-lg leading-tight">{getPlayerName(game.playerId)}</p>
+                                  <span className="text-[10px] sm:text-xs font-black uppercase bg-amber-200 border-2 border-black px-2 py-1">
+                                    {formatGameDate(game.date)}
+                                  </span>
+                                </div>
+                                {renderGameStatsGrid(game, fractions)}
                               </div>
                             );
                           })}
@@ -267,15 +399,51 @@ export default function GameHistory() {
 
                 {sessions.individualGames.map((game) => {
                   const fractions = formatGameFractions(game);
+                  const isEditingGameDate = editingDateTarget?.type === 'game' && editingDateTarget.id === game.id;
                   return (
-                    <div key={game.id} className="flex items-center justify-between bg-white border-4 border-black p-3 sm:p-4">
+                    <div key={game.id} className="flex items-start justify-between gap-3 bg-white border-4 border-black p-3 sm:p-4">
                       <div className="flex-1">
-                        <p className="font-black text-black text-sm sm:text-base">
-                          {getPlayerName(game.playerId)} - {new Date(game.date).toLocaleDateString()}
-                        </p>
-                        <p className="text-xs sm:text-sm font-bold text-black">
-                          {t('addGame.score')}: {game.totalScore} | {t('players.strikes')}: {fractions.strikes} | {t('players.spares')}: {fractions.spares} | {t('addGame.tenthFrame')}: {game.tenthFrame || '-'}
-                        </p>
+                        {isEditingGameDate ? (
+                          <div className="flex flex-wrap items-center gap-2 mb-1">
+                            <span className="font-black text-black text-sm sm:text-base">{getPlayerName(game.playerId)}</span>
+                            <input
+                              type="date"
+                              value={editingDateValue}
+                              max={getLocalTodayDateString()}
+                              onChange={(e) => setEditingDateValue(e.target.value)}
+                              className="bg-white border-2 border-black text-black font-black px-2 py-1 rounded-none text-sm"
+                            />
+                            <button
+                              onClick={saveEditedDate}
+                              disabled={!editingDateValue || savingDateTargetId === game.id}
+                              className="bg-lime-400 border-2 border-black text-black p-1 disabled:bg-gray-300"
+                              aria-label={t('common.save')}
+                            >
+                              {savingDateTargetId === game.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
+                            </button>
+                            <button
+                              onClick={cancelEditDate}
+                              className="bg-amber-400 border-2 border-black text-black p-1"
+                              aria-label={t('common.cancel')}
+                            >
+                              <X className="w-4 h-4" />
+                            </button>
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-2 mb-1">
+                            <p className="font-black text-black text-sm sm:text-base">
+                              {getPlayerName(game.playerId)} - {formatGameDate(game.date)}
+                            </p>
+                            <button
+                              onClick={() => beginEditDate('game', game.id, game.date)}
+                              className="bg-amber-400 border-2 border-black text-black p-1"
+                              aria-label={t('common.edit')}
+                            >
+                              <Pencil className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        )}
+                        {renderGameStatsGrid(game, fractions)}
                       </div>
                       <button
                         onClick={() => handleDeleteGame(game.id)}

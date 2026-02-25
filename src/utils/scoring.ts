@@ -118,7 +118,10 @@ export const parseTenthFrame = (notation: string): { strikes: number; spares: nu
         spares = 1;
       } else if (shot2 === '-') {
         totalPins += 0;
-        if (shot3 && shot3 !== '-') {
+        if (shot3 === '/') {
+          totalPins += 10;
+          spares = 1;
+        } else if (shot3 && shot3 !== '-') {
           const pins = parseInt(shot3) || 0;
           totalPins += pins;
         }
@@ -254,9 +257,9 @@ export const validateTenthFrame = (notation: string): { valid: boolean; error?: 
       if (!shot3) {
         return { valid: true }; // Still typing
       }
-      // Third shot cannot be a spare if second was a number
+      // Spare is valid here (e.g., X9/) because shots 2+3 share the same rack
       if (shot3 === '/') {
-        return { valid: false, error: 'Cannot have a spare on the third ball after a strike' };
+        return { valid: true };
       }
       // Third shot cannot be a strike if second was a number (you'd need to knock down remaining pins)
       if (shot3 === 'X' && pins2 < 10) {
@@ -285,7 +288,7 @@ export const validateTenthFrame = (notation: string): { valid: boolean; error?: 
         return { valid: true }; // Still typing
       }
       if (shot3 === '/') {
-        return { valid: false, error: 'Cannot have a spare on third ball after missing second ball' };
+        return { valid: true }; // X-/ is valid (spare across shots 2+3)
       }
       if (shot3 === 'X') {
         return { valid: false, error: 'Cannot have a strike on third ball after missing second ball' };

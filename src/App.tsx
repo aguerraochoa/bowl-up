@@ -287,7 +287,9 @@ function App() {
 
     return (
       <div className="min-h-screen bg-orange-50">
-        <div className="lg:pl-64">
+        <div
+          className="lg:pl-64 pb-[calc(80px+env(safe-area-inset-bottom,0px))] lg:pb-0"
+        >
           {adminPage === 'dashboard' && <Suspense fallback={<LoadingSpinner />}><AdminDashboard onSignOut={handleAdminSignOut} onNavigate={handleAdminNavigate} /></Suspense>}
           {adminPage === 'teams' && <Suspense fallback={<LoadingSpinner />}><AdminTeams onSignOut={handleAdminSignOut} onNavigate={handleAdminNavigate} /></Suspense>}
           {adminPage === 'leagues' && <Suspense fallback={<LoadingSpinner />}><AdminLeagues onSignOut={handleAdminSignOut} onNavigate={handleAdminNavigate} /></Suspense>}
@@ -344,13 +346,17 @@ function App() {
     }
   };
 
+  const showBottomNav = activeTab !== 'designs' && activeTab !== 'debts-designs' && activeTab !== 'color';
+
   return (
     <SeasonProvider>
       <div className="min-h-screen bg-orange-50">
-        <div className="lg:pl-64">
+        <div
+          className={`lg:pl-64 ${showBottomNav ? 'pb-[calc(80px+env(safe-area-inset-bottom,0px))] lg:pb-0' : ''}`}
+        >
           {renderContent()}
         </div>
-        {activeTab !== 'designs' && activeTab !== 'debts-designs' && activeTab !== 'color' && <BottomNav activeTab={activeTab} onTabChange={handleTabChange} onSignOut={handleSignOut} />}
+        {showBottomNav && <BottomNav activeTab={activeTab} onTabChange={handleTabChange} onSignOut={handleSignOut} />}
         {(activeTab === 'designs' || activeTab === 'debts-designs' || activeTab === 'color') && (
           <div className="fixed bottom-4 right-4">
             <a

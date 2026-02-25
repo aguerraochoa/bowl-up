@@ -114,8 +114,8 @@ export const calculatePlayerStatsFromData = (playerId: string, games: Game[]): S
   });
   const averageTenthFrame = playerGames.length > 0 ? totalTenthFramePins / playerGames.length : 0;
   
-  // Calculate games above 200
-  const gamesAbove200 = scores.filter(score => score > 200).length;
+  // Calculate games 200+
+  const gamesAbove200 = scores.filter(score => score >= 200).length;
   const gamesAbove200Percentage = playerGames.length > 0 ? (gamesAbove200 / playerGames.length) * 100 : 0;
   
   return {
@@ -156,6 +156,8 @@ export const calculateTeamStatsFromData = (games: Game[]) => {
       totalStrikePercentage: 0,
       totalSparePercentage: 0,
       averageTenthFrame: 0,
+      gamesAbove200: 0,
+      gamesAbove200Percentage: 0,
     };
   }
   
@@ -198,6 +200,8 @@ export const calculateTeamStatsFromData = (games: Game[]) => {
     totalTenthFramePins += tenthFrame.totalPins;
   });
   const averageTenthFrame = activePlayerGames.length > 0 ? totalTenthFramePins / activePlayerGames.length : 0;
+  const gamesAbove200 = activePlayerGames.filter((game) => game.totalScore >= 200).length;
+  const gamesAbove200Percentage = activePlayerGames.length > 0 ? (gamesAbove200 / activePlayerGames.length) * 100 : 0;
   
   return {
     teamGameAverage: Math.round(teamGameAverage * 10) / 10,
@@ -205,6 +209,8 @@ export const calculateTeamStatsFromData = (games: Game[]) => {
     totalStrikePercentage: Math.round(totalStrikePercentage * 10) / 10,
     totalSparePercentage: Math.round(totalSparePercentage * 10) / 10,
     averageTenthFrame: Math.round(averageTenthFrame * 10) / 10,
+    gamesAbove200,
+    gamesAbove200Percentage: Math.round(gamesAbove200Percentage * 10) / 10,
   };
 };
 

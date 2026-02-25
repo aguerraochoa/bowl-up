@@ -13,6 +13,7 @@ import {
 import { getPlayers, getGames } from '../utils/storage';
 import { t, getLanguage } from '../i18n';
 import { useSeason } from '../contexts/useSeason';
+import { formatAppDate } from '../utils/date';
 import { Target, Zap, Gamepad2, TrendingUp, X, Loader2 } from 'lucide-react';
 import type { Game, Player } from '../types';
 
@@ -25,6 +26,8 @@ export default function Dashboard() {
     totalStrikePercentage: 0,
     totalSparePercentage: 0,
     averageTenthFrame: 0,
+    gamesAbove200: 0,
+    gamesAbove200Percentage: 0,
   });
   const [topGames, setTopGames] = useState<Array<{ playerName: string; totalScore: number; date: string }>>([]);
   const [topTeamSums, setTopTeamSums] = useState<Array<{ date: string; totalSum: number; players: string[]; games: Game[] }>>([]);
@@ -187,7 +190,7 @@ export default function Dashboard() {
 
         {/* Desktop One-Pager Layout */}
         <div className="hidden lg:block">
-          <div className="grid grid-cols-2 xl:grid-cols-4 gap-4 mb-4">
+          <div className="grid grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6 gap-4 mb-4">
             <KPICard
               title={t('dashboard.teamAverage')}
               value={teamStats.teamGameAverage.toFixed(1)}
@@ -216,6 +219,20 @@ export default function Dashboard() {
               icon={<TrendingUp className="w-6 h-6 opacity-60" />}
               color="orange"
             />
+            <KPICard
+              title={t('dashboard.avgTenthFrame')}
+              value={teamStats.averageTenthFrame.toFixed(1)}
+              subtitle={t('dashboard.teamAvgTenthFrameSubtitle')}
+              icon={<Target className="w-6 h-6 opacity-60" />}
+              color="accent"
+            />
+            <KPICard
+              title={t('players.gamesAbove200')}
+              value={teamStats.gamesAbove200}
+              subtitle={`${teamStats.gamesAbove200Percentage.toFixed(1)}% ${t('dashboard.gamesAbove200SubtitleSuffix')}`}
+              icon={<TrendingUp className="w-6 h-6 opacity-60" />}
+              color="purple"
+            />
           </div>
 
           <div className="grid grid-cols-1 xl:grid-cols-2 2xl:grid-cols-3 gap-4">
@@ -225,7 +242,7 @@ export default function Dashboard() {
                 rank: index + 1,
                 name: game.playerName,
                 value: game.totalScore,
-                subtitle: new Date(game.date).toLocaleDateString(),
+                subtitle: formatAppDate(game.date),
               }))}
               emptyMessage={t('dashboard.noGames')}
               showMoreButton={topGames.length > 5}
@@ -262,7 +279,7 @@ export default function Dashboard() {
                   rank: index + 1,
                   name: initials || t('dashboard.removedPlayer'),
                   value: sum.totalSum,
-                  subtitle: new Date(sum.date).toLocaleDateString(),
+                  subtitle: formatAppDate(sum.date),
                   onClick: () => handleTeamGameClick(sum),
                 };
               })}
@@ -352,6 +369,20 @@ export default function Dashboard() {
               icon={<TrendingUp className="w-8 h-8 opacity-60" />}
               color="orange"
             />
+            <KPICard
+              title={t('dashboard.avgTenthFrame')}
+              value={teamStats.averageTenthFrame.toFixed(1)}
+              subtitle={t('dashboard.teamAvgTenthFrameSubtitleMobile')}
+              icon={<Target className="w-8 h-8 opacity-60" />}
+              color="accent"
+            />
+            <KPICard
+              title={t('players.gamesAbove200')}
+              value={teamStats.gamesAbove200}
+              subtitle={`${teamStats.gamesAbove200Percentage.toFixed(1)}% ${t('dashboard.gamesAbove200SubtitleSuffix')}`}
+              icon={<TrendingUp className="w-8 h-8 opacity-60" />}
+              color="purple"
+            />
           </div>
 
           {/* Leaderboards */}
@@ -362,7 +393,7 @@ export default function Dashboard() {
                 rank: index + 1,
                 name: game.playerName,
                 value: game.totalScore,
-                subtitle: new Date(game.date).toLocaleDateString(),
+                subtitle: formatAppDate(game.date),
               }))}
               emptyMessage={t('dashboard.noGames')}
               showMoreButton={topGames.length > 5}
@@ -405,7 +436,7 @@ export default function Dashboard() {
                   rank: index + 1,
                   name: initials || t('dashboard.removedPlayer'),
                   value: sum.totalSum,
-                  subtitle: new Date(sum.date).toLocaleDateString(),
+                  subtitle: formatAppDate(sum.date),
                   onClick: () => handleTeamGameClick(sum),
                 };
               })}
@@ -504,7 +535,7 @@ export default function Dashboard() {
               <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-4 sm:py-6 bg-white min-h-0">
                 <div className="mb-4 sm:mb-6">
                   <p className="text-sm sm:text-base text-black font-bold">
-                    {t('dashboard.date')}: {new Date(selectedTeamGame.date).toLocaleDateString()}
+                    {t('dashboard.date')}: {formatAppDate(selectedTeamGame.date)}
                   </p>
                   <p className="text-lg sm:text-xl text-black font-black mt-2">
                     {t('dashboard.total')}: {selectedTeamGame.totalSum}

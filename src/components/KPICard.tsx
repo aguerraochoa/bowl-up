@@ -29,15 +29,19 @@ export default function KPICard({
 
   return (
     <div className={`rounded-none border-4 p-4 sm:p-6 ${colorClasses[color]}`}>
-      <div className="flex items-start justify-between mb-2">
-        <div className="flex-1 min-w-0">
-          <p className="text-xs font-black uppercase mb-2 tracking-wide break-words">{title}</p>
-          <p className="text-3xl sm:text-4xl md:text-5xl font-black break-words">{value}</p>
-          {subtitle && (
-            <p className="text-xs mt-2 font-bold break-words">{subtitle}</p>
-          )}
+      <div className="mb-2">
+        <div className="flex items-start justify-between gap-2 mb-2">
+          <p className="text-xs font-black uppercase tracking-wide break-words min-w-0">
+            {title}
+          </p>
+          {icon && <div className="flex-shrink-0">{icon}</div>}
         </div>
-        {icon && <div className="ml-2 sm:ml-3 flex-shrink-0">{icon}</div>}
+        <p className="text-[clamp(2.1rem,2.3vw,3.4rem)] leading-[0.9] font-black tracking-tight whitespace-nowrap">
+          {value}
+        </p>
+        {subtitle && (
+          <p className="text-xs mt-2 font-bold break-words">{subtitle}</p>
+        )}
       </div>
       {trend && (
         <div className={`flex items-center mt-3 text-sm font-black ${

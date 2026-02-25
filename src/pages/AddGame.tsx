@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { getPlayers, addGame } from '../utils/storage';
 import { validateGame, validateTenthFrame } from '../utils/scoring';
+import { getTodayDateInAppTimeZone } from '../utils/date';
 import { t, getLanguage } from '../i18n';
 import { useSeason } from '../contexts/useSeason';
 import type { Player, Game } from '../types';
@@ -20,10 +21,13 @@ type LiveDraftState = {
   selectedPlayers: string[];
   currentStep: number;
   currentPlayerIndex: number;
+  gameDate?: string;
   liveGames: Partial<Game>[];
   gameData: Partial<Game>[];
   currentGame: Partial<Game>;
 };
+
+const getTodayDateString = (): string => getTodayDateInAppTimeZone();
 
 export default function AddGame() {
   const { currentSeason } = useSeason();
@@ -41,6 +45,7 @@ export default function AddGame() {
   const [isLoadingPlayers, setIsLoadingPlayers] = useState(true);
   const [currentLang, setCurrentLang] = useState<'es' | 'en'>(() => getLanguage());
   const [hasInitializedDraft, setHasInitializedDraft] = useState(false);
+  const [gameDate, setGameDate] = useState<string>(getTodayDateString());
 
   useEffect(() => {
     // Listen for language changes
@@ -76,6 +81,7 @@ export default function AddGame() {
     setEntryMode('classic');
     setSelectedPlayers([]);
     setCurrentPlayerIndex(0);
+    setGameDate(getTodayDateString());
     setGameData([]);
     setLiveGames([]);
     setCurrentGame(EMPTY_GAME);
@@ -122,6 +128,7 @@ export default function AddGame() {
                 setGameData(restoredGameData);
                 setCurrentPlayerIndex(restoredIndex);
                 setCurrentStep(restoredStep);
+                setGameDate(parsed.gameDate || getTodayDateString());
                 setCurrentGame(restoredCurrentGame);
                 setError('');
 
@@ -159,6 +166,7 @@ export default function AddGame() {
         selectedPlayers,
         currentStep,
         currentPlayerIndex,
+        gameDate,
         liveGames,
         gameData,
         currentGame,
@@ -168,7 +176,7 @@ export default function AddGame() {
     }
 
     window.localStorage.removeItem(LIVE_DRAFT_STORAGE_KEY);
-  }, [hasInitializedDraft, entryMode, currentStep, selectedPlayers, currentPlayerIndex, liveGames, gameData, currentGame]);
+  }, [hasInitializedDraft, entryMode, currentStep, selectedPlayers, currentPlayerIndex, gameDate, liveGames, gameData, currentGame]);
 
   const handleAddPlayer = (playerId: string) => {
     if (selectedPlayers.includes(playerId)) {
@@ -292,7 +300,7 @@ export default function AddGame() {
     const validation = validateGame({
       ...currentGame,
       playerId: playersList[currentPlayerIndex]?.id || '',
-      date: new Date().toISOString().split('T')[0],
+      date: gameDate,
     });
 
     if (!validation.valid) {
@@ -355,7 +363,7 @@ export default function AddGame() {
     const fullValidation = validateGame({
       ...currentGame,
       playerId: getSelectedPlayersList()[currentPlayerIndex]?.id || '',
-      date: new Date().toISOString().split('T')[0],
+      date: gameDate,
     });
     return fullValidation.valid;
   };
@@ -383,7 +391,7 @@ export default function AddGame() {
       const fullValidation = validateGame({
         ...game,
         playerId: playersList[i]?.id || '',
-        date: new Date().toISOString().split('T')[0],
+        date: gameDate,
       });
       if (!fullValidation.valid) {
         return false;
@@ -491,7 +499,7 @@ export default function AddGame() {
       const playersList = getSelectedPlayersList();
       // Generate ONE session ID for this team game
       const gameSessionId = crypto.randomUUID();
-      const date = new Date().toISOString().split('T')[0];
+      const date = gameDate;
 
       for (let index = 0; index < gameData.length; index++) {
         const game = gameData[index];
@@ -526,6 +534,24 @@ export default function AddGame() {
   const currentPlayer = selectedPlayersList[currentPlayerIndex];
   const isFirstPlayer = currentPlayerIndex === 0;
   const isLastPlayer = currentPlayerIndex === selectedPlayersList.length - 1;
+  const renderGameDateField = () => (
+    <div className="bg-white border-4 border-black p-4 sm:p-5 mb-4">
+      <label className="block text-sm font-black text-black mb-2 uppercase">
+        {t('addGame.date')}
+      </label>
+      <input
+        type="date"
+        value={gameDate}
+        max={getTodayDateString()}
+        onChange={(e) => {
+          setGameDate(e.target.value || getTodayDateString());
+          setError('');
+        }}
+        className="w-full bg-white border-4 border-black text-black font-black px-3 py-3 rounded-none"
+      />
+    </div>
+  );
+
   const renderScoreNavigation = () => (
     <div className="flex gap-2 sm:gap-3">
       <button
@@ -597,6 +623,8 @@ export default function AddGame() {
               {error}
             </div>
           )}
+
+          {renderGameDateField()}
 
           {/* Player Selection Grid */}
           <div className="bg-white rounded-none border-4 border-black p-4 sm:p-6 mb-4 sm:mb-6 ">
@@ -679,6 +707,8 @@ export default function AddGame() {
               {error}
             </div>
           )}
+
+          {renderGameDateField()}
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4 mb-4 sm:mb-6">
             {selectedPlayersList.map((player, index) => {
@@ -773,6 +803,7 @@ export default function AddGame() {
       <div className="min-h-screen bg-orange-50 pb-20 safe-top relative">
         <div className="max-w-2xl mx-auto px-4 py-4 sm:py-6">
           <h1 className="text-3xl sm:text-4xl md:text-5xl font-black text-black mb-4 sm:mb-6 uppercase">{t('addGame.review')}</h1>
+          {renderGameDateField()}
           <div className="space-y-3 sm:space-y-4 mb-4 sm:mb-6">
             {gameData.map((game, index) => {
               const player = selectedPlayersList[index];
@@ -858,6 +889,8 @@ export default function AddGame() {
         <div className="mb-4 sm:mb-6">
           {renderScoreNavigation()}
         </div>
+
+        {renderGameDateField()}
 
         {/* Current Player */}
         <div className="bg-white rounded-none border-4 border-black p-4 sm:p-6 mb-4 sm:mb-6 ">

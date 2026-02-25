@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { getPlayers, getDebts, getDebtTags } from '../utils/storage';
+import { formatAppDate } from '../utils/date';
 import { ChevronDown, ChevronUp, Plus, Tag } from 'lucide-react';
 import type { Debt, DebtTag, Player } from '../types';
 
@@ -157,7 +158,7 @@ export default function DebtsDesigns() {
                 <div className="flex items-start justify-between mb-2">
                   <div className="flex-1">
                     <h3 className="font-black text-black">{getTagName(debt.tag)}</h3>
-                    <p className="text-xs text-black font-bold">{new Date(debt.date).toLocaleDateString()}</p>
+                    <p className="text-xs text-black font-bold">{formatAppDate(debt.date)}</p>
                   </div>
                   <span className="text-xl font-black text-black">${debt.amount.toFixed(2)}</span>
                 </div>
@@ -233,7 +234,7 @@ export default function DebtsDesigns() {
                   <div className="flex items-start justify-between mb-2">
                     <div className="flex-1">
                       <h3 className="font-black text-black">{getTagName(debt.tag)}</h3>
-                      <p className="text-xs text-black font-bold">{new Date(debt.date).toLocaleDateString()}</p>
+                      <p className="text-xs text-black font-bold">{formatAppDate(debt.date)}</p>
                     </div>
                     <span className="text-xl font-black text-black">${debt.amount.toFixed(2)}</span>
                   </div>
@@ -331,7 +332,7 @@ export default function DebtsDesigns() {
                     <div className="flex items-start justify-between mb-2">
                       <div className="flex-1">
                         <h3 className="font-black text-black">{getTagName(debt.tag)}</h3>
-                        <p className="text-xs text-black font-bold">{new Date(debt.date).toLocaleDateString()}</p>
+                        <p className="text-xs text-black font-bold">{formatAppDate(debt.date)}</p>
                       </div>
                       <span className="text-xl font-black text-black">${debt.amount.toFixed(2)}</span>
                     </div>

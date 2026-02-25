@@ -547,6 +547,10 @@ export const saveGames = async (games: Game[]): Promise<void> => {
   }
 };
 
+const invalidateGamesCache = (): void => {
+  cache.invalidatePattern('^games');
+};
+
 export const addGame = async (game: Game): Promise<void> => {
   const teamId = await getTeamId();
   if (!teamId) return;
@@ -573,7 +577,7 @@ export const addGame = async (game: Game): Promise<void> => {
   }
 
   // Invalidate cache
-  cache.invalidate('games');
+  invalidateGamesCache();
 };
 
 export const removeGame = async (gameId: string): Promise<void> => {
@@ -588,7 +592,7 @@ export const removeGame = async (gameId: string): Promise<void> => {
   }
 
   // Invalidate cache
-  cache.invalidate('games');
+  invalidateGamesCache();
 };
 
 export const removeGamesBySession = async (gameSessionId: string): Promise<void> => {
@@ -603,7 +607,35 @@ export const removeGamesBySession = async (gameSessionId: string): Promise<void>
   }
 
   // Invalidate cache
-  cache.invalidate('games');
+  invalidateGamesCache();
+};
+
+export const updateGameDate = async (gameId: string, date: string): Promise<void> => {
+  const { error } = await supabase
+    .from('games')
+    .update({ date })
+    .eq('id', gameId);
+
+  if (error) {
+    console.error('Error updating game date:', error);
+    throw error;
+  }
+
+  invalidateGamesCache();
+};
+
+export const updateGamesDateBySession = async (gameSessionId: string, date: string): Promise<void> => {
+  const { error } = await supabase
+    .from('games')
+    .update({ date })
+    .eq('game_session_id', gameSessionId);
+
+  if (error) {
+    console.error('Error updating session game dates:', error);
+    throw error;
+  }
+
+  invalidateGamesCache();
 };
 
 // Debts

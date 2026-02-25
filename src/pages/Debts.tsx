@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { getDebts, getDebtTags, getPlayers, addDebt, updateDebt, removeDebt, addDebtTag, updateDebtTag, removeDebtTag } from '../utils/storage';
 import { t, getLanguage } from '../i18n';
+import { formatAppDate, getTodayDateInAppTimeZone } from '../utils/date';
 import type { Debt, DebtTag, Player } from '../types';
 import { Plus, Tag, X, Edit2, Trash2, Check, Loader2 } from 'lucide-react';
 
@@ -227,8 +228,8 @@ export default function Debts() {
         gameCounts: newDebt.splitMethod === 'games' ? newDebt.gameCounts : undefined,
         customAmounts: newDebt.splitMethod === 'custom' ? newDebt.customAmounts : undefined,
         date: editingDebtId 
-          ? debts.find(d => d.id === editingDebtId)?.date || new Date().toISOString().split('T')[0]
-          : new Date().toISOString().split('T')[0],
+          ? debts.find(d => d.id === editingDebtId)?.date || getTodayDateInAppTimeZone()
+          : getTodayDateInAppTimeZone(),
       };
 
       if (editingDebtId) {
@@ -451,7 +452,7 @@ export default function Debts() {
                         <div className="flex items-start justify-between mb-3 gap-2">
                           <div className="flex-1 min-w-0">
                             <h3 className="font-black text-lg text-black truncate">{getTagName(debt)}</h3>
-                            <p className="text-xs text-black font-bold">{new Date(debt.date).toLocaleDateString()}</p>
+                            <p className="text-xs text-black font-bold">{formatAppDate(debt.date)}</p>
                           </div>
                           <div className="flex items-center gap-1 ml-2 flex-shrink-0">
                             <span className="text-xl font-black text-black">${debt.amount.toFixed(2)}</span>
@@ -678,7 +679,7 @@ export default function Debts() {
                         <div className="flex items-start justify-between mb-3 gap-4">
                           <div className="flex-1 min-w-0">
                             <h3 className="font-black text-xl text-black truncate">{getTagName(debt)}</h3>
-                            <p className="text-sm text-black font-bold mt-1">{new Date(debt.date).toLocaleDateString()}</p>
+                            <p className="text-sm text-black font-bold mt-1">{formatAppDate(debt.date)}</p>
                           </div>
                           <div className="flex items-center gap-3 ml-4 flex-shrink-0">
                             <span className="text-2xl font-black text-black">${debt.amount.toFixed(2)}</span>
