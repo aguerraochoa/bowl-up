@@ -46,7 +46,7 @@ export default function AdminLogin() {
   };
 
   return (
-    <div className="min-h-screen bg-orange-50 flex items-center justify-center px-4">
+    <div className="min-h-screen bg-orange-50 flex items-center justify-center px-4 safe-top">
       <div className="w-full max-w-md">
         <div className="bg-white border-4 border-black p-6 sm:p-8">
           <div className="flex justify-center mb-6">

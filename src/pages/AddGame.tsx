@@ -547,7 +547,7 @@ export default function AddGame() {
           setGameDate(e.target.value || getTodayDateString());
           setError('');
         }}
-        className="w-full bg-white border-4 border-black text-black font-black px-3 py-3 rounded-none"
+        className="block w-full max-w-full min-w-0 bg-white border-4 border-black text-black font-black px-3 py-3 rounded-none"
       />
     </div>
   );
@@ -708,8 +708,6 @@ export default function AddGame() {
             </div>
           )}
 
-          {renderGameDateField()}
-
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4 mb-4 sm:mb-6">
             {selectedPlayersList.map((player, index) => {
               const game = liveGames[index] || EMPTY_GAME;
@@ -803,7 +801,6 @@ export default function AddGame() {
       <div className="min-h-screen bg-orange-50 pb-20 safe-top relative">
         <div className="max-w-2xl mx-auto px-4 py-4 sm:py-6">
           <h1 className="text-3xl sm:text-4xl md:text-5xl font-black text-black mb-4 sm:mb-6 uppercase">{t('addGame.review')}</h1>
-          {renderGameDateField()}
           <div className="space-y-3 sm:space-y-4 mb-4 sm:mb-6">
             {gameData.map((game, index) => {
               const player = selectedPlayersList[index];
@@ -889,8 +886,6 @@ export default function AddGame() {
         <div className="mb-4 sm:mb-6">
           {renderScoreNavigation()}
         </div>
-
-        {renderGameDateField()}
 
         {/* Current Player */}
         <div className="bg-white rounded-none border-4 border-black p-4 sm:p-6 mb-4 sm:mb-6 ">
