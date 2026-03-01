@@ -10,6 +10,7 @@ const TYPICAL_RANGE_WINDOW = 30;
 const MIN_GAMES_FOR_TYPICAL_RANGE = 10;
 
 const round1 = (value: number): number => Math.round(value * 10) / 10;
+const hasFrameData = (game: Game): boolean => game.tenthFrame.trim() !== '';
 
 const getPercentile = (sortedValues: number[], percentile: number): number => {
   if (sortedValues.length === 0) return 0;
@@ -108,11 +109,12 @@ export const calculatePlayerStatsFromData = (playerId: string, games: Game[]): S
   
   // Calculate average 10th frame score
   let totalTenthFramePins = 0;
-  playerGames.forEach(game => {
+  const gamesWithFrameData = playerGames.filter(hasFrameData);
+  gamesWithFrameData.forEach(game => {
     const tenthFrame = parseTenthFrame(game.tenthFrame);
     totalTenthFramePins += tenthFrame.totalPins;
   });
-  const averageTenthFrame = playerGames.length > 0 ? totalTenthFramePins / playerGames.length : 0;
+  const averageTenthFrame = gamesWithFrameData.length > 0 ? totalTenthFramePins / gamesWithFrameData.length : 0;
   
   // Calculate games 200+
   const gamesAbove200 = scores.filter(score => score >= 200).length;
@@ -195,11 +197,12 @@ export const calculateTeamStatsFromData = (games: Game[]) => {
   
   // Calculate average 10th frame score
   let totalTenthFramePins = 0;
-  activePlayerGames.forEach(game => {
+  const gamesWithFrameData = activePlayerGames.filter(hasFrameData);
+  gamesWithFrameData.forEach(game => {
     const tenthFrame = parseTenthFrame(game.tenthFrame);
     totalTenthFramePins += tenthFrame.totalPins;
   });
-  const averageTenthFrame = activePlayerGames.length > 0 ? totalTenthFramePins / activePlayerGames.length : 0;
+  const averageTenthFrame = gamesWithFrameData.length > 0 ? totalTenthFramePins / gamesWithFrameData.length : 0;
   const gamesAbove200 = activePlayerGames.filter((game) => game.totalScore >= 200).length;
   const gamesAbove200Percentage = activePlayerGames.length > 0 ? (gamesAbove200 / activePlayerGames.length) * 100 : 0;
   
@@ -315,7 +318,7 @@ export const getTopTenthFrameAveragesFromData = (games: Game[], players: Player[
   const activePlayerGames = games.filter(g => g.playerId !== null);
   
   const playerTenthFrameAverages = players.map((player: Player) => {
-    const playerGames = activePlayerGames.filter(g => g.playerId === player.id);
+    const playerGames = activePlayerGames.filter(g => g.playerId === player.id && hasFrameData(g));
     if (playerGames.length === 0) return null;
     
     let totalTenthFramePins = 0;
@@ -355,6 +358,7 @@ export const getTopStrikePercentagesFromData = (
   const rows = players
     .map((player) => {
       const playerGames = activePlayerGames.filter((g) => g.playerId === player.id);
+      const frameGames = playerGames.filter(hasFrameData);
       if (playerGames.length === 0) return null;
 
       const totals = playerGames.reduce(
@@ -372,7 +376,7 @@ export const getTopStrikePercentagesFromData = (
         percentage: totals.opportunities > 0
           ? Math.round(((totals.made / totals.opportunities) * 100) * 10) / 10
           : 0,
-        gamesPlayed: playerGames.length,
+        gamesPlayed: frameGames.length,
       };
     })
     .filter((row): row is { playerId: string; playerName: string; percentage: number; gamesPlayed: number } => row !== null);
@@ -390,6 +394,7 @@ export const getTopSparePercentagesFromData = (
   const rows = players
     .map((player) => {
       const playerGames = activePlayerGames.filter((g) => g.playerId === player.id);
+      const frameGames = playerGames.filter(hasFrameData);
       if (playerGames.length === 0) return null;
 
       const totals = playerGames.reduce(
@@ -407,7 +412,7 @@ export const getTopSparePercentagesFromData = (
         percentage: totals.opportunities > 0
           ? Math.round(((totals.made / totals.opportunities) * 100) * 10) / 10
           : 0,
-        gamesPlayed: playerGames.length,
+        gamesPlayed: frameGames.length,
       };
     })
     .filter((row): row is { playerId: string; playerName: string; percentage: number; gamesPlayed: number } => row !== null);

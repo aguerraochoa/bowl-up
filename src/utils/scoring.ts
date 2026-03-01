@@ -13,6 +13,8 @@ type SpareSummary = {
   percentage: number;
 };
 
+const hasFrameData = (game: Pick<Game, 'tenthFrame'>): boolean => game.tenthFrame.trim() !== '';
+
 export const getTenthFrameStrikeSummary = (notation: string): { strikes: number; opportunities: number } => {
   const normalized = notation.toUpperCase().trim();
   if (!normalized) {
@@ -193,6 +195,10 @@ export const calculateSparePercentage = (game: Game): number => {
 };
 
 export const calculateStrikeSummary = (game: Game): StrikeSummary => {
+  if (!hasFrameData(game)) {
+    return { strikes: 0, opportunities: 0, percentage: 0 };
+  }
+
   const tenthFrame = getTenthFrameStrikeSummary(game.tenthFrame);
   const strikes = game.strikesFrames1to9 + tenthFrame.strikes;
   const opportunities = 9 + tenthFrame.opportunities;
@@ -201,6 +207,10 @@ export const calculateStrikeSummary = (game: Game): StrikeSummary => {
 };
 
 export const calculateSpareSummary = (game: Game): SpareSummary => {
+  if (!hasFrameData(game)) {
+    return { spares: 0, opportunities: 0, opens: 0, percentage: 0 };
+  }
+
   const tenthFrame = parseTenthFrame(game.tenthFrame);
   const spares = game.sparesFrames1to9 + tenthFrame.spares;
   

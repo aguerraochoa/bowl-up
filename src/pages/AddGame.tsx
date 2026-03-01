@@ -34,7 +34,7 @@ export default function AddGame() {
   const [allPlayers, setAllPlayers] = useState<Player[]>([]);
   const [selectedPlayers, setSelectedPlayers] = useState<string[]>([]); // Array of player IDs in order
   const [currentStep, setCurrentStep] = useState(0); // 0 = select players, 1 = classic entry, 2 = review, 3 = live entry
-  const [entryMode, setEntryMode] = useState<'classic' | 'live'>('classic');
+  const [entryMode, setEntryMode] = useState<'classic' | 'live' | 'score-only'>('classic');
   const [currentPlayerIndex, setCurrentPlayerIndex] = useState(0);
   const [gameData, setGameData] = useState<Partial<Game>[]>([]);
   const [liveGames, setLiveGames] = useState<Partial<Game>[]>([]);
@@ -197,7 +197,7 @@ export default function AddGame() {
     resetDraftState();
   };
 
-  const handleStartGame = (mode: 'classic' | 'live' = 'classic') => {
+  const handleStartGame = (mode: 'classic' | 'live' | 'score-only' = 'classic') => {
     if (selectedPlayers.length === 0) {
       setError(t('addGame.selectAtLeastOne'));
       return;
@@ -210,6 +210,7 @@ export default function AddGame() {
     setCurrentStep(mode === 'live' ? 3 : 1);
     setCurrentPlayerIndex(0);
     setError('');
+    setTenthFrameError('');
   };
 
   const getSelectedPlayersList = (): Player[] => {
@@ -278,36 +279,42 @@ export default function AddGame() {
 
   const handleNext = () => {
     const playersList = getSelectedPlayersList();
+    const isScoreOnlyMode = entryMode === 'score-only';
 
-    // Validate 10th frame first
-    if (currentGame.tenthFrame) {
-      // Special validation: If 10th frame starts with X (strike), require 3 characters total
-      const normalized = currentGame.tenthFrame.toUpperCase().trim();
-      if (normalized[0] === 'X' && normalized.length < 3) {
-        setTenthFrameError('Strike in 10th frame requires 2 more shots');
-        setError('Strike in 10th frame requires 2 more shots');
+    if (!isScoreOnlyMode) {
+      // Validate 10th frame first
+      if (currentGame.tenthFrame) {
+        // Special validation: If 10th frame starts with X (strike), require 3 characters total
+        const normalized = currentGame.tenthFrame.toUpperCase().trim();
+        if (normalized[0] === 'X' && normalized.length < 3) {
+          setTenthFrameError('Strike in 10th frame requires 2 more shots');
+          setError('Strike in 10th frame requires 2 more shots');
+          return;
+        }
+        const tenthFrameValidation = validateTenthFrame(currentGame.tenthFrame);
+        if (!tenthFrameValidation.valid) {
+          setTenthFrameError(tenthFrameValidation.error || 'Invalid 10th frame');
+          setError(tenthFrameValidation.error || t('addGame.tenthFrameInvalid'));
+          return;
+        }
+      }
+
+      // Validate current game
+      const validation = validateGame({
+        ...currentGame,
+        playerId: playersList[currentPlayerIndex]?.id || '',
+        date: gameDate,
+      });
+
+      if (!validation.valid) {
+        setError(validation.error || 'Invalid game data');
+        if (validation.error?.includes('10th frame')) {
+          setTenthFrameError(validation.error);
+        }
         return;
       }
-      const tenthFrameValidation = validateTenthFrame(currentGame.tenthFrame);
-      if (!tenthFrameValidation.valid) {
-        setTenthFrameError(tenthFrameValidation.error || 'Invalid 10th frame');
-        setError(tenthFrameValidation.error || t('addGame.tenthFrameInvalid'));
-        return;
-      }
-    }
-
-    // Validate current game
-    const validation = validateGame({
-      ...currentGame,
-      playerId: playersList[currentPlayerIndex]?.id || '',
-      date: gameDate,
-    });
-
-    if (!validation.valid) {
-      setError(validation.error || 'Invalid game data');
-      if (validation.error?.includes('10th frame')) {
-        setTenthFrameError(validation.error);
-      }
+    } else if (!currentGame.totalScore || currentGame.totalScore <= 0) {
+      setError(t('addGame.totalScore'));
       return;
     }
 
@@ -348,6 +355,9 @@ export default function AddGame() {
     if (!currentGame.totalScore || currentGame.totalScore <= 0) {
       return false;
     }
+    if (entryMode === 'score-only') {
+      return true;
+    }
     if (!currentGame.tenthFrame || currentGame.tenthFrame.trim() === '') {
       return false;
     }
@@ -375,6 +385,9 @@ export default function AddGame() {
       const game = gameData[i];
       if (!game || !game.totalScore || game.totalScore <= 0) {
         return false;
+      }
+      if (entryMode === 'score-only') {
+        continue;
       }
       if (!game.tenthFrame || game.tenthFrame.trim() === '') {
         return false;
@@ -503,15 +516,17 @@ export default function AddGame() {
 
       for (let index = 0; index < gameData.length; index++) {
         const game = gameData[index];
-        if (game.totalScore !== undefined && game.tenthFrame) {
+        const canSaveScoreOnly = entryMode === 'score-only' && game.totalScore !== undefined;
+        const canSaveFull = entryMode !== 'score-only' && game.totalScore !== undefined && game.tenthFrame;
+        if (canSaveScoreOnly || canSaveFull) {
           const newGame: Game = {
             id: crypto.randomUUID(),
             playerId: playersList[index].id,
             date,
             totalScore: game.totalScore!,
-            strikesFrames1to9: game.strikesFrames1to9 || 0,
-            sparesFrames1to9: game.sparesFrames1to9 || 0,
-            tenthFrame: game.tenthFrame,
+            strikesFrames1to9: entryMode === 'score-only' ? 0 : (game.strikesFrames1to9 || 0),
+            sparesFrames1to9: entryMode === 'score-only' ? 0 : (game.sparesFrames1to9 || 0),
+            tenthFrame: entryMode === 'score-only' ? '' : (game.tenthFrame || ''),
             gameSessionId: gameSessionId, // Same session ID for all players in this game
             season: currentSeason, // Assign to current season
           };
@@ -675,9 +690,20 @@ export default function AddGame() {
               {t('addGame.startGameLive')}
               <ArrowRight className="w-5 h-5" />
             </button>
+            <button
+              onClick={() => handleStartGame('score-only')}
+              disabled={selectedPlayers.length === 0}
+              className="w-full sm:col-span-2 bg-lime-400 border-4 border-black text-black py-4 rounded-none font-black flex items-center justify-center gap-2 disabled:bg-gray-300 disabled:cursor-not-allowed"
+            >
+              {t('addGame.startGameQuick')}
+              <ArrowRight className="w-5 h-5" />
+            </button>
           </div>
           <p className="mt-3 text-xs sm:text-sm text-black font-bold">
             {t('addGame.liveModeHint')}
+          </p>
+          <p className="mt-2 text-xs sm:text-sm text-black font-bold">
+            {t('addGame.quickModeHint')}
           </p>
         </div>
       </div>
@@ -815,18 +841,27 @@ export default function AddGame() {
                         <span className="text-xs font-bold uppercase tracking-wider text-gray-500 mb-1">{t('addGame.score')}</span>
                         <span className="font-black text-3xl sm:text-4xl text-black">{game.totalScore}</span>
                       </div>
-                      <div className="flex flex-col">
-                        <span className="text-xs font-bold uppercase tracking-wider text-gray-500 mb-1">{t('addGame.tenthFrame')}</span>
-                        <span className="font-black text-md sm:text-lg text-black bg-yellow-100 p-2 border-2 border-black inline-block text-center">{game.tenthFrame}</span>
-                      </div>
-                      <div className="flex flex-col">
-                        <span className="text-xs font-bold uppercase tracking-wider text-gray-500 mb-1">{t('addGame.strikes')}</span>
-                        <span className="font-black text-2xl text-black">{game.strikesFrames1to9}</span>
-                      </div>
-                      <div className="flex flex-col">
-                        <span className="text-xs font-bold uppercase tracking-wider text-gray-500 mb-1">{t('addGame.spares')}</span>
-                        <span className="font-black text-2xl text-black">{game.sparesFrames1to9}</span>
-                      </div>
+                      {entryMode === 'score-only' ? (
+                        <div className="flex flex-col">
+                          <span className="text-xs font-bold uppercase tracking-wider text-gray-500 mb-1">{t('addGame.mode')}</span>
+                          <span className="font-black text-md sm:text-lg text-black bg-lime-100 p-2 border-2 border-black inline-block text-center">{t('addGame.scoreOnlyEntry')}</span>
+                        </div>
+                      ) : (
+                        <>
+                          <div className="flex flex-col">
+                            <span className="text-xs font-bold uppercase tracking-wider text-gray-500 mb-1">{t('addGame.tenthFrame')}</span>
+                            <span className="font-black text-md sm:text-lg text-black bg-yellow-100 p-2 border-2 border-black inline-block text-center">{game.tenthFrame}</span>
+                          </div>
+                          <div className="flex flex-col">
+                            <span className="text-xs font-bold uppercase tracking-wider text-gray-500 mb-1">{t('addGame.strikes')}</span>
+                            <span className="font-black text-2xl text-black">{game.strikesFrames1to9}</span>
+                          </div>
+                          <div className="flex flex-col">
+                            <span className="text-xs font-bold uppercase tracking-wider text-gray-500 mb-1">{t('addGame.spares')}</span>
+                            <span className="font-black text-2xl text-black">{game.sparesFrames1to9}</span>
+                          </div>
+                        </>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -1029,121 +1064,125 @@ export default function AddGame() {
             </>
           )}
 
-          {/* 10th Frame */}
-          <div className="mb-6">
-            <label className="block text-sm font-black text-black mb-3 uppercase">
-              {t('addGame.tenthFrame')}
-            </label>
+          {entryMode !== 'score-only' && (
+            <>
+              {/* 10th Frame */}
+              <div className="mb-6">
+                <label className="block text-sm font-black text-black mb-3 uppercase">
+                  {t('addGame.tenthFrame')}
+                </label>
 
-            {/* Current Notation Display */}
-            <div className="mb-4 flex items-center justify-center relative">
-              <div className={`inline-block px-4 py-3 border-4 min-w-[200px] text-center ${tenthFrameError ? 'border-red-600 bg-red-100' : 'border-black bg-white'
-                }`}>
-                <span className="text-2xl sm:text-3xl font-mono font-black text-black">
-                  {currentGame.tenthFrame || '---'}
-                </span>
-              </div>
-              {currentGame.tenthFrame && currentGame.tenthFrame.length > 0 && (
-                <button
-                  onClick={() => handleTenthFrameChange('')}
-                  className="absolute bg-red-600 border-4 border-black px-2 sm:px-2 md:px-1.5 py-1.5 sm:py-1.5 md:py-1 text-black font-black hover:bg-red-700"
-                  style={{ left: 'calc(50% + 110px)' }}
-                >
-                  <X className="w-4 h-4 sm:w-4 md:w-3.5" />
-                </button>
-              )}
-            </div>
+                {/* Current Notation Display */}
+                <div className="mb-4 flex items-center justify-center relative">
+                  <div className={`inline-block px-4 py-3 border-4 min-w-[200px] text-center ${tenthFrameError ? 'border-red-600 bg-red-100' : 'border-black bg-white'
+                    }`}>
+                    <span className="text-2xl sm:text-3xl font-mono font-black text-black">
+                      {currentGame.tenthFrame || '---'}
+                    </span>
+                  </div>
+                  {currentGame.tenthFrame && currentGame.tenthFrame.length > 0 && (
+                    <button
+                      onClick={() => handleTenthFrameChange('')}
+                      className="absolute bg-red-600 border-4 border-black px-2 sm:px-2 md:px-1.5 py-1.5 sm:py-1.5 md:py-1 text-black font-black hover:bg-red-700"
+                      style={{ left: 'calc(50% + 110px)' }}
+                    >
+                      <X className="w-4 h-4 sm:w-4 md:w-3.5" />
+                    </button>
+                  )}
+                </div>
 
-            {/* Error message for 10th frame */}
-            {tenthFrameError && (
-              <div className="mb-4 p-3 bg-red-600 border-4 border-black rounded-none text-black text-sm font-black">
-                {tenthFrameError}
-              </div>
-            )}
+                {/* Error message for 10th frame */}
+                {tenthFrameError && (
+                  <div className="mb-4 p-3 bg-red-600 border-4 border-black rounded-none text-black text-sm font-black">
+                    {tenthFrameError}
+                  </div>
+                )}
 
-            {/* Notation Pad */}
-            <div className="space-y-2">
-              {/* Row 1: 1, 2, 3 */}
-              <div className="grid grid-cols-3 gap-2">
-                {[1, 2, 3].map(num => (
-                  <button
-                    key={num}
-                    onClick={() => {
-                      const current = currentGame.tenthFrame || '';
-                      handleTenthFrameChange(current + num.toString());
-                    }}
-                    className="bg-amber-400 hover:bg-amber-500 border-4 border-black text-black py-3 sm:py-4 rounded-none font-black text-lg sm:text-xl transition-all "
-                  >
-                    {num}
-                  </button>
-                ))}
-              </div>
-              {/* Row 2: 4, 5, 6 */}
-              <div className="grid grid-cols-3 gap-2">
-                {[4, 5, 6].map(num => (
-                  <button
-                    key={num}
-                    onClick={() => {
-                      const current = currentGame.tenthFrame || '';
-                      handleTenthFrameChange(current + num.toString());
-                    }}
-                    className="bg-amber-400 hover:bg-amber-500 border-4 border-black text-black py-3 sm:py-4 rounded-none font-black text-lg sm:text-xl transition-all "
-                  >
-                    {num}
-                  </button>
-                ))}
-              </div>
-              {/* Row 3: 7, 8, 9 */}
-              <div className="grid grid-cols-3 gap-2">
-                {[7, 8, 9].map(num => (
-                  <button
-                    key={num}
-                    onClick={() => {
-                      const current = currentGame.tenthFrame || '';
-                      handleTenthFrameChange(current + num.toString());
-                    }}
-                    className="bg-amber-400 hover:bg-amber-500 border-4 border-black text-black py-3 sm:py-4 rounded-none font-black text-lg sm:text-xl transition-all "
-                  >
-                    {num}
-                  </button>
-                ))}
-              </div>
-              {/* Row 4: /, -, X */}
-              <div className="grid grid-cols-3 gap-2">
-                <button
-                  onClick={() => {
-                    const current = currentGame.tenthFrame || '';
-                    handleTenthFrameChange(current + '/');
-                  }}
-                  className="bg-amber-400 hover:bg-amber-500 border-4 border-black text-black py-3 sm:py-4 rounded-none font-black text-lg sm:text-xl transition-all "
-                >
-                  /
-                </button>
-                <button
-                  onClick={() => {
-                    const current = currentGame.tenthFrame || '';
-                    handleTenthFrameChange(current + '-');
-                  }}
-                  className="bg-amber-400 hover:bg-amber-500 border-4 border-black text-black py-3 sm:py-4 rounded-none font-black text-lg sm:text-xl transition-all "
-                >
-                  -
-                </button>
-                <button
-                  onClick={() => {
-                    const current = currentGame.tenthFrame || '';
-                    handleTenthFrameChange(current + 'X');
-                  }}
-                  className="bg-amber-400 hover:bg-amber-500 border-4 border-black text-black py-3 sm:py-4 rounded-none font-black text-lg sm:text-xl transition-all "
-                >
-                  X
-                </button>
-              </div>
-            </div>
+                {/* Notation Pad */}
+                <div className="space-y-2">
+                  {/* Row 1: 1, 2, 3 */}
+                  <div className="grid grid-cols-3 gap-2">
+                    {[1, 2, 3].map(num => (
+                      <button
+                        key={num}
+                        onClick={() => {
+                          const current = currentGame.tenthFrame || '';
+                          handleTenthFrameChange(current + num.toString());
+                        }}
+                        className="bg-amber-400 hover:bg-amber-500 border-4 border-black text-black py-3 sm:py-4 rounded-none font-black text-lg sm:text-xl transition-all "
+                      >
+                        {num}
+                      </button>
+                    ))}
+                  </div>
+                  {/* Row 2: 4, 5, 6 */}
+                  <div className="grid grid-cols-3 gap-2">
+                    {[4, 5, 6].map(num => (
+                      <button
+                        key={num}
+                        onClick={() => {
+                          const current = currentGame.tenthFrame || '';
+                          handleTenthFrameChange(current + num.toString());
+                        }}
+                        className="bg-amber-400 hover:bg-amber-500 border-4 border-black text-black py-3 sm:py-4 rounded-none font-black text-lg sm:text-xl transition-all "
+                      >
+                        {num}
+                      </button>
+                    ))}
+                  </div>
+                  {/* Row 3: 7, 8, 9 */}
+                  <div className="grid grid-cols-3 gap-2">
+                    {[7, 8, 9].map(num => (
+                      <button
+                        key={num}
+                        onClick={() => {
+                          const current = currentGame.tenthFrame || '';
+                          handleTenthFrameChange(current + num.toString());
+                        }}
+                        className="bg-amber-400 hover:bg-amber-500 border-4 border-black text-black py-3 sm:py-4 rounded-none font-black text-lg sm:text-xl transition-all "
+                      >
+                        {num}
+                      </button>
+                    ))}
+                  </div>
+                  {/* Row 4: /, -, X */}
+                  <div className="grid grid-cols-3 gap-2">
+                    <button
+                      onClick={() => {
+                        const current = currentGame.tenthFrame || '';
+                        handleTenthFrameChange(current + '/');
+                      }}
+                      className="bg-amber-400 hover:bg-amber-500 border-4 border-black text-black py-3 sm:py-4 rounded-none font-black text-lg sm:text-xl transition-all "
+                    >
+                      /
+                    </button>
+                    <button
+                      onClick={() => {
+                        const current = currentGame.tenthFrame || '';
+                        handleTenthFrameChange(current + '-');
+                      }}
+                      className="bg-amber-400 hover:bg-amber-500 border-4 border-black text-black py-3 sm:py-4 rounded-none font-black text-lg sm:text-xl transition-all "
+                    >
+                      -
+                    </button>
+                    <button
+                      onClick={() => {
+                        const current = currentGame.tenthFrame || '';
+                        handleTenthFrameChange(current + 'X');
+                      }}
+                      className="bg-amber-400 hover:bg-amber-500 border-4 border-black text-black py-3 sm:py-4 rounded-none font-black text-lg sm:text-xl transition-all "
+                    >
+                      X
+                    </button>
+                  </div>
+                </div>
 
-            <p className="text-xs text-black mt-3 text-center font-bold">
-              {t('addGame.examples')}
-            </p>
-          </div>
+                <p className="text-xs text-black mt-3 text-center font-bold">
+                  {t('addGame.examples')}
+                </p>
+              </div>
+            </>
+          )}
 
           {error && (
             <div className="mb-4 p-4 bg-red-600 border-4 border-black rounded-none text-black text-sm font-black">
