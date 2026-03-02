@@ -287,7 +287,7 @@ function App() {
 
     return (
       <div className="min-h-screen bg-orange-50">
-        <div className="lg:pl-64">
+        <div className="lg:pl-64 pb-[calc(env(safe-area-inset-bottom,0px)+12px)] lg:pb-0">
           {adminPage === 'dashboard' && <Suspense fallback={<LoadingSpinner />}><AdminDashboard onSignOut={handleAdminSignOut} onNavigate={handleAdminNavigate} /></Suspense>}
           {adminPage === 'teams' && <Suspense fallback={<LoadingSpinner />}><AdminTeams onSignOut={handleAdminSignOut} onNavigate={handleAdminNavigate} /></Suspense>}
           {adminPage === 'leagues' && <Suspense fallback={<LoadingSpinner />}><AdminLeagues onSignOut={handleAdminSignOut} onNavigate={handleAdminNavigate} /></Suspense>}
@@ -349,7 +349,7 @@ function App() {
   return (
     <SeasonProvider>
       <div className="min-h-screen bg-orange-50">
-        <div className="lg:pl-64">
+        <div className="lg:pl-64 pb-[calc(env(safe-area-inset-bottom,0px)+12px)] lg:pb-0">
           {renderContent()}
         </div>
         {showBottomNav && <BottomNav activeTab={activeTab} onTabChange={handleTabChange} onSignOut={handleSignOut} />}

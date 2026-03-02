@@ -74,7 +74,7 @@
     font-weight: 700;
   }
 
-  body::before {
+  html::before {
     content: "";
     position: fixed;
     top: 0;
@@ -82,7 +82,7 @@
     right: 0;
     height: var(--app-top-safe-space);
     background-color: #fff1f2;
-    z-index: 200;
+    z-index: 1000;
     pointer-events: none;
   }
   
