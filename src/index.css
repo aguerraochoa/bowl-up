@@ -55,15 +55,6 @@
     --app-top-safe-space: env(safe-area-inset-top, 0px);
   }
 
-  @media screen and (max-width: 1023px) {
-    :root {
-      /* Strong fallback for iPhone status bar area */
-      --app-top-safe-space: 56px;
-      /* Prefer real safe-area value when supported, but never smaller than fallback */
-      --app-top-safe-space: max(56px, env(safe-area-inset-top, 0px));
-    }
-  }
-
   body {
     margin: 0;
     min-height: 100vh;
@@ -74,18 +65,6 @@
     font-weight: 700;
   }
 
-  html::before {
-    content: "";
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: var(--app-top-safe-space);
-    background-color: #fff1f2;
-    z-index: 1000;
-    pointer-events: none;
-  }
-  
   #root {
     position: relative;
     min-height: 100vh;
@@ -120,7 +99,7 @@
 
 @layer utilities {
   .safe-top {
-    padding-top: var(--app-top-safe-space);
+    padding-top: max(0px, var(--app-top-safe-space));
   }
   
   .safe-bottom {
