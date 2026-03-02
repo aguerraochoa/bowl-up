@@ -554,7 +554,7 @@ export default function AddGame() {
       <label className="block text-sm font-black text-black mb-2 uppercase">
         {t('addGame.date')}
       </label>
-      <div className="w-full max-w-full overflow-hidden">
+      <div className="w-full max-w-full overflow-hidden border-4 border-black bg-white">
         <input
           type="date"
           value={gameDate}
@@ -563,7 +563,7 @@ export default function AddGame() {
             setGameDate(e.target.value || getTodayDateString());
             setError('');
           }}
-          className="block w-full max-w-full min-w-0 bg-white border-4 border-black text-black font-black px-3 py-3 rounded-none"
+          className="block w-full max-w-full min-w-0 bg-white border-0 text-black font-black px-3 py-3 rounded-none"
         />
       </div>
     </div>

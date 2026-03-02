@@ -73,6 +73,18 @@
     -moz-osx-font-smoothing: grayscale;
     font-weight: 700;
   }
+
+  body::before {
+    content: "";
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: var(--app-top-safe-space);
+    background-color: #fff1f2;
+    z-index: 200;
+    pointer-events: none;
+  }
   
   #root {
     position: relative;
