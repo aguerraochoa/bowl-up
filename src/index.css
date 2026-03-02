@@ -57,17 +57,17 @@
 
   @media screen and (max-width: 1023px) {
     :root {
-      /* Conservative fallback for iPhone status bar area */
-      --app-top-safe-space: 44px;
+      /* Strong fallback for iPhone status bar area */
+      --app-top-safe-space: 56px;
       /* Prefer real safe-area value when supported, but never smaller than fallback */
-      --app-top-safe-space: max(44px, env(safe-area-inset-top, 0px));
+      --app-top-safe-space: max(56px, env(safe-area-inset-top, 0px));
     }
   }
 
   body {
     margin: 0;
     min-height: 100vh;
-    background-color: #F5F9EB; /* amber-50 from new palette */
+    background-color: #fff1f2; /* orange-50 to match app screens */
     color: #000000;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
@@ -80,23 +80,20 @@
     box-sizing: border-box;
   }
 
-  #root::before {
-    content: "";
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: var(--app-top-safe-space);
-    background-color: #F5F9EB;
-    z-index: 60;
-    pointer-events: none;
-  }
-
   /* Prevent iOS auto-zoom on input focus */
   input,
   select,
   textarea {
     font-size: 16px !important;
+  }
+
+  input[type="date"] {
+    display: block;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+    overflow: hidden;
   }
 
   /* For smaller screens, ensure inputs still have 16px */
